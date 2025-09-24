@@ -22,6 +22,6 @@ jobs:
       - name: Run opencode
         uses: sst/opencode/github@latest
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: anthropic/claude-sonnet-4
+          model: opencode/claude-sonnet-4
