@@ -1,4 +1,6 @@
-export const products = [
+import type { Product } from '../types/index.js';
+
+export const products: Product[] = [
   {
     id: '1',
     name: 'Wireless Headphones',
@@ -55,14 +57,14 @@ export const products = [
   }
 ];
 
-export function getProductById(id) {
+export function getProductById(id: string): Product | undefined {
   return products.find((product) => product.id === id);
 }
 
-export function getProductsByCategory(category) {
+export function getProductsByCategory(category: string): Product[] {
   return products.filter((product) => product.category === category);
 }
 
-export function getCategories() {
+export function getCategories(): string[] {
   return [...new Set(products.map((product) => product.category))];
 }

@@ -1,4 +1,4 @@
-import { getProductById } from '../../../lib/data/products.js';
+import { getProductById } from '../../../lib/data/products.ts';
 import { error } from '@sveltejs/kit';
 
 export const load = ({ params }) => {

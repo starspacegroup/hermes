@@ -1,6 +1,6 @@
 <script>
   import '../app.css';
-  import { cartStore } from '../lib/stores/cart.js';
+  import { cartStore } from '../lib/stores/cart.ts';
 
   $: totalItems = cartStore.getTotalItems($cartStore);
 </script>

@@ -1,6 +1,6 @@
 <script>
   import Button from '../../../lib/components/Button.svelte';
-  import { cartStore } from '../../../lib/stores/cart.js';
+  import { cartStore } from '../../../lib/stores/cart.ts';
 
   export let data;
 

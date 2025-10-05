@@ -1,0 +1,62 @@
+import { writable, type Writable } from 'svelte/store';
+import type { Product, CartItem } from '../types/index.js';
+
+export const cartItems: Writable<CartItem[]> = writable([]);
+
+export interface CartStore {
+  subscribe: typeof cartItems.subscribe;
+  addItem: (product: Product, quantity?: number) => void;
+  removeItem: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  clear: () => void;
+  getTotalItems: (items: CartItem[]) => number;
+  getTotalPrice: (items: CartItem[]) => number;
+}
+
+export const cartStore: CartStore = {
+  subscribe: cartItems.subscribe,
+
+  addItem: (product: Product, quantity: number = 1): void => {
+    cartItems.update((items: CartItem[]) => {
+      const existingItem = items.find((item) => item.id === product.id);
+
+      if (existingItem) {
+        existingItem.quantity += quantity;
+        return items;
+      } else {
+        return [...items, { ...product, quantity }];
+      }
+    });
+  },
+
+  removeItem: (productId: string): void => {
+    cartItems.update((items: CartItem[]) => items.filter((item) => item.id !== productId));
+  },
+
+  updateQuantity: (productId: string, quantity: number): void => {
+    if (quantity <= 0) {
+      cartStore.removeItem(productId);
+      return;
+    }
+
+    cartItems.update((items: CartItem[]) => {
+      const item = items.find((item) => item.id === productId);
+      if (item) {
+        item.quantity = quantity;
+      }
+      return items;
+    });
+  },
+
+  clear: (): void => {
+    cartItems.set([]);
+  },
+
+  getTotalItems: (items: CartItem[]): number => {
+    return items.reduce((total, item) => total + item.quantity, 0);
+  },
+
+  getTotalPrice: (items: CartItem[]): number => {
+    return items.reduce((total, item) => total + item.price * item.quantity, 0);
+  }
+};

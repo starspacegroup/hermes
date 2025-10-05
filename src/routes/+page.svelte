@@ -1,5 +1,5 @@
 <script>
-  import { products } from '../lib/data/products.js';
+  import { products } from '../lib/data/products.ts';
   import ProductCard from '../lib/components/ProductCard.svelte';
 </script>
 

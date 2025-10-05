@@ -1,5 +1,5 @@
 <script>
-  import { cartStore } from '../../lib/stores/cart.js';
+  import { cartStore } from '../../lib/stores/cart.ts';
   import Button from '../../lib/components/Button.svelte';
 
   $: totalItems = cartStore.getTotalItems($cartStore);
