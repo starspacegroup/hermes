@@ -1,7 +1,7 @@
-<script lang="ts">
-  export let variant: 'primary' | 'secondary' | 'danger' = 'primary';
+<script>
+  export let variant = 'primary';
   export let disabled = false;
-  export let type: 'button' | 'submit' | 'reset' = 'button';
+  export let type = 'button';
 </script>
 
 <button class="btn btn-{variant}" {disabled} {type} on:click>

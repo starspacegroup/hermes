@@ -1,6 +1,7 @@
 # Agent Guidelines
 
 ## Commands
+
 - **Dev**: `npm run dev` - Start development server
 - **Build**: `npm run build` - Build for production (includes Cloudflare adapter)
 - **Preview**: `npm run preview` - Preview production build locally
@@ -11,6 +12,7 @@
 - **Single test**: `npm test -- tests/file.test.ts` - Run specific test file
 
 ## Code Style
+
 - **Framework**: SvelteKit with TypeScript
 - **Imports**: ES6 imports, group by: SvelteKit imports, external libraries, internal modules
 - **Formatting**: 2 spaces indentation, semicolons required, single quotes for strings
@@ -22,5 +24,6 @@
 - **Comments**: JSDoc for public APIs, sparse inline comments
 
 ## Rules
+
 - No Cursor or Copilot rules found - add .cursor/rules/ or .cursorrules when available
 - No GitHub Copilot instructions found - add .github/copilot-instructions.md when available
