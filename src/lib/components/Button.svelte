@@ -24,29 +24,29 @@
   }
 
   .btn-primary {
-    background-color: #3b82f6;
+    background-color: var(--accent-primary);
     color: white;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: var(--accent-hover);
   }
 
   .btn-secondary {
-    background-color: #6b7280;
+    background-color: var(--button-secondary);
     color: white;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: #4b5563;
+    background-color: var(--button-secondary-hover);
   }
 
   .btn-danger {
-    background-color: #ef4444;
+    background-color: var(--button-danger);
     color: white;
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #dc2626;
+    background-color: var(--button-danger-hover);
   }
 </style>

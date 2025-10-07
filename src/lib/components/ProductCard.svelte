@@ -24,13 +24,14 @@
 
 <style>
   .product-card {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px var(--shadow);
     overflow: hidden;
     transition:
       transform 0.2s,
-      box-shadow 0.2s;
+      box-shadow 0.2s,
+      background-color 0.3s ease;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -38,7 +39,7 @@
 
   .product-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px var(--shadow);
   }
 
   img {
@@ -56,19 +57,19 @@
 
   h3 {
     margin: 0 0 0.5rem 0;
-    color: #333;
+    color: var(--text-primary);
     font-size: 1.1rem;
   }
 
   .description {
-    color: #666;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     margin: 0 0 0.5rem 0;
     flex: 1;
   }
 
   .category {
-    color: #888;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -85,12 +86,12 @@
   .price {
     font-size: 1.2rem;
     font-weight: bold;
-    color: #2563eb;
+    color: var(--accent-primary);
   }
 
   .stock {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
   }
 
   .actions {
