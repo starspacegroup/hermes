@@ -100,36 +100,44 @@
   }
 
   .cart-header h1 {
-    color: #333;
+    color: var(--color-text-primary);
     margin: 0;
+    transition: color var(--transition-normal);
   }
 
   .continue-shopping {
-    color: #2563eb;
+    color: var(--color-primary);
     text-decoration: none;
     font-size: 1rem;
+    transition: color var(--transition-fast);
   }
 
   .continue-shopping:hover {
+    color: var(--color-primary-hover);
     text-decoration: underline;
   }
 
   .empty-cart {
     text-align: center;
-    background: white;
+    background: var(--color-bg-primary);
     padding: 3rem;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--color-shadow-light);
+    transition:
+      background-color var(--transition-normal),
+      box-shadow var(--transition-normal);
   }
 
   .empty-cart h2 {
-    color: #666;
+    color: var(--color-text-secondary);
     margin-bottom: 1rem;
+    transition: color var(--transition-normal);
   }
 
   .empty-cart p {
-    color: #888;
+    color: var(--color-text-tertiary);
     margin-bottom: 2rem;
+    transition: color var(--transition-normal);
   }
 
   .cart-content {
@@ -139,10 +147,13 @@
   }
 
   .cart-items {
-    background: white;
+    background: var(--color-bg-primary);
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--color-shadow-light);
     padding: 1.5rem;
+    transition:
+      background-color var(--transition-normal),
+      box-shadow var(--transition-normal);
   }
 
   .cart-item {
@@ -150,7 +161,7 @@
     grid-template-columns: auto 1fr auto;
     gap: 1rem;
     padding: 1rem 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-primary);
   }
 
   .cart-item:last-child {
@@ -166,20 +177,23 @@
 
   .item-details h3 {
     margin: 0 0 0.5rem 0;
-    color: #333;
+    color: var(--color-text-primary);
+    transition: color var(--transition-normal);
   }
 
   .item-price {
     font-weight: bold;
-    color: #2563eb;
+    color: var(--color-primary);
     margin: 0 0 0.25rem 0;
+    transition: color var(--transition-normal);
   }
 
   .item-category {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--color-text-tertiary);
     margin: 0;
     text-transform: uppercase;
+    transition: color var(--transition-normal);
   }
 
   .item-controls {
@@ -198,17 +212,21 @@
   .quantity-controls button {
     width: 28px;
     height: 28px;
-    border: 1px solid #ddd;
-    background: white;
+    border: 1px solid var(--color-border-secondary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal);
   }
 
   .quantity-controls button:hover:not(:disabled) {
-    background: #f5f5f5;
+    background: var(--color-bg-accent);
   }
 
   .quantity-controls button:disabled {
@@ -220,41 +238,52 @@
     min-width: 30px;
     text-align: center;
     font-weight: bold;
+    color: var(--color-text-primary);
+    transition: color var(--transition-normal);
   }
 
   .item-total {
     font-weight: bold;
-    color: #333;
+    color: var(--color-text-primary);
     margin: 0;
+    transition: color var(--transition-normal);
   }
 
   .cart-summary {
-    background: white;
+    background: var(--color-bg-primary);
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--color-shadow-light);
     padding: 1.5rem;
     height: fit-content;
+    transition:
+      background-color var(--transition-normal),
+      box-shadow var(--transition-normal);
   }
 
   .summary-content h3 {
     margin: 0 0 1rem 0;
-    color: #333;
+    color: var(--color-text-primary);
+    transition: color var(--transition-normal);
   }
 
   .summary-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5rem;
-    color: #666;
+    color: var(--color-text-secondary);
+    transition: color var(--transition-normal);
   }
 
   .summary-row.total {
     font-size: 1.2rem;
     font-weight: bold;
-    color: #333;
-    border-top: 1px solid #eee;
+    color: var(--color-text-primary);
+    border-top: 1px solid var(--color-border-primary);
     padding-top: 0.5rem;
     margin-top: 1rem;
+    transition:
+      color var(--transition-normal),
+      border-color var(--transition-normal);
   }
 
   .cart-actions {
