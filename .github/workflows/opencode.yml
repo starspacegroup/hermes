@@ -24,4 +24,4 @@ jobs:
         env:
           MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
         with:
-          model: moonshotai/kimi-k2-0905
+          model: moonshotai/kimi-k2-0905-preview
