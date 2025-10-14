@@ -26,34 +26,43 @@
   .hero {
     text-align: center;
     padding: 3rem 0;
-    background: white;
+    background: var(--color-bg-primary);
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--color-shadow-light);
     margin-bottom: 2rem;
+    transition:
+      background-color var(--transition-normal),
+      box-shadow var(--transition-normal);
   }
 
   h2 {
-    color: #2563eb;
+    color: var(--color-primary);
     font-size: 2rem;
     margin-bottom: 1rem;
+    transition: color var(--transition-normal);
   }
 
   .hero p {
-    color: #666;
+    color: var(--color-text-secondary);
     font-size: 1.1rem;
+    transition: color var(--transition-normal);
   }
 
   .products {
-    background: white;
+    background: var(--color-bg-primary);
     padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--color-shadow-light);
+    transition:
+      background-color var(--transition-normal),
+      box-shadow var(--transition-normal);
   }
 
   h3 {
-    color: #333;
+    color: var(--color-text-primary);
     margin-bottom: 1.5rem;
     font-size: 1.5rem;
+    transition: color var(--transition-normal);
   }
 
   .product-grid {

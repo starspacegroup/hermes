@@ -15,7 +15,7 @@
     border-radius: 0.25rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color var(--transition-normal);
   }
 
   .btn:disabled {
@@ -24,29 +24,29 @@
   }
 
   .btn-primary {
-    background-color: #3b82f6;
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--color-text-inverse);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #2563eb;
+    background-color: var(--color-primary-hover);
   }
 
   .btn-secondary {
-    background-color: #6b7280;
-    color: white;
+    background-color: var(--color-secondary);
+    color: var(--color-text-inverse);
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background-color: #4b5563;
+    background-color: var(--color-secondary-hover);
   }
 
   .btn-danger {
-    background-color: #ef4444;
-    color: white;
+    background-color: var(--color-danger);
+    color: var(--color-text-inverse);
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #dc2626;
+    background-color: var(--color-danger-hover);
   }
 </style>
