@@ -24,4 +24,4 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         with:
-          model: openrouter/moonshotai/kimi-k2-0905
+          model: moonshotai/kimi-k2-0905
