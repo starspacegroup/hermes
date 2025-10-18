@@ -3,6 +3,7 @@
   import { cartStore } from '../lib/stores/cart.ts';
   import { themeStore } from '../lib/stores/theme.ts';
   import ThemeToggle from '../lib/components/ThemeToggle.svelte';
+  import ToastContainer from '../lib/components/ToastContainer.svelte';
   import { onMount } from 'svelte';
 
   $: totalItems = cartStore.getTotalItems($cartStore);
@@ -37,6 +38,8 @@
 
   <slot />
 </main>
+
+<ToastContainer />
 
 <style>
   :global(body) {

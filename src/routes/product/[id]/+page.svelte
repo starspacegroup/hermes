@@ -1,6 +1,7 @@
 <script>
   import Button from '../../../lib/components/Button.svelte';
   import { cartStore } from '../../../lib/stores/cart.ts';
+  import { toastStore } from '../../../lib/stores/toast.ts';
 
   export let data;
 
@@ -9,7 +10,7 @@
 
   function addToCart() {
     cartStore.addItem(product, quantity);
-    alert(`Added ${quantity} x ${product.name} to cart!`);
+    toastStore.show(`Added ${quantity} x ${product.name} to cart!`, 'success');
   }
 
   function goBack() {
