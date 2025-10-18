@@ -10,7 +10,8 @@
 
 <section class="hero">
   <h2>Welcome to Hermes</h2>
-  <p>Discover amazing products at great prices</p>
+  <p>An <a href="https://github.com/starspacegroup/hermes">Open Source</a> eCommerce Platform</p>
+  <p>Proudly created in <a href="https://starspace.group">*Space</a>!</p>
 </section>
 
 <section class="products">
