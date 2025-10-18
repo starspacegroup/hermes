@@ -1,4 +1,5 @@
 <script>
+  import { goto } from '$app/navigation';
   import { cartStore } from '../../lib/stores/cart.ts';
   import Button from '../../lib/components/Button.svelte';
 
@@ -18,7 +19,7 @@
   }
 
   function checkout() {
-    alert('Checkout functionality will be implemented in the next phase!');
+    goto('/checkout');
   }
 </script>
 

@@ -11,3 +11,14 @@ export interface Product {
 export interface CartItem extends Product {
   quantity: number;
 }
+
+// Re-export checkout types
+export type {
+  ShippingAddress,
+  BillingAddress,
+  PaymentMethod,
+  OrderItem,
+  Order,
+  CheckoutFormData,
+  CheckoutValidationErrors
+} from './checkout';

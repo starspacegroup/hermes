@@ -1,7 +1,33 @@
 import { writable, type Writable } from 'svelte/store';
+import { browser } from '$app/environment';
 import type { Product, CartItem } from '../types/index.js';
 
-export const cartItems: Writable<CartItem[]> = writable([]);
+// Initialize with persisted data if available
+const getInitialCartItems = (): CartItem[] => {
+  if (browser) {
+    try {
+      const stored = localStorage.getItem('cart');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Failed to load cart from localStorage:', error);
+      return [];
+    }
+  }
+  return [];
+};
+
+export const cartItems: Writable<CartItem[]> = writable(getInitialCartItems());
+
+// Persist cart changes to localStorage
+if (browser) {
+  cartItems.subscribe((items) => {
+    try {
+      localStorage.setItem('cart', JSON.stringify(items));
+    } catch (error) {
+      console.error('Failed to save cart to localStorage:', error);
+    }
+  });
+}
 
 export interface CartStore {
   subscribe: typeof cartItems.subscribe;
