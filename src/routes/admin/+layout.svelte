@@ -14,7 +14,8 @@
   onMount(() => {
     // Check authentication on mount, but allow login page
     if (!isLoginPage && !$authStore.isAuthenticated) {
-      goto('/admin/login');
+      // Use replaceState to avoid adding to history, so back button works correctly
+      goto('/admin/login', { replaceState: true });
     }
   });
 
