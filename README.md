@@ -1,7 +1,5 @@
 # Hermes eCommerce Platform
 
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/starspacegroup/006ec188c8a105fe69bcba8097fd8bf7/raw/hermes-coverage.json)](./coverage/index.html)
-
 A modern eCommerce platform built with SvelteKit and TypeScript, ready for
 deployment on Cloudflare Pages.
 
