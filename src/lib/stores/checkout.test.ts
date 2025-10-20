@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { get } from 'svelte/store';
 import { checkoutStore, copyShippingToBilling } from './checkout';
-import type { CheckoutFormData } from '../types/checkout';
+import type { CheckoutFormData, CheckoutValidationErrors } from '../types/checkout';
+
+interface CheckoutState {
+  formData: CheckoutFormData;
+  currentStep: number;
+  isSubmitting: boolean;
+  validationErrors: CheckoutValidationErrors;
+}
 
 describe('Checkout Store', () => {
   beforeEach(() => {
@@ -26,14 +32,14 @@ describe('Checkout Store', () => {
 
       checkoutStore.updateFormData(newData);
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.formData.shippingAddress.firstName).toBe('Jane');
-      expect(state.formData.shippingAddress.lastName).toBe('Smith');
-      expect(state.formData.shippingAddress.email).toBe('jane@example.com');
+      expect(state?.formData.shippingAddress.firstName).toBe('Jane');
+      expect(state?.formData.shippingAddress.lastName).toBe('Smith');
+      expect(state?.formData.shippingAddress.email).toBe('jane@example.com');
       unsubscribe();
     });
 
@@ -52,13 +58,13 @@ describe('Checkout Store', () => {
         }
       });
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.formData.shippingAddress.firstName).toBe('John');
-      expect(state.formData.shippingAddress.lastName).toBe('Doe');
+      expect(state?.formData.shippingAddress.firstName).toBe('John');
+      expect(state?.formData.shippingAddress.lastName).toBe('Doe');
       unsubscribe();
     });
   });
@@ -67,24 +73,24 @@ describe('Checkout Store', () => {
     it('should set sameAsShipping to true', () => {
       checkoutStore.setSameAsShipping(true);
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.formData.sameAsShipping).toBe(true);
+      expect(state?.formData.sameAsShipping).toBe(true);
       unsubscribe();
     });
 
     it('should set sameAsShipping to false', () => {
       checkoutStore.setSameAsShipping(false);
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.formData.sameAsShipping).toBe(false);
+      expect(state?.formData.sameAsShipping).toBe(false);
       unsubscribe();
     });
   });
@@ -163,13 +169,13 @@ describe('Checkout Store', () => {
 
       checkoutStore.validateForm();
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
       expect(Object.keys(state.validationErrors).length).toBeGreaterThan(0);
-      expect(state.validationErrors.shippingAddress).toBeDefined();
+      expect(state?.validationErrors.shippingAddress).toBeDefined();
       unsubscribe();
     });
   });
@@ -218,7 +224,7 @@ describe('Checkout Store', () => {
       Math.random = () => 0.5;
 
       const result = await checkoutStore.submitOrder();
-      
+
       Math.random = originalRandom;
 
       // May succeed or fail based on random, just check structure
@@ -304,14 +310,14 @@ describe('Checkout Store', () => {
 
       checkoutStore.reset();
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.formData.shippingAddress.firstName).toBe('');
-      expect(state.currentStep).toBe(1);
-      expect(state.isSubmitting).toBe(false);
+      expect(state?.formData.shippingAddress.firstName).toBe('');
+      expect(state?.currentStep).toBe(1);
+      expect(state?.isSubmitting).toBe(false);
       expect(Object.keys(state.validationErrors)).toHaveLength(0);
       unsubscribe();
     });
@@ -326,12 +332,12 @@ describe('Checkout Store', () => {
     it('should set current step', () => {
       checkoutStore.setCurrentStep(2);
 
-      let state: any;
+      let state: CheckoutState | undefined;
       const unsubscribe = checkoutStore.subscribe((s) => {
         state = s;
       });
 
-      expect(state.currentStep).toBe(2);
+      expect(state?.currentStep).toBe(2);
       unsubscribe();
     });
 

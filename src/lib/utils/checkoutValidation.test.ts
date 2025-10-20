@@ -252,7 +252,10 @@ describe('Checkout Validation', () => {
 
     it('should error on year too far in future', () => {
       const currentYear = new Date().getFullYear();
-      const errors = validatePaymentMethod({ ...validPayment, expiryYear: String(currentYear + 11) });
+      const errors = validatePaymentMethod({
+        ...validPayment,
+        expiryYear: String(currentYear + 11)
+      });
       expect(errors.expiryYear).toBeDefined();
     });
 
@@ -275,18 +278,18 @@ describe('Checkout Validation', () => {
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
-      
+
       let pastMonth = currentMonth - 1;
       if (pastMonth === 0) {
         pastMonth = 12;
       }
-      
+
       const errors = validatePaymentMethod({
         ...validPayment,
         expiryMonth: String(pastMonth).padStart(2, '0'),
         expiryYear: String(currentYear)
       });
-      
+
       if (currentMonth > 1) {
         expect(errors.expiryMonth).toBeDefined();
       }
@@ -296,13 +299,13 @@ describe('Checkout Validation', () => {
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
-      
+
       const errors = validatePaymentMethod({
         ...validPayment,
         expiryMonth: String(currentMonth).padStart(2, '0'),
         expiryYear: String(currentYear)
       });
-      
+
       expect(errors.expiryMonth).toBeUndefined();
       expect(errors.expiryYear).toBeUndefined();
     });

@@ -95,11 +95,11 @@ describe('Products Data', () => {
     it('should return different products for different categories', () => {
       const electronics = getProductsByCategory('Electronics');
       const sports = getProductsByCategory('Sports');
-      
+
       electronics.forEach((product) => {
         expect(product.category).toBe('Electronics');
       });
-      
+
       sports.forEach((product) => {
         expect(product.category).toBe('Sports');
       });
@@ -122,7 +122,7 @@ describe('Products Data', () => {
     it('should include all categories from products', () => {
       const categories = getCategories();
       const productCategories = [...new Set(products.map((p) => p.category))];
-      
+
       expect(categories.sort()).toEqual(productCategories.sort());
     });
 

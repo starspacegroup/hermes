@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { cartStore, cartItems } from './cart';
 import type { Product } from '../types/index';
@@ -54,7 +54,7 @@ describe('Cart Store', () => {
     it('should add a new item to the cart', () => {
       cartStore.addItem(mockProduct);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
       expect(items[0].id).toBe(mockProduct.id);
       expect(items[0].quantity).toBe(1);
@@ -63,7 +63,7 @@ describe('Cart Store', () => {
     it('should add item with specified quantity', () => {
       cartStore.addItem(mockProduct, 3);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
       expect(items[0].quantity).toBe(3);
     });
@@ -72,7 +72,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct, 2);
       cartStore.addItem(mockProduct, 3);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
       expect(items[0].quantity).toBe(5);
     });
@@ -81,7 +81,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct);
       cartStore.addItem(mockProduct2);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(2);
       expect(items[0].id).toBe(mockProduct.id);
       expect(items[1].id).toBe(mockProduct2.id);
@@ -94,7 +94,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct2);
       cartStore.removeItem(mockProduct.id);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
       expect(items[0].id).toBe(mockProduct2.id);
     });
@@ -103,7 +103,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct);
       cartStore.removeItem('non-existent');
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
     });
   });
@@ -113,7 +113,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct, 2);
       cartStore.updateQuantity(mockProduct.id, 5);
       const items = get(cartItems);
-      
+
       expect(items[0].quantity).toBe(5);
     });
 
@@ -121,7 +121,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct);
       cartStore.updateQuantity(mockProduct.id, 0);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(0);
     });
 
@@ -129,7 +129,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct);
       cartStore.updateQuantity(mockProduct.id, -1);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(0);
     });
 
@@ -137,7 +137,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct);
       cartStore.updateQuantity('non-existent', 5);
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(1);
       expect(items[0].quantity).toBe(1);
     });
@@ -149,7 +149,7 @@ describe('Cart Store', () => {
       cartStore.addItem(mockProduct2);
       cartStore.clear();
       const items = get(cartItems);
-      
+
       expect(items).toHaveLength(0);
     });
   });
