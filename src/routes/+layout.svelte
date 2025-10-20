@@ -5,45 +5,52 @@
   import ThemeToggle from '../lib/components/ThemeToggle.svelte';
   import ToastContainer from '../lib/components/ToastContainer.svelte';
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
 
   $: totalItems = cartStore.getTotalItems($cartStore);
+  $: isAdminPage = $page.url.pathname.startsWith('/admin');
 
   onMount(() => {
     themeStore.initTheme();
   });
 </script>
 
-<main>
-  <header>
-    <nav>
-      <a href="/" class="logo">
-        <h1>Hermes</h1>
-      </a>
-      <div class="nav-actions">
-        <ThemeToggle />
-        <a href="/admin/dashboard" class="admin-link">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="3" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
-            <rect x="14" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
-            <rect x="14" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
-            <rect x="3" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
-          </svg>
-          <span class="admin-text">Admin</span>
+<main class:admin-page={isAdminPage}>
+  {#if !isAdminPage}
+    <header>
+      <nav>
+        <a href="/" class="logo">
+          <h1>Hermes</h1>
         </a>
-        <a href="/cart" class="cart-link">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="9" cy="21" r="1"></circle>
-            <circle cx="20" cy="21" r="1"></circle>
-            <path d="m1 1 4 4 14 1-1 7H6"></path>
-          </svg>
-          <span class="cart-text">Cart</span>
-          {#if totalItems > 0}
-            <span class="cart-badge">{totalItems}</span>
-          {/if}
-        </a>
-      </div>
-    </nav>
-  </header>
+        <div class="nav-actions">
+          <ThemeToggle />
+          <a href="/admin/dashboard" class="admin-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
+              <rect x="14" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"
+              ></rect>
+              <rect x="14" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"
+              ></rect>
+              <rect x="3" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"
+              ></rect>
+            </svg>
+            <span class="admin-text">Admin</span>
+          </a>
+          <a href="/cart" class="cart-link">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="m1 1 4 4 14 1-1 7H6"></path>
+            </svg>
+            <span class="cart-text">Cart</span>
+            {#if totalItems > 0}
+              <span class="cart-badge">{totalItems}</span>
+            {/if}
+          </a>
+        </div>
+      </nav>
+    </header>
+  {/if}
 
   <slot />
 </main>
@@ -61,6 +68,12 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem;
+  }
+
+  main.admin-page {
+    max-width: none;
+    padding: 0;
+    margin: 0;
   }
 
   header {
