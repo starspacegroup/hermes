@@ -7,6 +7,31 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,ts}'],
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./tests/setup.ts']
+    setupFiles: ['./tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{js,ts,svelte}'],
+      exclude: [
+        'src/**/*.{test,spec}.{js,ts}',
+        'src/**/*.d.ts',
+        'src/app.html',
+        'src/app.css',
+        'tests/**',
+        'node_modules/**',
+        '.svelte-kit/**',
+        'build/**',
+        'dist/**'
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80
+      },
+      all: true,
+      clean: true
+    }
   }
 });
