@@ -1,8 +1,9 @@
-<script>
+<script lang="ts">
   import { checkoutStore } from '../stores/checkout';
   import { copyShippingToBilling } from '../stores/checkout';
+  import type { BillingAddress } from '../types/checkout';
 
-  export let errors = {};
+  export let errors: Partial<Record<keyof BillingAddress, string>> = {};
 
   $: formData = $checkoutStore.formData.billingAddress;
   $: sameAsShipping = $checkoutStore.formData.sameAsShipping;
@@ -14,15 +15,15 @@
     checkoutStore.updateFormData({ billingAddress });
   }
 
-  function updateField(field, value) {
+  function updateField(field: keyof BillingAddress, value: string) {
     const updatedAddress = { ...formData, [field]: value };
     checkoutStore.updateFormData({
       billingAddress: updatedAddress
     });
   }
 
-  function handleSameAsShippingChange(event) {
-    const target = event.target;
+  function handleSameAsShippingChange(event: Event) {
+    const target = event.target as HTMLInputElement;
     checkoutStore.setSameAsShipping(target.checked);
   }
 </script>

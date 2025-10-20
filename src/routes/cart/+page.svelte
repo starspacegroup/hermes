@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
   import { cartStore } from '../../lib/stores/cart.ts';
   import Button from '../../lib/components/Button.svelte';
@@ -6,11 +6,11 @@
   $: totalItems = cartStore.getTotalItems($cartStore);
   $: totalPrice = cartStore.getTotalPrice($cartStore);
 
-  function updateQuantity(productId, quantity) {
+  function updateQuantity(productId: string, quantity: number) {
     cartStore.updateQuantity(productId, quantity);
   }
 
-  function removeItem(productId) {
+  function removeItem(productId: string) {
     cartStore.removeItem(productId);
   }
 

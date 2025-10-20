@@ -1,11 +1,12 @@
-<script>
+<script lang="ts">
   import { checkoutStore } from '../stores/checkout';
+  import type { ShippingAddress } from '../types/checkout';
 
-  export let errors = {};
+  export let errors: Partial<Record<keyof ShippingAddress, string>> = {};
 
   $: formData = $checkoutStore.formData.shippingAddress;
 
-  function updateField(field, value) {
+  function updateField(field: keyof ShippingAddress, value: string) {
     const updatedAddress = { ...formData, [field]: value };
     checkoutStore.updateFormData({
       shippingAddress: updatedAddress

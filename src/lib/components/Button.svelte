@@ -1,7 +1,7 @@
-<script>
-  export let variant = 'primary';
-  export let disabled = false;
-  export let type = 'button';
+<script lang="ts">
+  export let variant: string = 'primary';
+  export let disabled: boolean = false;
+  export let type: 'button' | 'submit' | 'reset' = 'button';
 </script>
 
 <button class="btn btn-{variant}" {disabled} {type} on:click>

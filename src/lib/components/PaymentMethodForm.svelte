@@ -1,18 +1,19 @@
-<script>
+<script lang="ts">
   import { checkoutStore } from '../stores/checkout';
+  import type { PaymentMethod } from '../types/checkout';
 
-  export let errors = {};
+  export let errors: Partial<Record<keyof PaymentMethod, string>> = {};
 
   $: formData = $checkoutStore.formData.paymentMethod;
 
-  function updateField(field, value) {
+  function updateField(field: keyof PaymentMethod, value: string) {
     const updatedPayment = { ...formData, [field]: value };
     checkoutStore.updateFormData({
       paymentMethod: updatedPayment
     });
   }
 
-  function formatCardNumber(value) {
+  function formatCardNumber(value: string): string {
     // Remove all non-digits
     const digits = value.replace(/\D/g, '');
 
@@ -21,14 +22,14 @@
     return groups.join(' ').substr(0, 19); // Max 16 digits + 3 spaces
   }
 
-  function handleCardNumberInput(event) {
-    const target = event.target;
+  function handleCardNumberInput(event: Event) {
+    const target = event.target as HTMLInputElement;
     const formatted = formatCardNumber(target.value);
     target.value = formatted;
     updateField('cardNumber', formatted);
   }
 
-  function formatExpiry(value) {
+  function formatExpiry(value: string): string {
     // Remove all non-digits
     const digits = value.replace(/\D/g, '');
 
@@ -38,8 +39,8 @@
     return digits;
   }
 
-  function handleExpiryInput(event) {
-    const target = event.target;
+  function handleExpiryInput(event: Event) {
+    const target = event.target as HTMLInputElement;
     const formatted = formatExpiry(target.value);
     target.value = formatted;
 

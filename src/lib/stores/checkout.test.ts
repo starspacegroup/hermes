@@ -174,7 +174,8 @@ describe('Checkout Store', () => {
         state = s;
       });
 
-      expect(Object.keys(state.validationErrors).length).toBeGreaterThan(0);
+      expect(state).toBeDefined();
+      expect(Object.keys(state!.validationErrors).length).toBeGreaterThan(0);
       expect(state?.validationErrors.shippingAddress).toBeDefined();
       unsubscribe();
     });
@@ -318,7 +319,7 @@ describe('Checkout Store', () => {
       expect(state?.formData.shippingAddress.firstName).toBe('');
       expect(state?.currentStep).toBe(1);
       expect(state?.isSubmitting).toBe(false);
-      expect(Object.keys(state.validationErrors)).toHaveLength(0);
+      expect(Object.keys(state!.validationErrors)).toHaveLength(0);
       unsubscribe();
     });
   });

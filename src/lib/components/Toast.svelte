@@ -1,14 +1,14 @@
-<script>
+<script lang="ts">
   import { fly } from 'svelte/transition';
-  import { toastStore } from '../stores/toast.ts';
+  import { toastStore, type Toast } from '../stores/toast.ts';
 
-  export let toast;
+  export let toast: Toast;
 
   function handleClose() {
     toastStore.remove(toast.id);
   }
 
-  function getToastIcon(type) {
+  function getToastIcon(type: string): string {
     switch (type) {
       case 'success':
         return '✓';

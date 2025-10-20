@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { cartStore } from '../../lib/stores/cart';
@@ -7,10 +7,11 @@
   import BillingAddressForm from '../../lib/components/BillingAddressForm.svelte';
   import PaymentMethodForm from '../../lib/components/PaymentMethodForm.svelte';
   import Button from '../../lib/components/Button.svelte';
+  import type { CheckoutValidationErrors } from '../../lib/types/checkout';
 
   let currentStep = 1;
   let isSubmitting = false;
-  let validationErrors = {};
+  let validationErrors: CheckoutValidationErrors = {};
   let errorMessage = '';
 
   $: cartItems = $cartStore;
