@@ -33,6 +33,7 @@ The coverage badge is automatically updated by GitHub Actions. To complete the s
 3. Replace `GIST_ID_HERE` with your actual Gist ID from step 1
 
 Example:
+
 ```markdown
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/starspacegroup/abc123def456/raw/hermes-coverage.json)](./coverage/index.html)
 ```
@@ -59,6 +60,7 @@ Example:
 ## Troubleshooting
 
 If the badge shows "invalid":
+
 - Verify the Gist is **public**
 - Check that both secrets are set correctly
 - Ensure the Gist ID in README matches the GIST_ID secret
