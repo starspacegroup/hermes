@@ -41,6 +41,11 @@
   --color-shadow-light: rgba(239, 68, 68, 0.1);
   --color-shadow-medium: rgba(239, 68, 68, 0.2);
   --color-shadow-dark: rgba(239, 68, 68, 0.35);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
 }
 
 /* Dark Theme – Neon pinks & purples */
