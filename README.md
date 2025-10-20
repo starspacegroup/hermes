@@ -1,6 +1,9 @@
 # Hermes eCommerce Platform
 
-A modern eCommerce platform built with SvelteKit and TypeScript, ready for deployment on Cloudflare Pages.
+[![Coverage](https://img.shields.io/badge/coverage-88.51%25-brightgreen.svg)](./coverage/index.html)
+
+A modern eCommerce platform built with SvelteKit and TypeScript, ready for
+deployment on Cloudflare Pages.
 
 ## 🚀 Features
 
@@ -70,7 +73,8 @@ The project is configured for deployment on Cloudflare Pages:
 
 ### Cloudflare Adapter
 
-The project uses `@sveltejs/adapter-cloudflare` configured in `svelte.config.js` for:
+The project uses `@sveltejs/adapter-cloudflare` configured in `svelte.config.js`
+for:
 
 - Edge-side rendering
 - Static asset optimization
