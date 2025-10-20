@@ -10,6 +10,10 @@ export interface Toast {
 export interface ToastStore {
   subscribe: typeof toasts.subscribe;
   show: (message: string, type?: Toast['type'], duration?: number) => void;
+  success: (message: string, duration?: number) => void;
+  error: (message: string, duration?: number) => void;
+  warning: (message: string, duration?: number) => void;
+  info: (message: string, duration?: number) => void;
   remove: (id: string) => void;
   clear: () => void;
 }
@@ -32,6 +36,22 @@ export const toastStore: ToastStore = {
         toastStore.remove(id);
       }, duration);
     }
+  },
+
+  success: (message: string, duration: number = 3000): void => {
+    toastStore.show(message, 'success', duration);
+  },
+
+  error: (message: string, duration: number = 3000): void => {
+    toastStore.show(message, 'error', duration);
+  },
+
+  warning: (message: string, duration: number = 3000): void => {
+    toastStore.show(message, 'warning', duration);
+  },
+
+  info: (message: string, duration: number = 3000): void => {
+    toastStore.show(message, 'info', duration);
   },
 
   remove: (id: string): void => {
