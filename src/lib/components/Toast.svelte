@@ -33,9 +33,7 @@
     <span class="toast-icon">{getToastIcon(toast.type)}</span>
     <span class="toast-message">{toast.message}</span>
   </div>
-  <button class="toast-close" on:click={handleClose} aria-label="Close notification">
-    ✕
-  </button>
+  <button class="toast-close" on:click={handleClose} aria-label="Close notification"> ✕ </button>
 </div>
 
 <style>

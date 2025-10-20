@@ -1,4 +1,4 @@
-?<script>
+<script>
   import { checkoutStore } from '../stores/checkout';
 
   export let errors = {};
@@ -53,6 +53,7 @@
   }
 </script>
 
+?
 <div class="payment-method-form">
   <h3>Payment Method</h3>
 
