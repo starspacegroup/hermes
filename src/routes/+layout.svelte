@@ -21,6 +21,15 @@
       </a>
       <div class="nav-actions">
         <ThemeToggle />
+        <a href="/admin/dashboard" class="admin-link">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
+            <rect x="14" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
+            <rect x="14" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
+            <rect x="3" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"></rect>
+          </svg>
+          <span class="admin-text">Admin</span>
+        </a>
         <a href="/cart" class="cart-link">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="9" cy="21" r="1"></circle>
@@ -89,6 +98,27 @@
     gap: 1rem;
   }
 
+  .admin-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-primary);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .admin-link:hover {
+    background-color: var(--color-bg-accent);
+  }
+
+  .admin-text {
+    font-weight: 500;
+  }
+
   .cart-link {
     display: flex;
     align-items: center;
@@ -136,6 +166,7 @@
       font-size: 1.5rem;
     }
 
+    .admin-text,
     .cart-text {
       display: none;
     }
