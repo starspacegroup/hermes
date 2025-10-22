@@ -35,6 +35,7 @@ export interface CartStore {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clear: () => void;
+  getItemQuantity: (items: CartItem[], productId: string) => number;
   getTotalItems: (items: CartItem[]) => number;
   getTotalPrice: (items: CartItem[]) => number;
 }
@@ -76,6 +77,11 @@ export const cartStore: CartStore = {
 
   clear: (): void => {
     cartItems.set([]);
+  },
+
+  getItemQuantity: (items: CartItem[], productId: string): number => {
+    const item = items.find((item) => item.id === productId);
+    return item ? item.quantity : 0;
   },
 
   getTotalItems: (items: CartItem[]): number => {

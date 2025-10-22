@@ -197,4 +197,32 @@ describe('Cart Store', () => {
       expect(total).toBe(349.95);
     });
   });
+
+  describe('getItemQuantity', () => {
+    it('should return 0 for empty cart', () => {
+      const quantity = cartStore.getItemQuantity([], mockProduct.id);
+      expect(quantity).toBe(0);
+    });
+
+    it('should return 0 for item not in cart', () => {
+      const items = [{ ...mockProduct, quantity: 2 }];
+      const quantity = cartStore.getItemQuantity(items, 'non-existent-id');
+      expect(quantity).toBe(0);
+    });
+
+    it('should return correct quantity for item in cart', () => {
+      const items = [{ ...mockProduct, quantity: 3 }];
+      const quantity = cartStore.getItemQuantity(items, mockProduct.id);
+      expect(quantity).toBe(3);
+    });
+
+    it('should return correct quantity when multiple items in cart', () => {
+      const items = [
+        { ...mockProduct, quantity: 2 },
+        { ...mockProduct2, quantity: 5 }
+      ];
+      const quantity = cartStore.getItemQuantity(items, mockProduct2.id);
+      expect(quantity).toBe(5);
+    });
+  });
 });
