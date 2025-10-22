@@ -1,8 +1,9 @@
-<script>
+<script lang="ts">
   import Button from './Button.svelte';
   import { cartStore, cartItems } from '../stores/cart.ts';
+  import type { Product } from '../types/index.js';
 
-  export let product;
+  export let product: Product;
 
   $: quantity = cartStore.getItemQuantity($cartItems, product.id);
 
