@@ -21,7 +21,7 @@ npm run db:reset:preview
 # Preview setup (migrate + seed, no wipe)
 npm run db:setup:preview:seed
 
-# Local database (full reset with seed data)  
+# Local database (full reset with seed data)
 npm run db:reset:local
 
 # Local setup (migrate + seed, no wipe)

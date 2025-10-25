@@ -24,9 +24,9 @@ The `scripts/preview-build.js` script uses Cloudflare Pages environment
 variables to detect the deployment type:
 
 ```javascript
-const isCloudflarePages = process.env.CF_PAGES === "1";
-const branch = process.env.CF_PAGES_BRANCH || "";
-const isProduction = branch === "main" || branch === "master";
+const isCloudflarePages = process.env.CF_PAGES === '1';
+const branch = process.env.CF_PAGES_BRANCH || '';
+const isProduction = branch === 'main' || branch === 'master';
 const isPreview = isCloudflarePages && !isProduction;
 ```
 

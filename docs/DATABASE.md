@@ -202,7 +202,7 @@ wrangler d1 execute hermes-db --file=./migrations/0002_seed_data.sql
 The database is available through the platform context in SvelteKit:
 
 ```typescript
-import { getDB } from "$lib/server/db";
+import { getDB } from '$lib/server/db';
 
 export async function load({ platform }) {
   const db = getDB(platform);
@@ -216,7 +216,7 @@ All database operations use repository functions that automatically scope by
 site:
 
 ```typescript
-import { createProduct, getAllProducts } from "$lib/server/db";
+import { createProduct, getAllProducts } from '$lib/server/db';
 
 export async function load({ platform, locals }) {
   const db = getDB(platform);
