@@ -21,6 +21,8 @@ describe('Products Data', () => {
         expect(product).toHaveProperty('image');
         expect(product).toHaveProperty('category');
         expect(product).toHaveProperty('stock');
+        expect(product).toHaveProperty('type');
+        expect(product).toHaveProperty('tags');
       });
     });
 
@@ -33,6 +35,8 @@ describe('Products Data', () => {
         expect(typeof product.image).toBe('string');
         expect(typeof product.category).toBe('string');
         expect(typeof product.stock).toBe('number');
+        expect(typeof product.type).toBe('string');
+        expect(Array.isArray(product.tags)).toBe(true);
       });
     });
 
