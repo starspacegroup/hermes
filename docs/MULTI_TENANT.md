@@ -5,6 +5,7 @@ This document provides a high-level overview of the multi-tenant architecture im
 ## What is Multi-Tenancy?
 
 Multi-tenancy allows a single deployment of the Hermes platform to serve multiple independent stores/sites. Each site:
+
 - Has its own isolated data (products, users, orders)
 - Can use a custom domain
 - Maintains its own settings and configuration
@@ -21,6 +22,7 @@ Request → hooks.server.ts → Lookup site by hostname → Set site_id in local
 ```
 
 The `hooks.server.ts` file automatically:
+
 1. Extracts the hostname from the request (e.g., `store1.example.com`)
 2. Queries the database for a site with that domain
 3. Stores the `site_id` in `event.locals.siteId`
@@ -38,6 +40,7 @@ const orders = await getAllOrders(db, siteId);
 ```
 
 This ensures:
+
 - Site A cannot see Site B's data
 - No cross-contamination of data
 - Proper data isolation
@@ -116,7 +119,7 @@ CREATE TABLE products (
 
 ```sql
 INSERT INTO sites (id, name, domain, description, status)
-VALUES 
+VALUES
   ('site-1', 'Electronics Store', 'electronics.example.com', 'Electronic gadgets', 'active'),
   ('site-2', 'Fashion Store', 'fashion.example.com', 'Fashion and apparel', 'active');
 ```
@@ -132,7 +135,7 @@ VALUES
 await createProduct(db, 'site-1', {
   name: 'Wireless Headphones',
   description: 'Premium audio',
-  price: 199.99,
+  price: 199.99
   // ... other fields
 });
 
@@ -140,7 +143,7 @@ await createProduct(db, 'site-1', {
 await createProduct(db, 'site-2', {
   name: 'Designer Dress',
   description: 'Elegant evening wear',
-  price: 299.99,
+  price: 299.99
   // ... other fields
 });
 ```
@@ -156,10 +159,10 @@ import { getDB, getAllProducts } from '$lib/server/db';
 export async function load({ platform, locals }) {
   const db = getDB(platform);
   const siteId = locals.siteId; // Automatically set by hooks.server.ts
-  
+
   // This will only return products for the current site
   const products = await getAllProducts(db, siteId);
-  
+
   return { products };
 }
 ```
@@ -167,12 +170,14 @@ export async function load({ platform, locals }) {
 ## Benefits
 
 ### For Platform Owners
+
 - **Single Codebase**: Maintain one codebase for all sites
 - **Scalability**: Add unlimited sites without additional infrastructure
 - **Cost Efficiency**: Shared resources across all sites
 - **Centralized Updates**: Deploy updates to all sites simultaneously
 
 ### For Store Owners
+
 - **Data Isolation**: Complete separation of data between sites
 - **Custom Domains**: Each site can have its own domain
 - **Independent Configuration**: Each site can have unique settings
@@ -181,16 +186,19 @@ export async function load({ platform, locals }) {
 ## Data Isolation Guarantees
 
 ### 1. Database Level
+
 - Foreign key constraints ensure referential integrity
 - Indexes optimize site-scoped queries
 - Unique constraints prevent data leaks
 
 ### 2. Application Level
+
 - All repository functions require `site_id`
 - Hooks automatically set site context
 - Type-safe interfaces prevent accidental cross-site queries
 
 ### 3. Query Level
+
 - Every query includes `WHERE site_id = ?`
 - Prepared statements prevent SQL injection
 - Batch operations maintain site context
@@ -198,6 +206,7 @@ export async function load({ platform, locals }) {
 ## Performance Considerations
 
 ### Indexing Strategy
+
 ```sql
 -- All multi-tenant tables have site_id index
 CREATE INDEX idx_products_site_id ON products(site_id);
@@ -210,6 +219,7 @@ CREATE INDEX idx_users_email ON users(site_id, email);
 ```
 
 ### Query Optimization
+
 - Site lookups are cached in memory
 - Prepared statements reduce parsing overhead
 - Batch operations minimize round trips
@@ -218,6 +228,7 @@ CREATE INDEX idx_users_email ON users(site_id, email);
 ## Security
 
 ### Multi-Tenant Security
+
 1. **Data Isolation**: Site ID required for all queries
 2. **SQL Injection Prevention**: Prepared statements only
 3. **Secure ID Generation**: Cryptographically strong UUIDs
@@ -225,6 +236,7 @@ CREATE INDEX idx_users_email ON users(site_id, email);
 5. **Unique Constraints**: Prevent duplicate data per site
 
 ### Best Practices
+
 - Never trust client-provided site_id
 - Always use locals.siteId from hooks
 - Validate site exists before operations
@@ -234,11 +246,13 @@ CREATE INDEX idx_users_email ON users(site_id, email);
 ## Limitations and Considerations
 
 ### Current Limitations
+
 1. **Shared Resources**: All sites share the same database
 2. **Single Region**: Data stored in one D1 region
 3. **No Site-Specific Migrations**: Schema changes affect all sites
 
 ### Future Enhancements
+
 1. **Per-Site Settings**: Custom themes, logos, payment processors
 2. **Site-Specific Analytics**: Track metrics per site
 3. **Resource Quotas**: Limit products/users per site
@@ -250,12 +264,14 @@ CREATE INDEX idx_users_email ON users(site_id, email);
 If migrating from a single-tenant system:
 
 1. **Create default site:**
+
 ```sql
 INSERT INTO sites (id, name, domain, description, status)
 VALUES ('default-site', 'Default Store', 'localhost', 'Default site', 'active');
 ```
 
 2. **Update existing data:**
+
 ```sql
 -- Add site_id column to existing tables
 ALTER TABLE products ADD COLUMN site_id TEXT DEFAULT 'default-site';
@@ -271,12 +287,14 @@ ALTER TABLE users ADD COLUMN site_id TEXT DEFAULT 'default-site';
 ## Monitoring and Debugging
 
 ### Check Current Site
+
 ```typescript
 // In any server-side code
 console.log('Current site:', locals.siteId);
 ```
 
 ### Query Site Data
+
 ```bash
 # Check all sites
 wrangler d1 execute hermes-db --command="SELECT * FROM sites"
@@ -286,7 +304,9 @@ wrangler d1 execute hermes-db --command="SELECT * FROM products WHERE site_id = 
 ```
 
 ### Debug Site Resolution
+
 Add logging to `hooks.server.ts`:
+
 ```typescript
 console.log('Hostname:', event.url.hostname);
 console.log('Resolved site ID:', siteId);
