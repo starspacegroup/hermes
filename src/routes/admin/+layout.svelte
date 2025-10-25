@@ -45,7 +45,7 @@
           <path d="M3 12h18M3 6h18M3 18h18" stroke-width="2" stroke-linecap="round"></path>
         </svg>
       </button>
-      <a href="/" class="header-link">
+      <a href="/" class="header-link" aria-label="Go to main site home page">
         <h1>Hermes Admin</h1>
       </a>
       <ThemeToggle />
@@ -54,7 +54,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" class:open={isSidebarOpen}>
       <div class="sidebar-header">
-        <a href="/" class="header-link">
+        <a href="/" class="header-link" aria-label="Go to main site home page">
           <h2>Hermes Admin</h2>
         </a>
         <button class="close-sidebar" on:click={closeSidebar} aria-label="Close menu">
@@ -238,6 +238,7 @@
   .header-link {
     text-decoration: none;
     display: inline-block;
+    color: inherit;
   }
 
   .header-link:hover h1,
