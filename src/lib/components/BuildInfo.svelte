@@ -5,7 +5,7 @@
 
   // Determine environment
   let environment: string = 'production';
-  let buildTime: string = new Date().toISOString();
+  let _buildTime: string = new Date().toISOString();
   let version: string = '0.0.1';
 
   if (dev) {

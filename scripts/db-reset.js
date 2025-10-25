@@ -123,7 +123,7 @@ DELETE FROM sites;
     ]);
 
     console.log('✅ Preview database data cleared successfully!');
-  } catch (error) {
+  } catch (_error) {
     console.log('⚠️  Some tables may not exist yet, continuing...');
   } finally {
     // Clean up temp file
