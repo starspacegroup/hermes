@@ -45,8 +45,16 @@
           <path d="M3 12h18M3 6h18M3 18h18" stroke-width="2" stroke-linecap="round"></path>
         </svg>
       </button>
-      <a href="/" class="header-link" aria-label="Go to main site home page">
-        <h1>Hermes Admin</h1>
+      <h1>Hermes Admin</h1>
+      <a href="/" class="open-site-link-mobile" aria-label="Open main site">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
       </a>
       <ThemeToggle />
     </header>
@@ -54,15 +62,25 @@
     <!-- Sidebar -->
     <aside class="sidebar" class:open={isSidebarOpen}>
       <div class="sidebar-header">
-        <a href="/" class="header-link" aria-label="Go to main site home page">
-          <h2>Hermes Admin</h2>
-        </a>
+        <h2>Hermes Admin</h2>
         <button class="close-sidebar" on:click={closeSidebar} aria-label="Close menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
           </svg>
         </button>
       </div>
+
+      <a href="/" class="open-site-link" aria-label="Open main site">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+        Open site
+      </a>
 
       <nav class="sidebar-nav">
         <a
@@ -235,24 +253,11 @@
       border-color var(--transition-normal);
   }
 
-  .header-link {
-    text-decoration: none;
-    display: inline-block;
-    color: inherit;
-  }
-
-  .header-link:hover h1,
-  .header-link:hover h2 {
-    opacity: 0.8;
-  }
-
   .mobile-header h1 {
     font-size: 1.25rem;
     color: var(--color-primary);
     margin: 0;
-    transition:
-      color var(--transition-normal),
-      opacity var(--transition-normal);
+    transition: color var(--transition-normal);
   }
 
   .menu-toggle {
@@ -264,6 +269,19 @@
     display: flex;
     align-items: center;
     transition: color var(--transition-normal);
+  }
+
+  .open-site-link-mobile {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color var(--transition-normal);
+  }
+
+  .open-site-link-mobile:hover {
+    color: var(--color-text-primary);
   }
 
   .sidebar {
@@ -296,9 +314,7 @@
     font-size: 1.5rem;
     color: var(--color-primary);
     margin: 0;
-    transition:
-      color var(--transition-normal),
-      opacity var(--transition-normal);
+    transition: color var(--transition-normal);
   }
 
   .close-sidebar {
@@ -312,6 +328,27 @@
   }
 
   .close-sidebar:hover {
+    color: var(--color-text-primary);
+  }
+
+  .open-site-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    margin: 0.5rem 1rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .open-site-link:hover {
+    background: var(--color-bg-accent);
     color: var(--color-text-primary);
   }
 
