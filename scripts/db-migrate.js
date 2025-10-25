@@ -46,10 +46,11 @@ async function migrate() {
       wranglerArgs.push('--local');
       console.log('📍 Environment: Local');
     } else if (isPreview) {
-      wranglerArgs.push('--preview --remote');
+      wranglerArgs.push('--preview', '--remote');
       console.log('📍 Environment: Preview');
     } else {
-      console.log('📍 Environment: Production');
+      wranglerArgs.push('--remote');
+      console.log('📍 Environment: Production (using --remote)');
     }
 
     await runCommand('wrangler', wranglerArgs);
