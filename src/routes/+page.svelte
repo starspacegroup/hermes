@@ -1,6 +1,8 @@
 <script>
-  import { productsList } from '../lib/stores/products.ts';
   import ProductCard from '../lib/components/ProductCard.svelte';
+
+  export let data;
+  const { products } = data;
 </script>
 
 <svelte:head>
@@ -16,11 +18,15 @@
 
 <section class="products">
   <h3>Featured Products</h3>
-  <div class="product-grid">
-    {#each $productsList as product}
-      <ProductCard {product} />
-    {/each}
-  </div>
+  {#if products.length === 0}
+    <p class="no-products">No products available at the moment.</p>
+  {:else}
+    <div class="product-grid">
+      {#each products as product}
+        <ProductCard {product} />
+      {/each}
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -64,6 +70,13 @@
     margin-bottom: 1.5rem;
     font-size: 1.5rem;
     transition: color var(--transition-normal);
+  }
+
+  .no-products {
+    color: var(--color-text-secondary);
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.1rem;
   }
 
   .product-grid {

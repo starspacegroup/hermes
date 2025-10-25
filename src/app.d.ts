@@ -3,10 +3,18 @@
 declare global {
   namespace App {
     // interface Error {}
-    // interface Locals {}
+    interface Locals {
+      siteId: string;
+    }
     // interface PageData {}
     // interface PageState {}
-    // interface Platform {}
+    interface Platform {
+      env: {
+        DB: D1Database;
+      };
+      context: ExecutionContext;
+      caches: CacheStorage & { default: Cache };
+    }
   }
 }
 

@@ -4,6 +4,7 @@
   import { themeStore } from '../lib/stores/theme.ts';
   import ThemeToggle from '../lib/components/ThemeToggle.svelte';
   import ToastContainer from '../lib/components/ToastContainer.svelte';
+  import BuildInfo from '../lib/components/BuildInfo.svelte';
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
 
@@ -56,6 +57,7 @@
 </main>
 
 <ToastContainer />
+<BuildInfo />
 
 <style>
   :global(body) {

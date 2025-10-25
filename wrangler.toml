@@ -1,3 +1,19 @@
 name = "hermes"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# D1 Database Configuration
+# Production database
+[[d1_databases]]
+binding = "DB"
+database_name = "hermes-db"
+database_id = "2e952313-eb3d-4a77-914f-828a112a317b"
+preview_database_id = "a60090e4-72b8-4101-a4f2-83d19c4b6266"
+migrations_dir = "migrations"
+
+# Preview database
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "hermes-db-preview"
+database_id = "a60090e4-72b8-4101-a4f2-83d19c4b6266"
+migrations_dir = "migrations"

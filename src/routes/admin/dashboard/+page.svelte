@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { products } from '$lib/data/products';
+  import type { PageData } from './$types';
 
-  // Mock data for dashboard metrics
-  const metrics = {
-    totalProducts: products.length,
-    totalOrders: 42,
-    revenue: 12456.78,
-    activeUsers: 128
-  };
+  export let data: PageData;
+
+  // Get metrics from server (real data from database)
+  const metrics = data.metrics;
 
   const recentOrders = [
     { id: 'ORD-001', customer: 'John Doe', amount: 299.99, status: 'completed' },
@@ -48,7 +45,7 @@
 
   <!-- Metrics Grid -->
   <div class="metrics-grid">
-    <div class="metric-card">
+    <a href="/admin/products" class="metric-card metric-card-link">
       <div class="metric-icon" style="background: rgba(239, 68, 68, 0.1);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)">
           <path
@@ -61,7 +58,7 @@
         <div class="metric-value">{metrics.totalProducts}</div>
         <div class="metric-label">Total Products</div>
       </div>
-    </div>
+    </a>
 
     <div class="metric-card">
       <div class="metric-icon" style="background: rgba(22, 163, 74, 0.1);">
@@ -271,6 +268,15 @@
   .metric-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px var(--color-shadow-medium);
+  }
+
+  .metric-card-link {
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .metric-card-link:hover {
+    background: var(--color-bg-secondary);
   }
 
   .metric-icon {
