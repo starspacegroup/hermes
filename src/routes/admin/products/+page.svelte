@@ -206,6 +206,22 @@
           </div>
         </div>
         <div class="product-actions">
+          <a
+            href="/product/{product.id}"
+            class="action-btn view-btn"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+            View
+          </a>
           <button class="action-btn edit-btn" on:click={() => handleEditProduct(product)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path
@@ -627,9 +643,19 @@
     border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
+    text-decoration: none;
     transition:
       background-color var(--transition-normal),
       color var(--transition-normal);
+  }
+
+  .view-btn {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+
+  .view-btn:hover {
+    background: var(--color-primary-hover);
   }
 
   .edit-btn {
