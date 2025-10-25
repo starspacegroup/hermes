@@ -31,7 +31,9 @@ const mockProduct: Product = {
   price: 99.99,
   image: 'test.jpg',
   category: 'Test',
-  stock: 10
+  stock: 10,
+  type: 'physical',
+  tags: ['test']
 };
 
 const mockProduct2: Product = {
@@ -41,7 +43,9 @@ const mockProduct2: Product = {
   price: 49.99,
   image: 'test2.jpg',
   category: 'Test',
-  stock: 5
+  stock: 5,
+  type: 'physical',
+  tags: ['test']
 };
 
 describe('Cart Store', () => {
