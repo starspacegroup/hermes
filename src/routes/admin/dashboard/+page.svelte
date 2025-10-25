@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { products } from '$lib/data/products';
+  import type { PageData } from './$types';
 
-  // Mock data for dashboard metrics
-  const metrics = {
-    totalProducts: products.length,
-    totalOrders: 42,
-    revenue: 12456.78,
-    activeUsers: 128
-  };
+  export let data: PageData;
+
+  // Get metrics from server (real data from database)
+  const metrics = data.metrics;
 
   const recentOrders = [
     { id: 'ORD-001', customer: 'John Doe', amount: 299.99, status: 'completed' },
