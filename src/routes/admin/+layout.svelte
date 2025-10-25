@@ -45,14 +45,18 @@
           <path d="M3 12h18M3 6h18M3 18h18" stroke-width="2" stroke-linecap="round"></path>
         </svg>
       </button>
-      <h1>Hermes Admin</h1>
+      <a href="/" class="header-link">
+        <h1>Hermes Admin</h1>
+      </a>
       <ThemeToggle />
     </header>
 
     <!-- Sidebar -->
     <aside class="sidebar" class:open={isSidebarOpen}>
       <div class="sidebar-header">
-        <h2>Hermes Admin</h2>
+        <a href="/" class="header-link">
+          <h2>Hermes Admin</h2>
+        </a>
         <button class="close-sidebar" on:click={closeSidebar} aria-label="Close menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
@@ -231,11 +235,23 @@
       border-color var(--transition-normal);
   }
 
+  .header-link {
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .header-link:hover h1,
+  .header-link:hover h2 {
+    opacity: 0.8;
+  }
+
   .mobile-header h1 {
     font-size: 1.25rem;
     color: var(--color-primary);
     margin: 0;
-    transition: color var(--transition-normal);
+    transition:
+      color var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   .menu-toggle {
@@ -279,7 +295,9 @@
     font-size: 1.5rem;
     color: var(--color-primary);
     margin: 0;
-    transition: color var(--transition-normal);
+    transition:
+      color var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   .close-sidebar {
