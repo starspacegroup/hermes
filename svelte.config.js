@@ -1,5 +1,5 @@
-import adapter from "@sveltejs/adapter-cloudflare";
-import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
+import adapter from '@sveltejs/adapter-cloudflare';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -7,17 +7,17 @@ const config = {
   kit: {
     adapter: adapter({
       routes: {
-        include: ["/*"],
-        exclude: ["<all>"],
+        include: ['/*'],
+        exclude: ['<all>']
       },
       platformProxy: {
-        configPath: "wrangler.toml",
+        configPath: 'wrangler.toml',
         environment: undefined,
         experimentalJsonConfig: false,
-        persist: true,
-      },
-    }),
-  },
+        persist: true
+      }
+    })
+  }
 };
 
 export default config;
