@@ -8,6 +8,7 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 binding = "DB"
 database_name = "hermes-db"
 database_id = "2e952313-eb3d-4a77-914f-828a112a317b"
+preview_database_id = "a60090e4-72b8-4101-a4f2-83d19c4b6266"
 migrations_dir = "migrations"
 
 # Preview database
