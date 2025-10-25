@@ -3,6 +3,11 @@
   import { toastStore } from '$lib/stores/toast';
   import type { Product, ProductType } from '$lib/types';
 
+  // Constants
+  const DEFAULT_PRODUCT_IMAGE =
+    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
+  const DEFAULT_CATEGORY = 'Uncategorized';
+
   let searchQuery = '';
   let selectedCategory = 'all';
   let showDeleteConfirm = false;
@@ -90,8 +95,8 @@
   }
 
   function handleSubmitProduct() {
-    // Validate form
-    if (!formName || !formDescription || formPrice <= 0) {
+    // Validate form - allow price of 0 for free products
+    if (!formName || !formDescription || formPrice < 0) {
       toastStore.error('Please fill in all required fields');
       return;
     }
@@ -100,10 +105,8 @@
       name: formName,
       description: formDescription,
       price: formPrice,
-      image:
-        formImage ||
-        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
-      category: formCategory || 'Uncategorized',
+      image: formImage || DEFAULT_PRODUCT_IMAGE,
+      category: formCategory || DEFAULT_CATEGORY,
       stock: formStock,
       type: formType,
       tags: formTags

@@ -43,7 +43,12 @@ export interface ProductsStore {
 
 // Helper function to generate unique ID
 const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  // Use crypto.randomUUID() if available (modern browsers and Node 14.17+)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older environments
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
 export const productsStore: ProductsStore = {
