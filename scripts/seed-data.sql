@@ -2,16 +2,6 @@
 -- This file is used by the db:seed script to populate the database with sample data
 -- It should NOT be run as a migration - only for local/preview development
 
--- Insert default site
-INSERT INTO sites (id, name, domain, description, status)
-VALUES (
-  'default-site',
-  'Hermes Store',
-  'hermes.local',
-  'Default Hermes eCommerce Store',
-  'active'
-);
-
 -- Insert sample products for default site
 INSERT INTO products (id, site_id, name, description, price, image, category, stock, type, tags)
 VALUES
