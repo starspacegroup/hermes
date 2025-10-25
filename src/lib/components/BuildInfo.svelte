@@ -1,6 +1,7 @@
 <script lang="ts">
   import { dev } from '$app/environment';
   import { browser } from '$app/environment';
+  import { page } from '$app/stores';
 
   // Determine environment
   let environment: string = 'production';
@@ -19,8 +20,11 @@
     }
   }
 
-  // Only show in dev or preview
-  $: shouldShow = environment === 'development' || environment === 'preview';
+  // Check for buildInfo URL parameter
+  $: hasBuildInfoParam = $page.url.searchParams.has('buildInfo');
+
+  // Only show in dev, preview, or when buildInfo param is present
+  $: shouldShow = environment === 'development' || environment === 'preview' || hasBuildInfoParam;
 
   function getEnvironmentColor(env: string): string {
     switch (env) {
