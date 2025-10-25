@@ -16,3 +16,6 @@ coverage/
 
 # Wrangler
 .wrangler/
+
+# Claude code
+.claude/

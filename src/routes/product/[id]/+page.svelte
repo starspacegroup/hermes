@@ -19,20 +19,12 @@
   function decrementCartQuantity() {
     cartStore.updateQuantity(product.id, cartQuantity - 1);
   }
-
-  function goBack() {
-    window.history.back();
-  }
 </script>
 
 <svelte:head>
   <title>{product.name} - Hermes</title>
   <meta name="description" content={product.description} />
 </svelte:head>
-
-<div class="breadcrumb">
-  <button on:click={goBack} class="back-button">← Back to Products</button>
-</div>
 
 <div class="product-detail">
   <div class="product-image">
@@ -79,25 +71,6 @@
 </div>
 
 <style>
-  .breadcrumb {
-    margin-bottom: 2rem;
-  }
-
-  .back-button {
-    background: none;
-    border: none;
-    color: var(--color-primary);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0.5rem 0;
-    transition: color var(--transition-fast);
-  }
-
-  .back-button:hover {
-    color: var(--color-primary-hover);
-    text-decoration: underline;
-  }
-
   .product-detail {
     background: var(--color-bg-primary);
     border-radius: 8px;
