@@ -7,7 +7,9 @@ deployment on Cloudflare Pages.
 
 - **SvelteKit** - Modern web framework with TypeScript support
 - **Cloudflare Pages** - Edge deployment for global performance
+- **Cloudflare D1** - Serverless SQL database with multi-tenant support
 - **TypeScript** - Type-safe development
+- **Multi-Tenant Architecture** - Support for multiple stores/sites
 - **Responsive Design** - Mobile-first approach
 - **Modern Tooling** - ESLint, Prettier, and Vitest configured
 
@@ -49,10 +51,39 @@ src/
 │   ├── +layout.svelte
 │   └── +page.svelte
 ├── lib/             # Shared components and utilities
+│   ├── server/      # Server-side code
+│   │   └── db/      # Database layer (multi-tenant)
+│   ├── stores/      # Svelte stores
+│   ├── types/       # TypeScript types
+│   └── utils/       # Utility functions
+├── hooks.server.ts  # Server hooks (multi-tenant context)
 ├── app.html         # HTML template
 ├── app.css          # Global styles
 └── app.d.ts         # Type definitions
+migrations/          # D1 database migrations
+docs/                # Documentation
 ```
+
+## 🗄️ Database
+
+The platform uses Cloudflare D1 for data persistence with full multi-tenant support.
+
+### Setup Database
+
+```bash
+# Create D1 database
+wrangler d1 create hermes-db
+
+# Update wrangler.toml with database_id
+
+# Run migrations
+wrangler d1 migrations apply hermes-db --local
+
+# Seed with sample data (optional)
+wrangler d1 execute hermes-db --local --file=./migrations/0002_seed_data.sql
+```
+
+See [docs/DATABASE.md](docs/DATABASE.md) for detailed documentation.
 
 ## 🌐 Deployment
 
@@ -66,6 +97,7 @@ The project is configured for deployment on Cloudflare Pages:
 - **Build Command**: `npm run build`
 - **Output Directory**: `.svelte-kit/cloudflare`
 - **Node.js Version**: 18+
+- **D1 Database**: Configured in `wrangler.toml`
 
 ## 🔧 Configuration
 
@@ -91,14 +123,20 @@ This foundation includes:
 - ✅ Modern tooling setup (ESLint, Prettier, Vitest)
 - ✅ Basic styling and responsive layout
 
+### Database Features
+
+- ✅ Multi-tenant architecture (site-scoped data)
+- ✅ Products, users, orders, and carts tables
+- ✅ Repository pattern for data access
+- ✅ Migration system
+- ✅ Type-safe database queries
+
 ### Upcoming Features
 
-- Product listing and catalog
-- Shopping cart functionality
-- User authentication
-- Checkout process
 - Payment integration
-- Admin dashboard
+- Advanced admin features
+- Inventory management
+- Analytics and reporting
 
 ## 🤝 Contributing
 
