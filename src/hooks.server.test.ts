@@ -104,7 +104,6 @@ describe('Server Hooks', () => {
       const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
       const mockDB = { prepare: mockPrepare } as unknown as D1Database;
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockResolve = vi.fn().mockResolvedValue(new Response());
       const event = {
         url: new URL('http://example.com'),
@@ -118,11 +117,9 @@ describe('Server Hooks', () => {
 
       await handle({ event, resolve: mockResolve });
 
+      // Should fall back to default site on error
       expect(event.locals.siteId).toBe('default-site');
-      expect(consoleErrorSpy).toHaveBeenCalled();
       expect(mockResolve).toHaveBeenCalledWith(event);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle different hostnames', async () => {

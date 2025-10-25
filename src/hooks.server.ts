@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { getDB, getSiteByDomain } from '$lib/server/db';
+import { dev } from '$app/environment';
 
 /**
  * SvelteKit hooks for multi-tenant site handling
@@ -22,7 +23,10 @@ export const handle: Handle = async ({ event, resolve }) => {
       }
     }
   } catch (error) {
-    console.error('Error loading site context:', error);
+    // Only log error in production; in dev, database might not be set up yet
+    if (!dev) {
+      console.error('Error loading site context:', error);
+    }
     // Continue with default site on error
   }
 
