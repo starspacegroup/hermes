@@ -3,7 +3,9 @@ import {
   getDB,
   execute,
   executeOne,
+  executeRow,
   executeBatch,
+  runMigrations,
   generateId,
   getCurrentTimestamp
 } from './connection';
@@ -91,6 +93,31 @@ describe('Database Connection Utilities', () => {
     });
   });
 
+  describe('executeRow', () => {
+    it('should return first result from query', async () => {
+      const mockUser = { id: '1', name: 'Test User' };
+      const mockFirst = vi.fn().mockResolvedValue(mockUser);
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await executeRow(mockDB, 'SELECT * FROM users WHERE id = ?', ['1']);
+
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return null when no result found', async () => {
+      const mockFirst = vi.fn().mockResolvedValue(null);
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await executeRow(mockDB, 'SELECT * FROM users WHERE id = ?', ['999']);
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('executeBatch', () => {
     it('should execute multiple statements', async () => {
       const mockResults = [
@@ -157,6 +184,74 @@ describe('Database Connection Utilities', () => {
 
       expect(timestamp).toBeGreaterThanOrEqual(now - 1);
       expect(timestamp).toBeLessThanOrEqual(now + 1);
+    });
+  });
+
+  describe('runMigrations', () => {
+    it('should run single migration', async () => {
+      const migration = 'CREATE TABLE test (id TEXT);';
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockPrepare = vi.fn().mockReturnValue({ run: mockRun });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await runMigrations(mockDB, [migration]);
+
+      expect(mockPrepare).toHaveBeenCalledWith('CREATE TABLE test (id TEXT)');
+      expect(mockRun).toHaveBeenCalled();
+    });
+
+    it('should run multiple migrations', async () => {
+      const migrations = ['CREATE TABLE test1 (id TEXT);', 'CREATE TABLE test2 (id TEXT);'];
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockPrepare = vi.fn().mockReturnValue({ run: mockRun });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await runMigrations(mockDB, migrations);
+
+      expect(mockPrepare).toHaveBeenCalledTimes(2);
+      expect(mockRun).toHaveBeenCalledTimes(2);
+    });
+
+    it('should split migration into multiple statements', async () => {
+      const migration = 'CREATE TABLE test1 (id TEXT); CREATE TABLE test2 (id TEXT);';
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockPrepare = vi.fn().mockReturnValue({ run: mockRun });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await runMigrations(mockDB, [migration]);
+
+      expect(mockPrepare).toHaveBeenCalledTimes(2);
+      expect(mockPrepare).toHaveBeenCalledWith('CREATE TABLE test1 (id TEXT)');
+      expect(mockPrepare).toHaveBeenCalledWith('CREATE TABLE test2 (id TEXT)');
+    });
+
+    it('should filter empty statements', async () => {
+      const migration = 'CREATE TABLE test (id TEXT);;;';
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockPrepare = vi.fn().mockReturnValue({ run: mockRun });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await runMigrations(mockDB, [migration]);
+
+      expect(mockPrepare).toHaveBeenCalledTimes(1);
+      expect(mockPrepare).toHaveBeenCalledWith('CREATE TABLE test (id TEXT)');
+    });
+
+    it('should handle migration with newlines and spacing', async () => {
+      const migration = `
+        CREATE TABLE test (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL
+        );
+      `;
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockPrepare = vi.fn().mockReturnValue({ run: mockRun });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await runMigrations(mockDB, [migration]);
+
+      expect(mockPrepare).toHaveBeenCalledTimes(1);
+      expect(mockRun).toHaveBeenCalled();
     });
   });
 });
