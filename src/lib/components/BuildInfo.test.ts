@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readable } from 'svelte/store';
 import BuildInfo from './BuildInfo.svelte';
+import { version } from '../../../package.json';
 
 // Mock SvelteKit's environment modules
 vi.mock('$app/environment', () => ({
@@ -63,7 +64,7 @@ describe('BuildInfo', () => {
     render(BuildInfo);
 
     expect(screen.getByText('Version:')).toBeTruthy();
-    expect(screen.getByText('0.0.1')).toBeTruthy();
+    expect(screen.getByText(version)).toBeTruthy();
   });
 
   it('should display mode information', async () => {

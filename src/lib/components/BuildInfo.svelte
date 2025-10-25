@@ -2,11 +2,11 @@
   import { dev } from '$app/environment';
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
+  import { version } from '../../../package.json';
 
   // Determine environment
   let environment: string = 'production';
   let _buildTime: string = new Date().toISOString();
-  let version: string = '0.0.1';
 
   if (dev) {
     environment = 'development';
