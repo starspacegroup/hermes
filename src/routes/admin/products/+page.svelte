@@ -94,6 +94,16 @@
     editingProductId = null;
   }
 
+  function clearSearch() {
+    searchQuery = '';
+  }
+
+  function handleSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      clearSearch();
+    }
+  }
+
   function handleSubmitProduct() {
     // Validate form - allow price of 0 for free products
     if (!formName || !formDescription || formPrice < 0) {
@@ -156,8 +166,16 @@
         type="text"
         placeholder="Search products..."
         bind:value={searchQuery}
+        on:keydown={handleSearchKeydown}
         class="search-input"
       />
+      {#if searchQuery}
+        <button class="clear-search-btn" on:click={clearSearch} aria-label="Clear search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+        </button>
+      {/if}
     </div>
 
     <select bind:value={selectedCategory} class="category-filter">
@@ -450,6 +468,26 @@
 
   .search-input::placeholder {
     color: var(--color-text-tertiary);
+  }
+
+  .clear-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    border-radius: 4px;
+    transition:
+      color var(--transition-normal),
+      background-color var(--transition-normal);
+  }
+
+  .clear-search-btn:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
   }
 
   .category-filter {
