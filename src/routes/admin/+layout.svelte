@@ -46,6 +46,16 @@
         </svg>
       </button>
       <h1>Hermes Admin</h1>
+      <a href="/" class="open-site-link-mobile" aria-label="Open main site">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+      </a>
       <ThemeToggle />
     </header>
 
@@ -59,6 +69,18 @@
           </svg>
         </button>
       </div>
+
+      <a href="/" class="open-site-link" aria-label="Open main site">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+        Open site
+      </a>
 
       <nav class="sidebar-nav">
         <a
@@ -249,6 +271,19 @@
     transition: color var(--transition-normal);
   }
 
+  .open-site-link-mobile {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color var(--transition-normal);
+  }
+
+  .open-site-link-mobile:hover {
+    color: var(--color-text-primary);
+  }
+
   .sidebar {
     width: 260px;
     background: var(--color-bg-primary);
@@ -293,6 +328,27 @@
   }
 
   .close-sidebar:hover {
+    color: var(--color-text-primary);
+  }
+
+  .open-site-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    margin: 0.5rem 1rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .open-site-link:hover {
+    background: var(--color-bg-accent);
     color: var(--color-text-primary);
   }
 
