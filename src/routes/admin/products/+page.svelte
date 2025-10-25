@@ -1,7 +1,13 @@
 <script lang="ts">
-  import { productsStore, productsList } from '$lib/stores/products';
   import { toastStore } from '$lib/stores/toast';
+  import { invalidateAll } from '$app/navigation';
   import type { Product, ProductType } from '$lib/types';
+
+  export let data;
+  let products: Product[] = data.products;
+
+  // Watch for data updates
+  $: products = data.products;
 
   // Constants
   const DEFAULT_PRODUCT_IMAGE =
@@ -15,6 +21,7 @@
   let productToDelete: Product | null = null;
   let isEditing = false;
   let editingProductId: string | null = null;
+  let isSubmitting = false;
 
   // Form fields
   let formName = '';
@@ -26,7 +33,7 @@
   let formType: ProductType = 'physical';
   let formTags = '';
 
-  $: filteredProducts = $productsList.filter((product) => {
+  $: filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -34,7 +41,7 @@
     return matchesSearch && matchesCategory;
   });
 
-  $: categories = ['all', ...new Set($productsList.map((p) => p.category))];
+  $: categories = ['all', ...new Set(products.map((p) => p.category))];
 
   function handleAddProduct() {
     isEditing = false;
@@ -62,12 +69,34 @@
     showDeleteConfirm = true;
   }
 
-  function confirmDelete() {
-    if (productToDelete) {
-      productsStore.delete(productToDelete.id);
-      toastStore.success(`Product "${productToDelete.name}" deleted successfully`);
-      productToDelete = null;
-      showDeleteConfirm = false;
+  async function confirmDelete() {
+    if (productToDelete && !isSubmitting) {
+      isSubmitting = true;
+      try {
+        const response = await fetch('/api/products', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id: productToDelete.id })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete product');
+        }
+
+        toastStore.success(`Product "${productToDelete.name}" deleted successfully`);
+        productToDelete = null;
+        showDeleteConfirm = false;
+
+        // Refresh the page data
+        await invalidateAll();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        toastStore.error('Failed to delete product');
+      } finally {
+        isSubmitting = false;
+      }
     }
   }
 
@@ -104,12 +133,16 @@
     }
   }
 
-  function handleSubmitProduct() {
+  async function handleSubmitProduct() {
+    if (isSubmitting) return;
+
     // Validate form - allow price of 0 for free products
     if (!formName || !formDescription || formPrice < 0) {
       toastStore.error('Please fill in all required fields');
       return;
     }
+
+    isSubmitting = true;
 
     const productData = {
       name: formName,
@@ -125,15 +158,47 @@
         .filter((tag) => tag.length > 0)
     };
 
-    if (isEditing && editingProductId) {
-      productsStore.update(editingProductId, productData);
-      toastStore.success(`Product "${formName}" updated successfully`);
-    } else {
-      productsStore.create(productData);
-      toastStore.success(`Product "${formName}" created successfully`);
-    }
+    try {
+      if (isEditing && editingProductId) {
+        const response = await fetch('/api/products', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id: editingProductId, ...productData })
+        });
 
-    closeProductModal();
+        if (!response.ok) {
+          throw new Error('Failed to update product');
+        }
+
+        toastStore.success(`Product "${formName}" updated successfully`);
+      } else {
+        const response = await fetch('/api/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(productData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create product');
+        }
+
+        toastStore.success(`Product "${formName}" created successfully`);
+      }
+
+      closeProductModal();
+
+      // Refresh the page data
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toastStore.error(isEditing ? 'Failed to update product' : 'Failed to create product');
+    } finally {
+      isSubmitting = false;
+    }
   }
 </script>
 
