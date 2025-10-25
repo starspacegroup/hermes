@@ -1,7 +1,23 @@
-<script>
+<script lang="ts">
   import Button from './Button.svelte';
+  import { cartStore, cartItems } from '../stores/cart.ts';
+  import type { Product } from '../types/index.js';
 
-  export let product;
+  export let product: Product;
+
+  $: quantity = cartStore.getItemQuantity($cartItems, product.id);
+
+  function addToCart() {
+    cartStore.addItem(product, 1);
+  }
+
+  function incrementQuantity() {
+    cartStore.updateQuantity(product.id, quantity + 1);
+  }
+
+  function decrementQuantity() {
+    cartStore.updateQuantity(product.id, quantity - 1);
+  }
 </script>
 
 <div class="product-card">
@@ -15,6 +31,26 @@
       <span class="stock">{product.stock} in stock</span>
     </div>
     <div class="actions">
+      {#if quantity === 0}
+        <Button variant="primary" on:click={addToCart} disabled={product.stock === 0}>
+          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+        </Button>
+      {:else}
+        <div class="quantity-controls">
+          <button class="quantity-btn" on:click={decrementQuantity} aria-label="Decrease quantity">
+            −
+          </button>
+          <span class="quantity-display" aria-live="polite">{quantity}</span>
+          <button
+            class="quantity-btn"
+            on:click={incrementQuantity}
+            disabled={quantity >= product.stock}
+            aria-label="Increase quantity"
+          >
+            +
+          </button>
+        </div>
+      {/if}
       <Button variant="primary" on:click={() => (window.location.href = `/product/${product.id}`)}>
         View Details
       </Button>
@@ -96,5 +132,59 @@
 
   .actions {
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quantity-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: var(--color-bg-accent);
+    border-radius: 0.25rem;
+    transition: background-color var(--transition-normal);
+  }
+
+  .quantity-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border-secondary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      transform var(--transition-fast);
+  }
+
+  .quantity-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+    transform: scale(1.1);
+  }
+
+  .quantity-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .quantity-display {
+    min-width: 32px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--color-text-primary);
+    transition: color var(--transition-normal);
   }
 </style>

@@ -1,16 +1,23 @@
 <script>
   import Button from '../../../lib/components/Button.svelte';
-  import { cartStore } from '../../../lib/stores/cart.ts';
-  import { toastStore } from '../../../lib/stores/toast.ts';
+  import { cartStore, cartItems } from '../../../lib/stores/cart.ts';
 
   export let data;
 
   const { product } = data;
-  let quantity = 1;
+
+  $: cartQuantity = cartStore.getItemQuantity($cartItems, product.id);
 
   function addToCart() {
-    cartStore.addItem(product, quantity);
-    toastStore.show(`Added ${quantity} x ${product.name} to cart!`, 'success');
+    cartStore.addItem(product, 1);
+  }
+
+  function incrementCartQuantity() {
+    cartStore.updateQuantity(product.id, cartQuantity + 1);
+  }
+
+  function decrementCartQuantity() {
+    cartStore.updateQuantity(product.id, cartQuantity - 1);
   }
 
   function goBack() {
@@ -43,25 +50,30 @@
     </div>
 
     <div class="purchase-section">
-      <div class="quantity-selector">
-        <label for="quantity">Quantity:</label>
+      {#if cartQuantity === 0}
+        <Button variant="primary" disabled={product.stock === 0} on:click={addToCart}>
+          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+        </Button>
+      {:else}
         <div class="quantity-controls">
-          <button on:click={() => (quantity = Math.max(1, quantity - 1))} disabled={quantity <= 1}>
-            -
-          </button>
-          <input type="number" id="quantity" bind:value={quantity} min="1" max={product.stock} />
           <button
-            on:click={() => (quantity = Math.min(product.stock, quantity + 1))}
-            disabled={quantity >= product.stock}
+            class="quantity-btn"
+            on:click={decrementCartQuantity}
+            aria-label="Decrease quantity"
+          >
+            −
+          </button>
+          <span class="quantity-display" aria-live="polite">{cartQuantity}</span>
+          <button
+            class="quantity-btn"
+            on:click={incrementCartQuantity}
+            disabled={cartQuantity >= product.stock}
+            aria-label="Increase quantity"
           >
             +
           </button>
         </div>
-      </div>
-
-      <Button variant="primary" disabled={product.stock === 0} on:click={addToCart}>
-        {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-      </Button>
+      {/if}
     </div>
   </div>
 </div>
@@ -164,25 +176,18 @@
     margin-top: auto;
   }
 
-  .quantity-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .quantity-selector label {
-    color: var(--color-text-primary);
-    font-weight: 500;
-    transition: color var(--transition-normal);
-  }
-
   .quantity-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: var(--color-bg-accent);
+    border-radius: 0.25rem;
+    transition: background-color var(--transition-normal);
   }
 
-  .quantity-controls button {
+  .quantity-btn {
     width: 32px;
     height: 32px;
     border: 1px solid var(--color-border-secondary);
@@ -193,37 +198,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
     transition:
       background-color var(--transition-normal),
-      border-color var(--transition-normal);
+      border-color var(--transition-normal),
+      transform var(--transition-fast);
   }
 
-  .quantity-controls button:hover:not(:disabled) {
-    background: var(--color-bg-accent);
+  .quantity-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-color: var(--color-primary);
+    transform: scale(1.1);
   }
 
-  .quantity-controls button:disabled {
+  .quantity-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  .quantity-controls input {
-    width: 60px;
-    padding: 0.5rem;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 4px;
+  .quantity-display {
+    min-width: 32px;
     text-align: center;
-    background: var(--color-bg-primary);
+    font-weight: bold;
+    font-size: 1.1rem;
     color: var(--color-text-primary);
-    transition:
-      border-color var(--transition-normal),
-      background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .quantity-controls input:focus {
-    outline: none;
-    border-color: var(--color-border-focus);
+    transition: color var(--transition-normal);
   }
 
   @media (max-width: 768px) {
