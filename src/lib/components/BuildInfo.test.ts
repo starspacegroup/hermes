@@ -1,11 +1,26 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readable } from 'svelte/store';
 import BuildInfo from './BuildInfo.svelte';
 
 // Mock SvelteKit's environment modules
 vi.mock('$app/environment', () => ({
   dev: false,
   browser: true
+}));
+
+// Mock SvelteKit's stores
+vi.mock('$app/stores', () => ({
+  page: readable({
+    url: new URL('http://localhost'),
+    params: {},
+    route: { id: null },
+    status: 200,
+    error: null,
+    data: {},
+    state: {},
+    form: undefined
+  })
 }));
 
 describe('BuildInfo', () => {
