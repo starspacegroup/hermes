@@ -1,4 +1,6 @@
--- Seed data for development and testing
+-- Development seed data for Hermes
+-- This file is used by the db:seed script to populate the database with sample data
+-- It should NOT be run as a migration - only for local/preview development
 
 -- Insert default site
 INSERT INTO sites (id, name, domain, description, status)

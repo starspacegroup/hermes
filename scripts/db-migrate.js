@@ -5,24 +5,24 @@
  * Applies all pending migrations to the specified environment
  */
 
-import { spawn } from 'child_process';
+import { spawn } from "child_process";
 
 const args = process.argv.slice(2);
-const isLocal = args.includes('--local');
-const isPreview = args.includes('--preview');
+const isLocal = args.includes("--local");
+const isPreview = args.includes("--preview");
 
-const databaseName = 'hermes-db';
+const databaseName = "hermes-db";
 
 function runCommand(command, args) {
   return new Promise((resolve, reject) => {
-    console.log(`Running: ${command} ${args.join(' ')}`);
+    console.log(`Running: ${command} ${args.join(" ")}`);
 
     const proc = spawn(command, args, {
-      stdio: 'inherit',
-      shell: true
+      stdio: "inherit",
+      shell: true,
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`Command failed with exit code ${code}`));
       } else {
@@ -30,7 +30,7 @@ function runCommand(command, args) {
       }
     });
 
-    proc.on('error', (err) => {
+    proc.on("error", (err) => {
       reject(err);
     });
   });
@@ -38,25 +38,25 @@ function runCommand(command, args) {
 
 async function migrate() {
   try {
-    console.log('🚀 Starting database migration...');
+    console.log("🚀 Starting database migration...");
 
-    const wranglerArgs = ['d1', 'migrations', 'apply', databaseName];
+    const wranglerArgs = ["d1", "migrations", "apply", databaseName];
 
     if (isLocal) {
-      wranglerArgs.push('--local');
-      console.log('📍 Environment: Local');
+      wranglerArgs.push("--local");
+      console.log("📍 Environment: Local");
     } else if (isPreview) {
-      wranglerArgs.push('--preview');
-      console.log('📍 Environment: Preview');
+      wranglerArgs.push("--preview --remote");
+      console.log("📍 Environment: Preview");
     } else {
-      console.log('📍 Environment: Production');
+      console.log("📍 Environment: Production");
     }
 
-    await runCommand('wrangler', wranglerArgs);
+    await runCommand("wrangler", wranglerArgs);
 
-    console.log('✅ Database migration completed successfully!');
+    console.log("✅ Database migration completed successfully!");
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    console.error("❌ Migration failed:", error.message);
     process.exit(1);
   }
 }

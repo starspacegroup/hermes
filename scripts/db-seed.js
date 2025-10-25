@@ -5,30 +5,30 @@
  * Seeds the database with initial data (for dev/preview environments only)
  */
 
-import { spawn } from 'child_process';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { spawn } from "child_process";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
-const isLocal = args.includes('--local');
-const isPreview = args.includes('--preview');
+const isLocal = args.includes("--local");
+const isPreview = args.includes("--preview");
 
-const databaseName = 'hermes-db';
-const seedFile = join(__dirname, '..', 'migrations', '0002_seed_data.sql');
+const databaseName = "hermes-db";
+const seedFile = join(__dirname, "seed-data.sql");
 
 function runCommand(command, args) {
   return new Promise((resolve, reject) => {
-    console.log(`Running: ${command} ${args.join(' ')}`);
+    console.log(`Running: ${command} ${args.join(" ")}`);
 
     const proc = spawn(command, args, {
-      stdio: 'inherit',
-      shell: true
+      stdio: "inherit",
+      shell: true,
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`Command failed with exit code ${code}`));
       } else {
@@ -36,7 +36,7 @@ function runCommand(command, args) {
       }
     });
 
-    proc.on('error', (err) => {
+    proc.on("error", (err) => {
       reject(err);
     });
   });
@@ -46,30 +46,34 @@ async function seed() {
   try {
     // Don't seed production database
     if (!isLocal && !isPreview) {
-      console.log('⚠️  Seed is only allowed for local and preview environments');
-      console.log('💡 Use --local or --preview flag to seed non-production environments');
+      console.log(
+        "⚠️  Seed is only allowed for local and preview environments",
+      );
+      console.log(
+        "💡 Use --local or --preview flag to seed non-production environments",
+      );
       process.exit(0);
     }
 
-    console.log('🌱 Starting database seed...');
+    console.log("🌱 Starting database seed...");
 
-    const wranglerArgs = ['d1', 'execute', databaseName];
+    const wranglerArgs = ["d1", "execute", databaseName];
 
     if (isLocal) {
-      wranglerArgs.push('--local');
-      console.log('📍 Environment: Local');
+      wranglerArgs.push("--local");
+      console.log("📍 Environment: Local");
     } else if (isPreview) {
-      wranglerArgs.push('--preview');
-      console.log('📍 Environment: Preview');
+      wranglerArgs.push("--preview --remote");
+      console.log("📍 Environment: Preview");
     }
 
     wranglerArgs.push(`--file=${seedFile}`);
 
-    await runCommand('wrangler', wranglerArgs);
+    await runCommand("wrangler", wranglerArgs);
 
-    console.log('✅ Database seed completed successfully!');
+    console.log("✅ Database seed completed successfully!");
   } catch (error) {
-    console.error('❌ Seed failed:', error.message);
+    console.error("❌ Seed failed:", error.message);
     process.exit(1);
   }
 }

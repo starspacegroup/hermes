@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "npm run db:setup:local && vite dev",
+    "dev": "vite dev",
     "build": "vite build",
     "preview": "npm run db:setup:preview && vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -18,13 +18,16 @@
     "deploy": "npm run db:migrate && wrangler deploy",
     "db:migrate": "node scripts/db-migrate.js",
     "db:migrate:local": "node scripts/db-migrate.js --local",
-    "db:migrate:preview": "node scripts/db-migrate.js --preview",
+    "db:migrate:preview": "node scripts/db-migrate.js --remote --preview",
     "db:seed": "node scripts/db-seed.js",
     "db:seed:local": "node scripts/db-seed.js --local",
-    "db:seed:preview": "node scripts/db-seed.js --preview",
+    "db:seed:preview": "node scripts/db-seed.js --remote --preview",
     "db:setup": "node scripts/db-setup.js",
     "db:setup:local": "node scripts/db-setup.js --local",
-    "db:setup:preview": "node scripts/db-setup.js --preview"
+    "db:setup:local:seed": "node scripts/db-setup.js --local --seed",
+    "db:setup:preview": "node scripts/db-setup.js --remote --preview",
+    "db:setup:preview:seed": "node scripts/db-setup.js --remote --preview --seed",
+    "db:reset:local": "node scripts/db-reset.js --local --skip-reinit"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.0.0",
@@ -49,7 +52,7 @@
     "typescript-eslint": "^8.0.0",
     "vite": "^5.0.3",
     "vitest": "^2.0.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.45.0"
   },
   "type": "module"
 }
