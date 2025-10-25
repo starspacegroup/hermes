@@ -1,5 +1,5 @@
 <script>
-  import { products } from '../lib/data/products.ts';
+  import { productsList } from '../lib/stores/products.ts';
   import ProductCard from '../lib/components/ProductCard.svelte';
 </script>
 
@@ -17,7 +17,7 @@
 <section class="products">
   <h3>Featured Products</h3>
   <div class="product-grid">
-    {#each products as product}
+    {#each $productsList as product}
       <ProductCard {product} />
     {/each}
   </div>

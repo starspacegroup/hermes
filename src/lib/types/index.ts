@@ -1,3 +1,5 @@
+export type ProductType = 'physical' | 'service' | 'digital';
+
 export interface Product {
   id: string;
   name: string;
@@ -6,6 +8,8 @@ export interface Product {
   image: string;
   category: string;
   stock: number;
+  type: ProductType;
+  tags: string[];
 }
 
 export interface CartItem extends Product {
