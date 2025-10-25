@@ -1,16 +1,20 @@
 # Cloudflare D1 Database Integration
 
-This document provides comprehensive information about the Cloudflare D1 database integration with multi-site support for the Hermes eCommerce platform.
+This document provides comprehensive information about the Cloudflare D1
+database integration with multi-site support for the Hermes eCommerce platform.
 
 ## Overview
 
-Hermes uses Cloudflare D1, a serverless SQL database, as its primary data storage solution. The database schema is designed with multi-tenancy in mind, allowing a single deployment to serve multiple stores/sites.
+Hermes uses Cloudflare D1, a serverless SQL database, as its primary data
+storage solution. The database schema is designed with multi-tenancy in mind,
+allowing a single deployment to serve multiple stores/sites.
 
 ## Architecture
 
 ### Multi-Tenant Design
 
-All database tables include a `site_id` column that scopes data to a specific store/site. This approach provides:
+All database tables include a `site_id` column that scopes data to a specific
+store/site. This approach provides:
 
 - **Data isolation**: Each site's data is logically separated
 - **Scalability**: Support for unlimited number of sites
@@ -156,7 +160,8 @@ wrangler d1 create hermes-db-preview
 
 ### 2. Update wrangler.toml
 
-Update the `database_id` in `wrangler.toml` with the ID returned from the create command:
+Update the `database_id` in `wrangler.toml` with the ID returned from the create
+command:
 
 ```toml
 [[d1_databases]]
@@ -197,7 +202,7 @@ wrangler d1 execute hermes-db --file=./migrations/0002_seed_data.sql
 The database is available through the platform context in SvelteKit:
 
 ```typescript
-import { getDB } from '$lib/server/db';
+import { getDB } from "$lib/server/db";
 
 export async function load({ platform }) {
   const db = getDB(platform);
@@ -207,10 +212,11 @@ export async function load({ platform }) {
 
 ### Repository Pattern
 
-All database operations use repository functions that automatically scope by site:
+All database operations use repository functions that automatically scope by
+site:
 
 ```typescript
-import { getAllProducts, createProduct } from '$lib/server/db';
+import { createProduct, getAllProducts } from "$lib/server/db";
 
 export async function load({ platform, locals }) {
   const db = getDB(platform);
@@ -225,7 +231,8 @@ export async function load({ platform, locals }) {
 
 ### Multi-Tenant Awareness
 
-The site context is automatically determined from the request hostname via `hooks.server.ts`:
+The site context is automatically determined from the request hostname via
+`hooks.server.ts`:
 
 1. Request comes in with a hostname (e.g., `store1.example.com`)
 2. Hook looks up the site by domain in the database
@@ -396,6 +403,67 @@ Consider implementing caching strategies:
 3. Sanitize user inputs
 4. Hash passwords before storing
 5. Use transactions for multi-step operations
+
+## Automated Preview Environment Setup
+
+Cloudflare Pages preview deployments automatically set up a fresh database with
+seed data. This ensures each preview branch has its own isolated, pre-populated
+database for testing.
+
+### How It Works
+
+The `scripts/preview-build.js` script detects the environment using Cloudflare
+Pages environment variables:
+
+- **Preview Environments**: Automatically wipes, migrates, and seeds the
+  database
+- **Production Environments**: Only runs migrations (no data wipe)
+- **Local Development**: Skips automatic database setup
+
+### Build Process
+
+For preview deployments (non-main branches):
+
+1. **Wipe**: Clears all existing data from the preview database
+2. **Migrate**: Applies all schema migrations
+3. **Seed**: Populates database with sample data
+4. **Build**: Compiles the SvelteKit application
+
+### Configuration
+
+The build command is configured in `wrangler.toml`:
+
+```toml
+[build]
+command = "npm run build:pages"
+```
+
+This runs the `scripts/preview-build.js` script which handles environment
+detection and database setup.
+
+### Environment Variables
+
+Cloudflare Pages provides these environment variables:
+
+- `CF_PAGES`: Set to `"1"` for all Pages builds
+- `CF_PAGES_BRANCH`: The git branch being built
+- Production branches: `main` or `master`
+- Preview branches: Any other branch name
+
+### Manual Database Management
+
+You can still manually manage preview databases:
+
+```bash
+# Reset and re-seed preview database
+npm run db:reset:preview
+
+# Run migrations only
+npm run db:migrate:preview
+
+# Seed with sample data
+npm run db:seed:preview
+```
 
 ## Troubleshooting
 
