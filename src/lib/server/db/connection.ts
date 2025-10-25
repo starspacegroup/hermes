@@ -90,14 +90,19 @@ export async function runMigrations(db: D1Database, migrations: string[]): Promi
 
 /**
  * Generate a unique ID for database records
+ * Uses crypto.randomUUID() which is always available in Cloudflare Workers
  */
 export function generateId(): string {
-  // Use crypto.randomUUID() if available
+  // In Cloudflare Workers, crypto.randomUUID() is always available
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  // Fallback for older environments
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}-${Math.random().toString(36).substring(2, 11)}`;
+  // This should never be reached in Cloudflare Workers environment
+  // but provides a fallback for testing environments
+  // Note: This fallback should not be used in production
+  throw new Error(
+    'crypto.randomUUID() is not available. This should not happen in Cloudflare Workers.'
+  );
 }
 
 /**

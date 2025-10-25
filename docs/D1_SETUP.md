@@ -19,7 +19,7 @@ wrangler d1 create hermes-db
 # You'll receive output like:
 # ✅ Successfully created DB 'hermes-db' in region WEUR
 # Created your database using D1's new storage backend.
-# 
+#
 # [[d1_databases]]
 # binding = "DB"
 # database_name = "hermes-db"
@@ -238,6 +238,7 @@ DEBUG=true
 **Error:** `D1 database is not available`
 
 **Solutions:**
+
 1. Check `wrangler.toml` has correct binding name (`DB`)
 2. Ensure migrations have been applied
 3. Restart dev server (`npm run dev`)
@@ -248,6 +249,7 @@ DEBUG=true
 **Error:** `Migration failed to apply`
 
 **Solutions:**
+
 1. Check SQL syntax in migration file
 2. Verify foreign key references are correct
 3. Check for duplicate table/index names
@@ -258,6 +260,7 @@ DEBUG=true
 **Error:** Site always resolves to `default-site`
 
 **Solutions:**
+
 1. Ensure site exists in database with correct domain
 2. Check that domain matches request hostname
 3. Verify `hooks.server.ts` is loaded
@@ -268,6 +271,7 @@ DEBUG=true
 **Error:** `Authorization error`
 
 **Solutions:**
+
 1. Run `wrangler login` to authenticate
 2. Check you have proper permissions for the D1 database
 3. Verify you're in the correct Cloudflare account
