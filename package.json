@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "vite dev",
+    "dev": "npm run db:setup:local && vite dev",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "npm run db:setup:preview && vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
@@ -15,7 +15,16 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:watch": "vitest --coverage --watch",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run db:migrate && wrangler deploy",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:migrate:local": "node scripts/db-migrate.js --local",
+    "db:migrate:preview": "node scripts/db-migrate.js --preview",
+    "db:seed": "node scripts/db-seed.js",
+    "db:seed:local": "node scripts/db-seed.js --local",
+    "db:seed:preview": "node scripts/db-seed.js --preview",
+    "db:setup": "node scripts/db-setup.js",
+    "db:setup:local": "node scripts/db-setup.js --local",
+    "db:setup:preview": "node scripts/db-setup.js --preview"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.0.0",

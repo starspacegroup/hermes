@@ -34,14 +34,30 @@ npm run dev
 
 ## 🛠️ Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production (includes Cloudflare adapter)
-- `npm run preview` - Preview production build locally
-- `npm run deploy` or `wrangler deploy` - Deploy to Cloudflare
+### Development
+
+- `npm run dev` - Start development server (auto-migrates and seeds database)
+- `npm run preview` - Preview production build locally (auto-migrates and seeds)
+- `npm test` - Run tests with Vitest
+- `npm run test:coverage` - Run tests with coverage report
+
+### Build & Deploy
+
+- `npm run build` - Build for production
+- `npm run deploy` - Deploy to Cloudflare (auto-migrates database)
+- `npm run check` - Type check with svelte-check
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
-- `npm test` - Run tests with Vitest
-- `npm run check` - Type check with svelte-check
+
+### Database Management
+
+- `npm run db:setup:local` - Migrate and seed local database
+- `npm run db:migrate:local` - Run migrations on local database
+- `npm run db:seed:local` - Seed local database with sample data
+- `npm run db:setup:preview` - Migrate and seed preview database
+- `npm run db:migrate` - Run migrations on production database
+
+See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for detailed database management guide.
 
 ## 🏗️ Project Structure
 
@@ -66,24 +82,41 @@ docs/                # Documentation
 
 ## 🗄️ Database
 
-The platform uses Cloudflare D1 for data persistence with full multi-tenant support.
+The platform uses Cloudflare D1 for data persistence with full multi-tenant support. Database migrations and seeding are automated:
 
-### Setup Database
+- **Development**: Auto-migrates and seeds when running `npm run dev`
+- **Preview**: Auto-migrates and seeds when running `npm run preview`
+- **Production**: Auto-migrates when deploying (seeding is blocked for safety)
+
+### Quick Setup
 
 ```bash
 # Create D1 database
 wrangler d1 create hermes-db
 
-# Update wrangler.toml with database_id
+# Update wrangler.toml with the database_id from above
 
-# Run migrations
-wrangler d1 migrations apply hermes-db --local
+# Setup database (migrate + seed for local dev)
+npm run db:setup:local
 
-# Seed with sample data (optional)
-wrangler d1 execute hermes-db --local --file=./migrations/0002_seed_data.sql
+# Or just run dev (database setup is automatic)
+npm run dev
 ```
 
-See [docs/DATABASE.md](docs/DATABASE.md) for detailed documentation.
+### Database Scripts
+
+```bash
+# Local development
+npm run db:migrate:local    # Run migrations only
+npm run db:seed:local       # Seed with sample data
+npm run db:setup:local      # Both migrate and seed
+
+# Production
+npm run db:migrate          # Run migrations only (no seed)
+npm run deploy              # Deploy and auto-migrate
+```
+
+See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for complete database management guide.
 
 ## 🌐 Deployment
 
