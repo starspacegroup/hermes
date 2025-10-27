@@ -32,14 +32,19 @@
 
       // Delete all existing widgets
       for (const widget of data.widgets) {
-        await fetch(`/api/widgets/${widget.id}`, {
+        const deleteResponse = await fetch(`/api/widgets/${widget.id}`, {
           method: 'DELETE'
         });
+
+        if (!deleteResponse.ok) {
+          console.error('Failed to delete widget:', widget.id);
+          // Continue deleting other widgets even if one fails
+        }
       }
 
       // Create all new widgets
       for (const widget of updateData.widgets) {
-        await fetch(`/api/pages/${data.page.id}/widgets`, {
+        const createResponse = await fetch(`/api/pages/${data.page.id}/widgets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -48,6 +53,11 @@
             position: widget.position
           })
         });
+
+        if (!createResponse.ok) {
+          console.error('Failed to create widget:', widget.type);
+          // Continue creating other widgets even if one fails
+        }
       }
 
       toastStore.success('Page updated successfully');

@@ -24,7 +24,7 @@
   let draggedIndex: number | null = null;
 
   // Update slug when title changes (only for new pages)
-  $: if (!pageId && title && !slug) {
+  $: if (!pageId && title && (!slug || slug.trim() === '')) {
     slug =
       '/' +
       title

@@ -31,7 +31,7 @@
 
       // Then, create all widgets
       for (const widget of data.widgets) {
-        await fetch(`/api/pages/${page.id}/widgets`, {
+        const widgetResponse = await fetch(`/api/pages/${page.id}/widgets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -40,6 +40,11 @@
             position: widget.position
           })
         });
+
+        if (!widgetResponse.ok) {
+          console.error('Failed to create widget:', widget.type);
+          // Continue creating other widgets even if one fails
+        }
       }
 
       toastStore.success('Page created successfully');
