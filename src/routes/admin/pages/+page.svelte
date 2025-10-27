@@ -104,6 +104,56 @@
               <td class="date">{formatDate(page.updated_at)}</td>
               <td>
                 <div class="actions">
+                  {#if page.status === 'published'}
+                    <a
+                      href={page.slug}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="view-btn"
+                      title="View published page"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                      View
+                    </a>
+                  {:else}
+                    <a
+                      href="{page.slug}?preview"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="preview-btn"
+                      title="Preview draft page"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                        <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                      </svg>
+                      Preview
+                    </a>
+                  {/if}
                   <button class="edit-btn" on:click={() => handleEdit(page.id)}>
                     <svg
                       width="16"
@@ -289,6 +339,40 @@
   .actions {
     display: flex;
     gap: 0.5rem;
+  }
+
+  .view-btn,
+  .preview-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--transition-normal);
+  }
+
+  .view-btn {
+    background: var(--color-success);
+    color: var(--color-text-inverse);
+  }
+
+  .view-btn:hover {
+    background: var(--color-success);
+    opacity: 0.9;
+  }
+
+  .preview-btn {
+    background: var(--color-bg-accent);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .preview-btn:hover {
+    background: var(--color-bg-secondary);
   }
 
   .edit-btn {

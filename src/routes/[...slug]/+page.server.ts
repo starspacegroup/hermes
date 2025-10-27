@@ -3,12 +3,15 @@ import { getDB } from '$lib/server/db/connection';
 import * as pagesDb from '$lib/server/db/pages';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, platform, locals }) => {
+export const load: PageServerLoad = async ({ params, platform, locals, url }) => {
   const db = getDB(platform);
   const siteId = locals.siteId;
 
   // Construct the full slug path
   const slug = '/' + (params.slug || '');
+
+  // Check if this is a preview request
+  const isPreview = url.searchParams.has('preview');
 
   try {
     // Fetch page by slug
@@ -19,8 +22,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       throw error(404, 'Page not found');
     }
 
-    // Only show published pages on the frontend
-    if (page.status !== 'published') {
+    // Only show published pages on the frontend, unless it's a preview
+    if (page.status !== 'published' && !isPreview) {
       throw error(404, 'Page not found');
     }
 
@@ -35,7 +38,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 
     return {
       page,
-      widgets
+      widgets,
+      isPreview
     };
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {

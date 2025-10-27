@@ -7,12 +7,27 @@
 
   export let data: PageData;
 
-  const { page, widgets } = data;
+  const { page, widgets, isPreview } = data;
 </script>
 
 <svelte:head>
   <title>{page.title} - Hermes</title>
 </svelte:head>
+
+{#if isPreview && page.status === 'draft'}
+  <div class="preview-banner">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path
+        d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
+      <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+    </svg>
+    <span>Preview Mode - This is a draft page</span>
+  </div>
+{/if}
 
 <div class="custom-page">
   <h1>{page.title}</h1>
@@ -35,6 +50,21 @@
 </div>
 
 <style>
+  .preview-banner {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-warning, #f59e0b);
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
   .custom-page {
     max-width: 1200px;
     margin: 0 auto;
