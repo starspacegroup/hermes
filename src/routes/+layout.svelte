@@ -161,7 +161,7 @@
 {/if}
 
 <ToastContainer />
-<BuildInfo />
+<BuildInfo userRole={$authState.user?.role} />
 
 <style>
   :global(body) {

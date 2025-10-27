@@ -41,6 +41,42 @@ describe('BuildInfo', () => {
     expect(container.querySelector('.build-info')).toBeNull();
   });
 
+  it('should render for platform engineers in production', () => {
+    // Mock production hostname
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'hermes.pages.dev' },
+      writable: true
+    });
+
+    const { container } = render(BuildInfo, { props: { userRole: 'platform_engineer' } });
+    const buildInfo = container.querySelector('.build-info');
+
+    expect(buildInfo).toBeTruthy();
+    expect(screen.getByText('PRODUCTION')).toBeTruthy();
+  });
+
+  it('should not render for regular users in production', () => {
+    // Mock production hostname
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'hermes.pages.dev' },
+      writable: true
+    });
+
+    const { container } = render(BuildInfo, { props: { userRole: 'user' } });
+    expect(container.querySelector('.build-info')).toBeNull();
+  });
+
+  it('should not render for admin users in production', () => {
+    // Mock production hostname
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'hermes.pages.dev' },
+      writable: true
+    });
+
+    const { container } = render(BuildInfo, { props: { userRole: 'admin' } });
+    expect(container.querySelector('.build-info')).toBeNull();
+  });
+
   it('should render in preview environment', async () => {
     // Mock preview hostname
     Object.defineProperty(window, 'location', {

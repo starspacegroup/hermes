@@ -3,6 +3,9 @@
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
 
+  // Accept userRole prop
+  export let userRole: string | undefined = undefined;
+
   // Version is injected at build time via vite.config.ts
   const version = __APP_VERSION__;
 
@@ -25,8 +28,15 @@
   // Check for buildInfo URL parameter
   $: hasBuildInfoParam = $page.url.searchParams.has('buildInfo');
 
-  // Only show in dev, preview, or when buildInfo param is present
-  $: shouldShow = environment === 'development' || environment === 'preview' || hasBuildInfoParam;
+  // Check if user is a platform engineer
+  $: isPlatformEngineer = userRole === 'platform_engineer';
+
+  // Show in dev, preview, when buildInfo param is present, or for platform engineers
+  $: shouldShow =
+    environment === 'development' ||
+    environment === 'preview' ||
+    hasBuildInfoParam ||
+    isPlatformEngineer;
 
   function getEnvironmentColor(env: string): string {
     switch (env) {
