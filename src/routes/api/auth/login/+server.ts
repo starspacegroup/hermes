@@ -65,9 +65,17 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
-      // For admin and platform_engineer, also set admin session
-      if (user.role === 'admin' || user.role === 'platform_engineer') {
+      // Set role-specific session cookies
+      if (user.role === 'admin') {
         cookies.set('admin_session', 'authenticated', {
+          path: '/',
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7
+        });
+      } else if (user.role === 'platform_engineer') {
+        cookies.set('engineer_session', 'authenticated', {
           path: '/',
           httpOnly: true,
           secure: false,
