@@ -43,6 +43,11 @@
       handleLogin();
     }
   }
+
+  function fillCredentials(userEmail: string, userPassword: string) {
+    email = userEmail;
+    password = userPassword;
+  }
 </script>
 
 <svelte:head>
@@ -99,21 +104,36 @@
 
     <div class="demo-credentials">
       <p><strong>Demo Credentials:</strong></p>
-      <div class="credential-group">
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('user@hermes.local', 'user123Pass')}
+        disabled={isLoading}
+      >
         <p class="credential-title">Regular User:</p>
         <p>Email: user@hermes.local</p>
         <p>Password: user123Pass</p>
-      </div>
-      <div class="credential-group">
+      </button>
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('owner@hermes.local', 'owner456Pass')}
+        disabled={isLoading}
+      >
         <p class="credential-title">Site Owner (Admin):</p>
         <p>Email: owner@hermes.local</p>
         <p>Password: owner456Pass</p>
-      </div>
-      <div class="credential-group">
+      </button>
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('engineer@hermes.local', 'engineer789Pass')}
+        disabled={isLoading}
+      >
         <p class="credential-title">Platform Engineer:</p>
         <p>Email: engineer@hermes.local</p>
         <p>Password: engineer789Pass</p>
-      </div>
+      </button>
     </div>
   </div>
 </div>
@@ -230,6 +250,32 @@
     background: var(--color-bg-secondary);
     border-radius: 6px;
     border: 1px solid var(--color-border-secondary);
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      transform var(--transition-fast);
+  }
+
+  .credential-group.clickable {
+    cursor: pointer;
+  }
+
+  .credential-group.clickable:hover:not(:disabled) {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .credential-group.clickable:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .credential-group:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .credential-title {
