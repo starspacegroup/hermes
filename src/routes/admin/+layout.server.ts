@@ -3,7 +3,7 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
   // Allow login page to be accessed without authentication
-  if (url.pathname === '/admin/login') {
+  if (url.pathname === '/auth/login') {
     return {};
   }
 
@@ -12,7 +12,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 
   if (!userSession) {
     // No session, redirect to login
-    throw redirect(303, '/admin/login');
+    throw redirect(303, '/auth/login');
   }
 
   try {
@@ -42,6 +42,6 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
     cookies.delete('user_session', { path: '/' });
     cookies.delete('admin_session', { path: '/' });
     cookies.delete('engineer_session', { path: '/' });
-    throw redirect(303, '/admin/login');
+    throw redirect(303, '/auth/login');
   }
 };

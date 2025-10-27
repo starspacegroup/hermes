@@ -9,14 +9,14 @@
   let currentPath = '';
 
   $: currentPath = $page.url.pathname;
-  $: isLoginPage = currentPath === '/admin/login';
+  $: isLoginPage = currentPath === '/auth/login';
 
   onMount(() => {
     // Check authentication and role on mount, but allow login page
     if (!isLoginPage) {
       if (!$authStore.isAuthenticated) {
         // User not authenticated, redirect to login
-        goto('/admin/login', { replaceState: true });
+        goto('/auth/login', { replaceState: true });
       } else if (!authStore.canAccessAdmin()) {
         // User is authenticated but doesn't have admin privileges
         // Redirect to main site
@@ -27,7 +27,7 @@
 
   function handleLogout() {
     authStore.logout();
-    goto('/admin/login');
+    goto('/auth/login');
   }
 
   function toggleSidebar() {

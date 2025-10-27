@@ -51,15 +51,15 @@
 </script>
 
 <svelte:head>
-  <title>Admin Login - Hermes</title>
-  <meta name="description" content="Admin login for Hermes eCommerce Platform" />
+  <title>Login - Hermes</title>
+  <meta name="description" content="Login to Hermes eCommerce Platform" />
 </svelte:head>
 
 <div class="login-container">
   <div class="login-card">
     <div class="login-header">
-      <h1>Admin Login</h1>
-      <p>Sign in to access the admin dashboard</p>
+      <h1>Login</h1>
+      <p>Sign in to access your account</p>
     </div>
 
     <form on:submit|preventDefault={handleLogin}>
