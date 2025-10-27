@@ -217,4 +217,55 @@ describe('Auth Store', () => {
       expect(authStore.isAdmin()).toBe(false);
     });
   });
+
+  describe('canAccessAdmin', () => {
+    it('should return true for admin users', () => {
+      authState.set({
+        user: {
+          id: 'admin-1',
+          email: 'owner@hermes.local',
+          name: 'Site Owner',
+          role: 'admin'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(true);
+    });
+
+    it('should return true for platform_engineer users', () => {
+      authState.set({
+        user: {
+          id: 'engineer-1',
+          email: 'engineer@hermes.local',
+          name: 'Platform Engineer',
+          role: 'platform_engineer'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(true);
+    });
+
+    it('should return false for regular users', () => {
+      authState.set({
+        user: {
+          id: 'user-1',
+          email: 'user@hermes.local',
+          name: 'Regular User',
+          role: 'user'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(false);
+    });
+
+    it('should return false when not authenticated', () => {
+      expect(authStore.canAccessAdmin()).toBe(false);
+    });
+  });
 });

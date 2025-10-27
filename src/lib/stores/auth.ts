@@ -61,6 +61,7 @@ export interface AuthStore {
   logout: () => void;
   checkAuth: () => boolean;
   isAdmin: () => boolean;
+  canAccessAdmin: () => boolean;
 }
 
 // Mock authentication - in production, this would call a real API
@@ -146,5 +147,15 @@ export const authStore: AuthStore = {
       isAdminUser = state.isAuthenticated && state.user?.role === 'admin';
     })();
     return isAdminUser;
+  },
+
+  canAccessAdmin: (): boolean => {
+    let canAccess = false;
+    authState.subscribe((state) => {
+      canAccess =
+        state.isAuthenticated &&
+        (state.user?.role === 'admin' || state.user?.role === 'platform_engineer');
+    })();
+    return canAccess;
   }
 };
