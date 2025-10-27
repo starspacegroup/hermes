@@ -2,12 +2,15 @@
   import Button from './Button.svelte';
   import { cartStore, cartItems } from '../stores/cart.ts';
   import type { Product } from '../types/index.js';
+  import { onMount } from 'svelte';
 
   export let product: Product;
 
   $: quantity = cartStore.getItemQuantity($cartItems, product.id);
 
   let isImageLoaded = false;
+  let imageError = false;
+  let imgElement: HTMLImageElement | undefined;
 
   function addToCart() {
     cartStore.addItem(product, 1);
@@ -23,7 +26,24 @@
 
   function handleImageLoad() {
     isImageLoaded = true;
+    imageError = false;
   }
+
+  function handleImageError() {
+    imageError = true;
+    isImageLoaded = true;
+  }
+
+  // Check if image is already loaded (cached)
+  onMount(() => {
+    if (imgElement && imgElement.complete) {
+      if (imgElement.naturalHeight !== 0) {
+        handleImageLoad();
+      } else {
+        handleImageError();
+      }
+    }
+  });
 </script>
 
 <div class="product-card">
@@ -31,12 +51,21 @@
     {#if !isImageLoaded}
       <div class="image-skeleton"></div>
     {/if}
-    <img
-      src={product.image}
-      alt={product.name}
-      class:loaded={isImageLoaded}
-      on:load={handleImageLoad}
-    />
+    {#if imageError}
+      <div class="image-placeholder">
+        <span>📦</span>
+        <p>Image unavailable</p>
+      </div>
+    {:else}
+      <img
+        bind:this={imgElement}
+        src={product.image}
+        alt={product.name}
+        class:loaded={isImageLoaded}
+        on:load={handleImageLoad}
+        on:error={handleImageError}
+      />
+    {/if}
     <div class="image-overlay">
       <Button variant="primary" on:click={() => (window.location.href = `/product/${product.id}`)}>
         Quick View
@@ -151,12 +180,35 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+      transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+      opacity 0.3s ease;
     opacity: 0;
   }
 
   img.loaded {
     opacity: 1;
+  }
+
+  .image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+  }
+
+  .image-placeholder span {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .image-placeholder p {
+    margin: 0;
+    font-size: 0.875rem;
   }
 
   .product-card:hover img {
