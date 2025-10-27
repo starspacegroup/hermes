@@ -140,7 +140,8 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Autofill styles - Light Theme */
+/* Autofill styles - Override browser defaults to match theme colors
+   The long transition delay prevents the browser from showing the default autofill background */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -169,6 +170,9 @@ select:-webkit-autofill:focus {
 [data-theme='dark'] select:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--color-text-primary);
   -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+  transition:
+    background-color 5000s ease-in-out 0s,
+    color var(--transition-normal);
 }
 
 /* Autofill styles - Ocean Theme */
@@ -183,4 +187,7 @@ select:-webkit-autofill:focus {
 [data-theme='ocean'] select:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--color-text-primary);
   -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+  transition:
+    background-color 5000s ease-in-out 0s,
+    color var(--transition-normal);
 }
