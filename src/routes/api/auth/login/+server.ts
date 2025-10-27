@@ -1,10 +1,45 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// Mock authentication - in production, this would validate against a database
-const mockLogin = (email: string, password: string): boolean => {
-  // Mock admin credentials
-  return email === 'admin@hermes.local' && password === 'admin123';
+// Demo authentication credentials - in production, this would validate against the database with bcrypt
+const demoCredentials = [
+  {
+    email: 'user@hermes.local',
+    password: 'user123Pass',
+    user: {
+      id: 'user-1',
+      email: 'user@hermes.local',
+      name: 'Demo User',
+      role: 'user' as const
+    }
+  },
+  {
+    email: 'owner@hermes.local',
+    password: 'owner456Pass',
+    user: {
+      id: 'admin-1',
+      email: 'owner@hermes.local',
+      name: 'Site Owner',
+      role: 'admin' as const
+    }
+  },
+  {
+    email: 'engineer@hermes.local',
+    password: 'engineer789Pass',
+    user: {
+      id: 'engineer-1',
+      email: 'engineer@hermes.local',
+      name: 'Platform Engineer',
+      role: 'platform_engineer' as const
+    }
+  }
+];
+
+const mockLogin = (email: string, password: string) => {
+  const credential = demoCredentials.find(
+    (cred) => cred.email === email && cred.password === password
+  );
+  return credential ? credential.user : null;
 };
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -18,11 +53,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       return json({ success: false, error: 'Email and password are required' }, { status: 400 });
     }
 
-    const isValid = mockLogin(data.email, data.password);
+    const user = mockLogin(data.email, data.password);
 
-    if (isValid) {
-      // Set admin session cookie
-      cookies.set('admin_session', 'authenticated', {
+    if (user) {
+      // Set session cookie
+      cookies.set('user_session', JSON.stringify(user), {
         path: '/',
         httpOnly: true,
         secure: false, // Set to true in production with HTTPS
@@ -30,14 +65,20 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
+      // For admin and platform_engineer, also set admin session
+      if (user.role === 'admin' || user.role === 'platform_engineer') {
+        cookies.set('admin_session', 'authenticated', {
+          path: '/',
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7
+        });
+      }
+
       return json({
         success: true,
-        user: {
-          id: '1',
-          email: 'admin@hermes.local',
-          name: 'Admin User',
-          role: 'admin'
-        }
+        user
       });
     } else {
       return json({ success: false, error: 'Invalid email or password' }, { status: 401 });

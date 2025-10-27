@@ -65,7 +65,7 @@
           type="email"
           bind:value={email}
           on:keypress={handleKeyPress}
-          placeholder="admin@hermes.local"
+          placeholder="Enter your email"
           disabled={isLoading}
           required
         />
@@ -99,8 +99,21 @@
 
     <div class="demo-credentials">
       <p><strong>Demo Credentials:</strong></p>
-      <p>Email: admin@hermes.local</p>
-      <p>Password: admin123</p>
+      <div class="credential-group">
+        <p class="credential-title">Regular User:</p>
+        <p>Email: user@hermes.local</p>
+        <p>Password: user123Pass</p>
+      </div>
+      <div class="credential-group">
+        <p class="credential-title">Site Owner (Admin):</p>
+        <p>Email: owner@hermes.local</p>
+        <p>Password: owner456Pass</p>
+      </div>
+      <div class="credential-group">
+        <p class="credential-title">Platform Engineer:</p>
+        <p>Email: engineer@hermes.local</p>
+        <p>Password: engineer789Pass</p>
+      </div>
     </div>
   </div>
 </div>
@@ -203,7 +216,26 @@
     margin-top: 2rem;
     padding-top: 2rem;
     border-top: 1px solid var(--color-border-secondary);
+    text-align: left;
+  }
+
+  .demo-credentials > p:first-child {
     text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .credential-group {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .credential-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem !important;
   }
 
   .demo-credentials p {

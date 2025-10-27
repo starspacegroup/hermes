@@ -11,7 +11,7 @@ export interface DBUser {
   email: string;
   name: string;
   password_hash: string;
-  role: 'admin' | 'user' | 'customer';
+  role: 'admin' | 'user' | 'customer' | 'platform_engineer';
   created_at: number;
   updated_at: number;
 }
@@ -20,14 +20,14 @@ export interface CreateUserData {
   email: string;
   name: string;
   password_hash: string;
-  role?: 'admin' | 'user' | 'customer';
+  role?: 'admin' | 'user' | 'customer' | 'platform_engineer';
 }
 
 export interface UpdateUserData {
   email?: string;
   name?: string;
   password_hash?: string;
-  role?: 'admin' | 'user' | 'customer';
+  role?: 'admin' | 'user' | 'customer' | 'platform_engineer';
 }
 
 /**
@@ -76,7 +76,7 @@ export async function getAllUsers(db: D1Database, siteId: string): Promise<DBUse
 export async function getUsersByRole(
   db: D1Database,
   siteId: string,
-  role: 'admin' | 'user' | 'customer'
+  role: 'admin' | 'user' | 'customer' | 'platform_engineer'
 ): Promise<DBUser[]> {
   const result = await execute<DBUser>(
     db,

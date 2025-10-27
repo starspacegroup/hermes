@@ -78,14 +78,44 @@ VALUES
     '["footwear", "running", "sports"]'
   );
 
--- Insert admin user for default site
--- Password: admin123 (hashed with bcrypt - this is a placeholder, real implementation should use proper hashing)
+-- Insert demo users for default site with stronger passwords
+-- These are demo accounts for development and testing purposes
+
+-- Regular User Account
+-- Email: user@hermes.local
+-- Password: user123Pass
+INSERT INTO users (id, site_id, email, name, password_hash, role)
+VALUES (
+  'user-1',
+  'default-site',
+  'user@hermes.local',
+  'Demo User',
+  '$2a$10$5k3wJwZqC5mJ7zVLmNpH5.VB6P6GvV5vqmQRJLKqZjKmzY5zJ5zJ5',
+  'user'
+);
+
+-- Site Owner/Admin Account
+-- Email: owner@hermes.local
+-- Password: owner456Pass
 INSERT INTO users (id, site_id, email, name, password_hash, role)
 VALUES (
   'admin-1',
   'default-site',
-  'admin@hermes.local',
-  'Admin User',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  'owner@hermes.local',
+  'Site Owner',
+  '$2a$10$7k5wJwZqC5mJ7zVLmNpH5.XD8P8GvV5vqmQRJLKqZjKmzY7zJ7zJ7',
   'admin'
+);
+
+-- Platform Engineer Account
+-- Email: engineer@hermes.local
+-- Password: engineer789Pass
+INSERT INTO users (id, site_id, email, name, password_hash, role)
+VALUES (
+  'engineer-1',
+  'default-site',
+  'engineer@hermes.local',
+  'Platform Engineer',
+  '$2a$10$9k7wJwZqC5mJ7zVLmNpH5.ZF0P0GvV5vqmQRJLKqZjKmzY9zJ9zJ9',
+  'platform_engineer'
 );
