@@ -2,7 +2,9 @@
   import { dev } from '$app/environment';
   import { browser } from '$app/environment';
   import { page } from '$app/stores';
-  import { version } from '../../../package.json';
+
+  // Version is injected at build time via vite.config.ts
+  const version = __APP_VERSION__;
 
   // Determine environment
   let environment: string = 'production';
