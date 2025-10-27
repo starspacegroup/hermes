@@ -43,18 +43,23 @@
       handleLogin();
     }
   }
+
+  function fillCredentials(userEmail: string, userPassword: string) {
+    email = userEmail;
+    password = userPassword;
+  }
 </script>
 
 <svelte:head>
-  <title>Admin Login - Hermes</title>
-  <meta name="description" content="Admin login for Hermes eCommerce Platform" />
+  <title>Login - Hermes</title>
+  <meta name="description" content="Login to Hermes eCommerce Platform" />
 </svelte:head>
 
 <div class="login-container">
   <div class="login-card">
     <div class="login-header">
-      <h1>Admin Login</h1>
-      <p>Sign in to access the admin dashboard</p>
+      <h1>Login</h1>
+      <p>Sign in to access your account</p>
     </div>
 
     <form on:submit|preventDefault={handleLogin}>
@@ -65,7 +70,7 @@
           type="email"
           bind:value={email}
           on:keypress={handleKeyPress}
-          placeholder="admin@hermes.local"
+          placeholder="Enter your email"
           disabled={isLoading}
           required
         />
@@ -99,8 +104,36 @@
 
     <div class="demo-credentials">
       <p><strong>Demo Credentials:</strong></p>
-      <p>Email: admin@hermes.local</p>
-      <p>Password: admin123</p>
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('user@hermes.local', 'user123Pass')}
+        disabled={isLoading}
+      >
+        <p class="credential-title">Regular User:</p>
+        <p>Email: user@hermes.local</p>
+        <p>Password: user123Pass</p>
+      </button>
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('owner@hermes.local', 'owner456Pass')}
+        disabled={isLoading}
+      >
+        <p class="credential-title">Site Owner (Admin):</p>
+        <p>Email: owner@hermes.local</p>
+        <p>Password: owner456Pass</p>
+      </button>
+      <button
+        type="button"
+        class="credential-group clickable"
+        on:click={() => fillCredentials('engineer@hermes.local', 'engineer789Pass')}
+        disabled={isLoading}
+      >
+        <p class="credential-title">Platform Engineer:</p>
+        <p>Email: engineer@hermes.local</p>
+        <p>Password: engineer789Pass</p>
+      </button>
     </div>
   </div>
 </div>
@@ -203,7 +236,52 @@
     margin-top: 2rem;
     padding-top: 2rem;
     border-top: 1px solid var(--color-border-secondary);
+    text-align: left;
+  }
+
+  .demo-credentials > p:first-child {
     text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .credential-group {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--color-border-secondary);
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      transform var(--transition-fast);
+  }
+
+  .credential-group.clickable {
+    cursor: pointer;
+  }
+
+  .credential-group.clickable:hover:not(:disabled) {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .credential-group.clickable:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .credential-group:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .credential-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem !important;
   }
 
   .demo-credentials p {

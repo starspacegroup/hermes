@@ -29,22 +29,22 @@ describe('Auth Store', () => {
         json: async () => ({
           success: true,
           user: {
-            id: '1',
-            email: 'admin@hermes.local',
-            name: 'Admin User',
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
             role: 'admin'
           }
         })
       });
 
-      const success = await authStore.login('admin@hermes.local', 'admin123');
+      const success = await authStore.login('owner@hermes.local', 'owner456Pass');
 
       expect(success).toBe(true);
 
       const state = get(authState);
       expect(state.isAuthenticated).toBe(true);
       expect(state.user).not.toBeNull();
-      expect(state.user?.email).toBe('admin@hermes.local');
+      expect(state.user?.email).toBe('owner@hermes.local');
       expect(state.user?.role).toBe('admin');
       expect(state.isLoading).toBe(false);
     });
@@ -73,15 +73,15 @@ describe('Auth Store', () => {
         json: async () => ({
           success: true,
           user: {
-            id: '1',
-            email: 'admin@hermes.local',
-            name: 'Admin User',
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
             role: 'admin'
           }
         })
       });
 
-      const loginPromise = authStore.login('admin@hermes.local', 'admin123');
+      const loginPromise = authStore.login('owner@hermes.local', 'owner456Pass');
 
       // Check immediately that loading is true
       let state = get(authState);
@@ -103,16 +103,16 @@ describe('Auth Store', () => {
         json: async () => ({
           success: true,
           user: {
-            id: '1',
-            email: 'admin@hermes.local',
-            name: 'Admin User',
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
             role: 'admin'
           }
         })
       });
 
       // Login first
-      await authStore.login('admin@hermes.local', 'admin123');
+      await authStore.login('owner@hermes.local', 'owner456Pass');
 
       let state = get(authState);
       expect(state.isAuthenticated).toBe(true);
@@ -141,15 +141,15 @@ describe('Auth Store', () => {
         json: async () => ({
           success: true,
           user: {
-            id: '1',
-            email: 'admin@hermes.local',
-            name: 'Admin User',
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
             role: 'admin'
           }
         })
       });
 
-      await authStore.login('admin@hermes.local', 'admin123');
+      await authStore.login('owner@hermes.local', 'owner456Pass');
 
       expect(authStore.checkAuth()).toBe(true);
     });
@@ -167,15 +167,15 @@ describe('Auth Store', () => {
         json: async () => ({
           success: true,
           user: {
-            id: '1',
-            email: 'admin@hermes.local',
-            name: 'Admin User',
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
             role: 'admin'
           }
         })
       });
 
-      await authStore.login('admin@hermes.local', 'admin123');
+      await authStore.login('owner@hermes.local', 'owner456Pass');
 
       expect(authStore.isAdmin()).toBe(true);
     });
@@ -198,6 +198,74 @@ describe('Auth Store', () => {
       });
 
       expect(authStore.isAdmin()).toBe(false);
+    });
+
+    it('should return false for platform_engineer users', () => {
+      // Manually set a platform_engineer user
+      authState.set({
+        user: {
+          id: 'engineer-1',
+          email: 'engineer@hermes.local',
+          name: 'Platform Engineer',
+          role: 'platform_engineer'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      // Platform engineers are not the same as admins
+      expect(authStore.isAdmin()).toBe(false);
+    });
+  });
+
+  describe('canAccessAdmin', () => {
+    it('should return true for admin users', () => {
+      authState.set({
+        user: {
+          id: 'admin-1',
+          email: 'owner@hermes.local',
+          name: 'Site Owner',
+          role: 'admin'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(true);
+    });
+
+    it('should return true for platform_engineer users', () => {
+      authState.set({
+        user: {
+          id: 'engineer-1',
+          email: 'engineer@hermes.local',
+          name: 'Platform Engineer',
+          role: 'platform_engineer'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(true);
+    });
+
+    it('should return false for regular users', () => {
+      authState.set({
+        user: {
+          id: 'user-1',
+          email: 'user@hermes.local',
+          name: 'Regular User',
+          role: 'user'
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+
+      expect(authStore.canAccessAdmin()).toBe(false);
+    });
+
+    it('should return false when not authenticated', () => {
+      expect(authStore.canAccessAdmin()).toBe(false);
     });
   });
 });
