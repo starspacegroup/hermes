@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { authStore, authState } from './auth';
+
+// Mock fetch globally for auth tests
+globalThis.fetch = vi.fn() as typeof fetch;
 
 describe('Auth Store', () => {
   beforeEach(() => {
@@ -13,10 +16,27 @@ describe('Auth Store', () => {
 
     // Clear sessionStorage
     sessionStorage.clear();
+
+    // Reset fetch mock
+    vi.clearAllMocks();
   });
 
   describe('login', () => {
     it('should successfully login with correct credentials', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: '1',
+            email: 'admin@hermes.local',
+            name: 'Admin User',
+            role: 'admin'
+          }
+        })
+      });
+
       const success = await authStore.login('admin@hermes.local', 'admin123');
 
       expect(success).toBe(true);
@@ -30,6 +50,12 @@ describe('Auth Store', () => {
     });
 
     it('should fail login with incorrect credentials', async () => {
+      // Mock failed login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 401
+      });
+
       const success = await authStore.login('wrong@email.com', 'wrongpass');
 
       expect(success).toBe(false);
@@ -41,6 +67,20 @@ describe('Auth Store', () => {
     });
 
     it('should set isLoading during login', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: '1',
+            email: 'admin@hermes.local',
+            name: 'Admin User',
+            role: 'admin'
+          }
+        })
+      });
+
       const loginPromise = authStore.login('admin@hermes.local', 'admin123');
 
       // Check immediately that loading is true
@@ -57,11 +97,31 @@ describe('Auth Store', () => {
 
   describe('logout', () => {
     it('should clear user data on logout', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: '1',
+            email: 'admin@hermes.local',
+            name: 'Admin User',
+            role: 'admin'
+          }
+        })
+      });
+
       // Login first
       await authStore.login('admin@hermes.local', 'admin123');
 
       let state = get(authState);
       expect(state.isAuthenticated).toBe(true);
+
+      // Mock logout endpoint
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true })
+      });
 
       // Logout
       authStore.logout();
@@ -75,6 +135,20 @@ describe('Auth Store', () => {
 
   describe('checkAuth', () => {
     it('should return true when authenticated', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: '1',
+            email: 'admin@hermes.local',
+            name: 'Admin User',
+            role: 'admin'
+          }
+        })
+      });
+
       await authStore.login('admin@hermes.local', 'admin123');
 
       expect(authStore.checkAuth()).toBe(true);
@@ -87,6 +161,20 @@ describe('Auth Store', () => {
 
   describe('isAdmin', () => {
     it('should return true for admin users', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: '1',
+            email: 'admin@hermes.local',
+            name: 'Admin User',
+            role: 'admin'
+          }
+        })
+      });
+
       await authStore.login('admin@hermes.local', 'admin123');
 
       expect(authStore.isAdmin()).toBe(true);

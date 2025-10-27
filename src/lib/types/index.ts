@@ -26,3 +26,15 @@ export type {
   CheckoutFormData,
   CheckoutValidationErrors
 } from './checkout';
+
+// Re-export page types
+export type {
+  PageStatus,
+  WidgetType,
+  Page,
+  PageWidget,
+  WidgetConfig,
+  PageWithWidgets,
+  PageFormData,
+  WidgetFormData
+} from './pages';

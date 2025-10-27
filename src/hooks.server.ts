@@ -3,7 +3,7 @@ import { getDB, getSiteByDomain } from '$lib/server/db';
 import { dev } from '$app/environment';
 
 /**
- * SvelteKit hooks for multi-tenant site handling
+ * SvelteKit hooks for multi-tenant site handling and authentication
  */
 export const handle: Handle = async ({ event, resolve }) => {
   // Get the hostname from the request
@@ -32,6 +32,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Set the site ID in locals for use in endpoints and pages
   event.locals.siteId = siteId;
+
+  // Check for admin session cookie
+  const adminSession = event.cookies?.get('admin_session');
+  event.locals.isAdmin = adminSession === 'authenticated';
 
   return resolve(event);
 };
