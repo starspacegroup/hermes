@@ -139,3 +139,48 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Autofill styles - Light Theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+  transition:
+    background-color 5000s ease-in-out 0s,
+    color var(--transition-normal);
+}
+
+/* Autofill styles - Dark Theme */
+[data-theme='dark'] input:-webkit-autofill,
+[data-theme='dark'] input:-webkit-autofill:hover,
+[data-theme='dark'] input:-webkit-autofill:focus,
+[data-theme='dark'] textarea:-webkit-autofill,
+[data-theme='dark'] textarea:-webkit-autofill:hover,
+[data-theme='dark'] textarea:-webkit-autofill:focus,
+[data-theme='dark'] select:-webkit-autofill,
+[data-theme='dark'] select:-webkit-autofill:hover,
+[data-theme='dark'] select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+}
+
+/* Autofill styles - Ocean Theme */
+[data-theme='ocean'] input:-webkit-autofill,
+[data-theme='ocean'] input:-webkit-autofill:hover,
+[data-theme='ocean'] input:-webkit-autofill:focus,
+[data-theme='ocean'] textarea:-webkit-autofill,
+[data-theme='ocean'] textarea:-webkit-autofill:hover,
+[data-theme='ocean'] textarea:-webkit-autofill:focus,
+[data-theme='ocean'] select:-webkit-autofill,
+[data-theme='ocean'] select:-webkit-autofill:hover,
+[data-theme='ocean'] select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-secondary) inset;
+}
