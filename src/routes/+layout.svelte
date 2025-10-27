@@ -46,7 +46,7 @@
         </a>
 
         <div class="nav-links">
-          <a href="#products" class="nav-link">See Example</a>
+          <a href="/#products" class="nav-link">See Example</a>
           <a href="#features" class="nav-link">Features</a>
           <a href="https://github.com/starspacegroup/hermes" target="_blank" class="nav-link">
             Help
