@@ -7,6 +7,8 @@
 
   $: quantity = cartStore.getItemQuantity($cartItems, product.id);
 
+  let isImageLoaded = false;
+
   function addToCart() {
     cartStore.addItem(product, 1);
   }
@@ -18,42 +20,79 @@
   function decrementQuantity() {
     cartStore.updateQuantity(product.id, quantity - 1);
   }
+
+  function handleImageLoad() {
+    isImageLoaded = true;
+  }
 </script>
 
 <div class="product-card">
-  <img src={product.image} alt={product.name} />
+  <div class="image-container">
+    {#if !isImageLoaded}
+      <div class="image-skeleton"></div>
+    {/if}
+    <img
+      src={product.image}
+      alt={product.name}
+      class:loaded={isImageLoaded}
+      on:load={handleImageLoad}
+    />
+    <div class="image-overlay">
+      <Button variant="primary" on:click={() => (window.location.href = `/product/${product.id}`)}>
+        Quick View
+      </Button>
+    </div>
+  </div>
+
   <div class="product-info">
+    <div class="product-header">
+      <span class="category-badge">{product.category}</span>
+      {#if product.stock < 10 && product.stock > 0}
+        <span class="low-stock-badge">Only {product.stock} left!</span>
+      {/if}
+    </div>
+
     <h3>{product.name}</h3>
     <p class="description">{product.description}</p>
-    <p class="category">{product.category}</p>
-    <div class="price-stock">
-      <span class="price">${product.price}</span>
-      <span class="stock">{product.stock} in stock</span>
-    </div>
-    <div class="actions">
-      {#if quantity === 0}
-        <Button variant="primary" on:click={addToCart} disabled={product.stock === 0}>
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-        </Button>
-      {:else}
-        <div class="quantity-controls">
-          <button class="quantity-btn" on:click={decrementQuantity} aria-label="Decrease quantity">
-            −
-          </button>
-          <span class="quantity-display" aria-live="polite">{quantity}</span>
-          <button
-            class="quantity-btn"
-            on:click={incrementQuantity}
-            disabled={quantity >= product.stock}
-            aria-label="Increase quantity"
-          >
-            +
-          </button>
-        </div>
-      {/if}
-      <Button variant="primary" on:click={() => (window.location.href = `/product/${product.id}`)}>
-        View Details
-      </Button>
+
+    <div class="product-footer">
+      <div class="price-container">
+        <span class="price">${product.price.toFixed(2)}</span>
+        <span class="stock-info">
+          {#if product.stock === 0}
+            <span class="out-of-stock">Out of Stock</span>
+          {:else}
+            <span class="in-stock">✓ In Stock</span>
+          {/if}
+        </span>
+      </div>
+
+      <div class="actions">
+        {#if quantity === 0}
+          <Button variant="primary" on:click={addToCart} disabled={product.stock === 0}>
+            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          </Button>
+        {:else}
+          <div class="quantity-controls">
+            <button
+              class="quantity-btn"
+              on:click={decrementQuantity}
+              aria-label="Decrease quantity"
+            >
+              −
+            </button>
+            <span class="quantity-display" aria-live="polite">{quantity}</span>
+            <button
+              class="quantity-btn"
+              on:click={incrementQuantity}
+              disabled={quantity >= product.stock}
+              aria-label="Increase quantity"
+            >
+              +
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
@@ -61,130 +100,245 @@
 <style>
   .product-card {
     background: var(--color-bg-primary);
-    border-radius: 8px;
+    border-radius: 16px;
     box-shadow: 0 2px 8px var(--color-shadow-light);
     overflow: hidden;
-    transition:
-      transform var(--transition-normal),
-      box-shadow var(--transition-normal),
-      background-color var(--transition-normal);
+    transition: all var(--transition-normal);
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
+    border: 1px solid var(--color-border-secondary);
   }
 
   .product-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--color-shadow-medium);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px var(--color-shadow-dark);
+    border-color: var(--color-primary);
+  }
+
+  .image-container {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    overflow: hidden;
+    background: var(--color-bg-tertiary);
+  }
+
+  .image-skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-tertiary) 0%,
+      var(--color-bg-accent) 50%,
+      var(--color-bg-tertiary) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   img {
     width: 100%;
-    height: 200px;
+    height: 100%;
     object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+  }
+
+  img.loaded {
+    opacity: 1;
+  }
+
+  .product-card:hover img {
+    transform: scale(1.1);
+  }
+
+  .image-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+  }
+
+  .product-card:hover .image-overlay {
+    opacity: 1;
   }
 
   .product-info {
-    padding: 1rem;
+    padding: 1.5rem;
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+  }
+
+  .product-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .category-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.75rem;
+    background: var(--color-bg-accent);
+    border-radius: 6px;
+  }
+
+  .low-stock-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-warning);
+    padding: 0.25rem 0.75rem;
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    border-radius: 6px;
   }
 
   h3 {
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     color: var(--color-text-primary);
-    font-size: 1.1rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+    transition: color var(--transition-normal);
   }
 
   .description {
     color: var(--color-text-secondary);
     font-size: 0.9rem;
-    margin: 0 0 0.5rem 0;
+    line-height: 1.5;
+    margin: 0;
     flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: color var(--transition-normal);
   }
 
-  .category {
-    color: var(--color-text-tertiary);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 1rem 0;
+  .product-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 
-  .price-stock {
+  .price-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
   }
 
   .price {
-    font-size: 1.2rem;
-    font-weight: bold;
+    font-size: 1.75rem;
+    font-weight: 700;
     color: var(--color-primary);
+    transition: color var(--transition-normal);
   }
 
-  .stock {
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
+  .stock-info {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .in-stock {
+    color: var(--color-success);
+  }
+
+  .out-of-stock {
+    color: var(--color-danger);
+    font-weight: 600;
   }
 
   .actions {
-    margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .quantity-controls {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 0.75rem;
+    background: var(--color-bg-secondary);
     padding: 0.5rem;
-    background: var(--color-bg-accent);
-    border-radius: 0.25rem;
-    transition: background-color var(--transition-normal);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
   }
 
   .quantity-btn {
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--color-border-secondary);
-    background: var(--color-bg-primary);
-    color: var(--color-text-primary);
-    border-radius: 4px;
-    cursor: pointer;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    font-weight: bold;
-    transition:
-      background-color var(--transition-normal),
-      border-color var(--transition-normal),
-      transform var(--transition-fast);
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: 6px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
   }
 
   .quantity-btn:hover:not(:disabled) {
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-    border-color: var(--color-primary);
+    background: var(--color-primary-hover);
     transform: scale(1.1);
   }
 
+  .quantity-btn:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
   .quantity-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
   .quantity-display {
-    min-width: 32px;
+    flex: 1;
     text-align: center;
-    font-weight: bold;
-    font-size: 1.1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
     color: var(--color-text-primary);
-    transition: color var(--transition-normal);
+    min-width: 40px;
+  }
+
+  @media (max-width: 768px) {
+    .image-container {
+      height: 220px;
+    }
+
+    .product-info {
+      padding: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1.125rem;
+    }
+
+    .price {
+      font-size: 1.5rem;
+    }
   }
 </style>

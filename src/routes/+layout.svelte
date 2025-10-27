@@ -33,6 +33,8 @@
   function closeAccountMenu() {
     showAccountMenu = false;
   }
+
+  const currentYear = new Date().getFullYear();
 </script>
 
 <main class:admin-page={isAdminPage}>
@@ -42,11 +44,19 @@
         <a href="/" class="logo">
           <h1>Hermes</h1>
         </a>
+
+        <div class="nav-links">
+          <a href="#products" class="nav-link">See Example</a>
+          <a href="#features" class="nav-link">Features</a>
+          <a href="https://github.com/starspacegroup/hermes" target="_blank" class="nav-link">
+            Help
+          </a>
+        </div>
+
         <div class="nav-actions">
           <ThemeToggle />
 
           {#if $authState.isAuthenticated}
-            <!-- Show admin link only for users who can access admin -->
             {#if canAccessAdmin}
               <a href="/admin/dashboard" class="admin-link">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -63,7 +73,6 @@
               </a>
             {/if}
 
-            <!-- Account dropdown for logged in users -->
             <div class="account-menu-container">
               <button class="account-button" on:click={toggleAccountMenu} aria-label="Account menu">
                 <div class="account-avatar">
@@ -116,7 +125,6 @@
               {/if}
             </div>
           {:else}
-            <!-- Show login/signup for non-authenticated users -->
             <a href="/auth/login" class="login-link">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path
@@ -147,9 +155,81 @@
   {/if}
 
   <slot />
+
+  {#if !isAdminPage}
+    <footer>
+      <div class="footer-content">
+        <div class="footer-section">
+          <div class="footer-logo">
+            <h3>Hermes</h3>
+            <p class="footer-tagline">Your Online Store, Simplified</p>
+          </div>
+          <p class="footer-description">
+            Everything you need to start selling online. Simple to set up, easy to manage, and built
+            to help your business grow.
+          </p>
+          <div class="social-links">
+            <a href="https://github.com/starspacegroup/hermes" target="_blank" aria-label="GitHub">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h4>Get Started</h4>
+          <ul>
+            <li><a href="/auth/login">Create Your Store</a></li>
+            <li><a href="#features">See Features</a></li>
+            <li><a href="#products">View Example</a></li>
+            <li><a href="https://github.com/starspacegroup/hermes">How It Works</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Your Store</h4>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="#products">Products</a></li>
+            <li><a href="/cart">Shopping Cart</a></li>
+            <li><a href="/checkout">Checkout</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="https://github.com/starspacegroup/hermes#readme">Documentation</a></li>
+            <li><a href="https://github.com/starspacegroup/hermes/issues">Get Help</a></li>
+            <li><a href="https://github.com/starspacegroup/hermes">Community</a></li>
+            <li><a href="https://starspace.group">About Us</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Why Hermes?</h4>
+          <ul class="tech-stack">
+            <li>✨ Beautiful Design</li>
+            <li>📱 Mobile Friendly</li>
+            <li>🎨 Fully Customizable</li>
+            <li>💳 Payment Ready</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; {currentYear} Hermes. Free to use and customize for your business.</p>
+        <p class="footer-credit">
+          Made with ❤️ by <a href="https://starspace.group" target="_blank">*Space</a>
+        </p>
+      </div>
+    </footer>
+  {/if}
 </main>
 
-<!-- Click outside to close account menu -->
 {#if showAccountMenu}
   <div
     class="overlay"
@@ -174,6 +254,9 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   main.admin-page {
@@ -184,19 +267,19 @@
 
   header {
     background: var(--color-bg-primary);
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 2px 10px var(--color-shadow-light);
     margin-bottom: 2rem;
     padding: 1rem 2rem;
-    transition:
-      background-color var(--transition-normal),
-      box-shadow var(--transition-normal);
+    transition: all var(--transition-normal);
+    border: 1px solid var(--color-border-secondary);
   }
 
   nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
   }
 
   .logo {
@@ -206,9 +289,31 @@
 
   .logo h1 {
     color: var(--color-primary);
-    font-size: 2rem;
+    font-size: 1.75rem;
     margin: 0;
     transition: color var(--transition-normal);
+    font-weight: 800;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .nav-link {
+    color: var(--color-text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: color var(--transition-fast);
+  }
+
+  .nav-link:hover {
+    color: var(--color-primary);
   }
 
   .nav-actions {
@@ -217,46 +322,30 @@
     gap: 1rem;
   }
 
-  .admin-link {
+  .admin-link,
+  .cart-link,
+  .login-link {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     color: var(--color-text-primary);
     text-decoration: none;
     padding: 0.5rem 1rem;
-    border-radius: 6px;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .admin-link:hover {
-    background-color: var(--color-bg-accent);
-  }
-
-  .admin-text {
-    font-weight: 500;
-  }
-
-  .cart-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--color-text-primary);
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    transition: all var(--transition-normal);
     position: relative;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
   }
 
-  .cart-link:hover {
+  .admin-link:hover,
+  .cart-link:hover,
+  .login-link:hover {
     background-color: var(--color-bg-accent);
+    color: var(--color-primary);
   }
 
-  .cart-text {
+  .admin-text,
+  .cart-text,
+  .login-text {
     font-weight: 500;
   }
 
@@ -269,32 +358,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
-    font-weight: bold;
+    font-size: 0.75rem;
+    font-weight: 700;
     position: absolute;
-    top: -2px;
-    right: -2px;
-  }
-
-  .login-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--color-text-primary);
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .login-link:hover {
-    background-color: var(--color-bg-accent);
-  }
-
-  .login-text {
-    font-weight: 500;
+    top: 0;
+    right: 0;
   }
 
   .account-menu-container {
@@ -309,7 +377,7 @@
     border: none;
     cursor: pointer;
     padding: 0.5rem 1rem;
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--color-text-primary);
     transition: background-color var(--transition-normal);
   }
@@ -357,9 +425,7 @@
     box-shadow: 0 4px 12px var(--color-shadow-medium);
     min-width: 220px;
     z-index: 1000;
-    transition:
-      background-color var(--transition-normal),
-      border-color var(--transition-normal);
+    transition: all var(--transition-normal);
   }
 
   .account-info {
@@ -388,9 +454,7 @@
     background: var(--color-bg-accent);
     border-radius: 4px;
     display: inline-block;
-    transition:
-      color var(--transition-normal),
-      background-color var(--transition-normal);
+    transition: all var(--transition-normal);
   }
 
   .account-divider {
@@ -412,9 +476,7 @@
     text-align: left;
     font-size: 0.9rem;
     font-weight: 500;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
+    transition: all var(--transition-normal);
   }
 
   .account-menu-item:hover {
@@ -431,9 +493,141 @@
     background: transparent;
   }
 
+  /* Footer Styles */
+  footer {
+    margin-top: auto;
+    padding-top: 4rem;
+  }
+
+  .footer-content {
+    background: var(--color-bg-primary);
+    border-radius: 16px 16px 0 0;
+    padding: 3rem 2rem 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    border: 1px solid var(--color-border-secondary);
+    border-bottom: none;
+  }
+
+  .footer-section h3 {
+    color: var(--color-primary);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .footer-tagline {
+    color: var(--color-text-tertiary);
+    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+    font-weight: 500;
+  }
+
+  .footer-description {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .social-links {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .social-links a {
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+  }
+
+  .social-links a:hover {
+    color: var(--color-primary);
+    background: var(--color-bg-accent);
+    transform: translateY(-2px);
+  }
+
+  .footer-section h4 {
+    color: var(--color-text-primary);
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .footer-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-section li {
+    margin-bottom: 0.75rem;
+  }
+
+  .footer-section a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    font-size: 0.9rem;
+  }
+
+  .footer-section a:hover {
+    color: var(--color-primary);
+  }
+
+  .tech-stack li {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .footer-bottom {
+    background: var(--color-bg-primary);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--color-border-secondary);
+    border-left: 1px solid var(--color-border-secondary);
+    border-right: 1px solid var(--color-border-secondary);
+  }
+
+  .footer-bottom p {
+    margin: 0.25rem 0;
+    color: var(--color-text-tertiary);
+    font-size: 0.875rem;
+  }
+
+  .footer-credit {
+    font-weight: 500;
+  }
+
+  .footer-credit a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .footer-credit a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 968px) {
+    .nav-links {
+      display: none;
+    }
+  }
+
   @media (max-width: 768px) {
     header {
       padding: 1rem;
+    }
+
+    nav {
+      gap: 1rem;
     }
 
     .logo h1 {
@@ -449,6 +643,15 @@
 
     .account-dropdown {
       right: -1rem;
+    }
+
+    .footer-content {
+      grid-template-columns: 1fr;
+      padding: 2rem 1.5rem 1.5rem;
+    }
+
+    .footer-bottom {
+      padding: 1rem 1.5rem;
     }
   }
 </style>
