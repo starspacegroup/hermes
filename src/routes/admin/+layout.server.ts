@@ -16,7 +16,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
   }
 
   try {
-    const user = JSON.parse(userSession);
+    const user = JSON.parse(decodeURIComponent(userSession));
 
     // Check if user has admin or platform_engineer role
     if (user.role !== 'admin' && user.role !== 'platform_engineer') {
@@ -32,7 +32,12 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
     return {
       user
     };
-  } catch {
+  } catch (error) {
+    // Check if it's a redirect error (which we want to throw)
+    if (error && typeof error === 'object' && 'status' in error && error.status === 303) {
+      throw error;
+    }
+
     // Invalid session data, redirect to login
     cookies.delete('user_session', { path: '/' });
     cookies.delete('admin_session', { path: '/' });
