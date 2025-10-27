@@ -22,9 +22,11 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
       throw error(404, 'Page not found');
     }
 
-    // Only show published pages on the frontend, unless it's a preview
-    if (page.status !== 'published' && !isPreview) {
-      throw error(404, 'Page not found');
+    // Only show published pages on the frontend, unless it's a preview by an admin
+    if (page.status !== 'published') {
+      if (!isPreview || !locals.isAdmin) {
+        throw error(404, 'Page not found');
+      }
     }
 
     // Fetch widgets for this page
@@ -39,7 +41,7 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
     return {
       page,
       widgets,
-      isPreview
+      isPreview: isPreview && page.status === 'draft'
     };
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {

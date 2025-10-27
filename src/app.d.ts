@@ -5,6 +5,7 @@ declare global {
     // interface Error {}
     interface Locals {
       siteId: string;
+      isAdmin: boolean;
     }
     // interface PageData {}
     // interface PageState {}

@@ -65,20 +65,23 @@ export interface AuthStore {
 
 // Mock authentication - in production, this would call a real API
 const mockLogin = async (email: string, password: string): Promise<User | null> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
 
-  // Mock admin credentials
-  if (email === 'admin@hermes.local' && password === 'admin123') {
-    return {
-      id: '1',
-      email: 'admin@hermes.local',
-      name: 'Admin User',
-      role: 'admin'
-    };
+    if (response.ok) {
+      const data = (await response.json()) as { success: boolean; user?: User };
+      return data.user || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Login API error:', error);
+    return null;
   }
-
-  return null;
 };
 
 export const authStore: AuthStore = {
@@ -117,6 +120,11 @@ export const authStore: AuthStore = {
   },
 
   logout: (): void => {
+    // Call logout endpoint to clear server-side session
+    fetch('/api/auth/logout', { method: 'POST' }).catch((error) => {
+      console.error('Logout API error:', error);
+    });
+
     authState.set({
       user: null,
       isAuthenticated: false,
