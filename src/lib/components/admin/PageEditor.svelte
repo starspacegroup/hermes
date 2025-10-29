@@ -198,8 +198,14 @@
         return {
           title: 'Hero Title',
           subtitle: 'Hero subtitle text',
+          backgroundColor: '#3b82f6',
+          backgroundImage: '',
           heroHeight: { desktop: '500px', tablet: '400px', mobile: '300px' },
-          contentAlign: 'center'
+          contentAlign: 'center',
+          overlay: false,
+          overlayOpacity: 50,
+          ctaText: '',
+          ctaLink: '#'
         };
       case 'button':
         return {
@@ -617,7 +623,11 @@
                   </div>
                 </div>
                 <div class="widget-render">
-                  <WidgetRenderer {widget} {currentBreakpoint} />
+                  <WidgetRenderer
+                    {widget}
+                    {currentBreakpoint}
+                    onUpdate={(config) => updateWidgetConfig(widget.id, config)}
+                  />
                 </div>
               </div>
             {/each}

@@ -1,8 +1,17 @@
 <script lang="ts">
-  import type { PageWidget, Breakpoint } from '$lib/types/pages';
+  import type { PageWidget, Breakpoint, WidgetConfig } from '$lib/types/pages';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
+  export let onUpdate: ((config: WidgetConfig) => void) | undefined = undefined;
+
+  function handleContentEdit(field: string, event: Event) {
+    if (!onUpdate) return;
+    const target = event.target as HTMLElement;
+    const newValue = target.textContent || '';
+    const updatedConfig = { ...widget.config, [field]: newValue };
+    onUpdate(updatedConfig);
+  }
 
   function getResponsiveValue<T>(value: T | { mobile?: T; tablet?: T; desktop: T }): T {
     if (typeof value === 'object' && value !== null && 'desktop' in value) {
@@ -129,10 +138,20 @@
         />
       {/if}
       <div class="hero-content">
-        <h1>{widget.config.title || 'Hero Title'}</h1>
-        {#if widget.config.subtitle}
-          <p>{widget.config.subtitle}</p>
-        {/if}
+        <h1
+          contenteditable="true"
+          on:blur={(e) => handleContentEdit('title', e)}
+          on:keydown={(e) => e.key === 'Enter' && e.preventDefault()}
+        >
+          {widget.config.title || 'Hero Title'}
+        </h1>
+        <p
+          contenteditable="true"
+          on:blur={(e) => handleContentEdit('subtitle', e)}
+          style="display: block;"
+        >
+          {widget.config.subtitle || 'Click to add subtitle'}
+        </p>
         {#if widget.config.ctaText}
           <a
             href={widget.config.ctaLink || '#'}
@@ -331,12 +350,34 @@
     font-size: 2.5rem;
     margin: 0 0 1rem 0;
     padding: 0;
+    outline: none;
+    cursor: text;
+  }
+
+  .hero-content h1:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 4px;
+    border-radius: 4px;
   }
 
   .hero-content p {
     font-size: 1.25rem;
     margin: 0 0 1.5rem 0;
     opacity: 0.9;
+    outline: none;
+    cursor: text;
+    min-height: 1.5em;
+  }
+
+  .hero-content p:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+
+  .hero-content p:empty:before {
+    content: 'Click to add subtitle';
+    opacity: 0.5;
   }
 
   .hero-cta {

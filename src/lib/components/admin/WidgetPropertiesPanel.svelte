@@ -7,11 +7,39 @@
   export let onClose: () => void;
 
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
-  let config: WidgetConfig = JSON.parse(JSON.stringify(widget.config));
+  let lastWidgetId = widget.id;
 
-  $: {
-    // Update config when widget changes
-    config = JSON.parse(JSON.stringify(widget.config));
+  // Initialize config when component mounts or widget changes
+  function initializeConfig() {
+    const newConfig = JSON.parse(JSON.stringify(widget.config));
+
+    // Ensure hero widgets have all required properties with defaults
+    if (widget.type === 'hero') {
+      newConfig.backgroundColor = newConfig.backgroundColor || '#3b82f6';
+      newConfig.backgroundImage = newConfig.backgroundImage || '';
+      newConfig.title = newConfig.title || 'Hero Title';
+      newConfig.subtitle = newConfig.subtitle || '';
+      newConfig.overlay = newConfig.overlay ?? false;
+      newConfig.overlayOpacity = newConfig.overlayOpacity ?? 50;
+      newConfig.ctaText = newConfig.ctaText || '';
+      newConfig.ctaLink = newConfig.ctaLink || '#';
+      newConfig.contentAlign = newConfig.contentAlign || 'center';
+      newConfig.heroHeight = newConfig.heroHeight || {
+        desktop: '500px',
+        tablet: '400px',
+        mobile: '300px'
+      };
+    }
+
+    lastWidgetId = widget.id;
+    return newConfig;
+  }
+
+  let config: WidgetConfig = initializeConfig();
+
+  // Only reinitialize if the widget ID changes (different widget selected)
+  $: if (widget.id !== lastWidgetId) {
+    config = initializeConfig();
   }
 
   function handleUpdate() {
@@ -249,7 +277,7 @@
               <input
                 type="text"
                 bind:value={config.title}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 placeholder="Hero title..."
               />
             </label>
@@ -259,7 +287,7 @@
               <span>Subtitle</span>
               <textarea
                 bind:value={config.subtitle}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 rows="3"
                 placeholder="Hero subtitle..."
               />
@@ -271,7 +299,7 @@
               <input
                 type="url"
                 bind:value={config.backgroundImage}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 placeholder="https://..."
               />
             </label>
@@ -279,7 +307,7 @@
           <div class="form-group">
             <label>
               <span>Background Color</span>
-              <input type="color" bind:value={config.backgroundColor} on:change={handleUpdate} />
+              <input type="color" bind:value={config.backgroundColor} on:input={handleUpdate} />
             </label>
           </div>
           <div class="form-group">
@@ -318,7 +346,7 @@
               <input
                 type="text"
                 bind:value={config.ctaText}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 placeholder="Learn More"
               />
             </label>
@@ -329,7 +357,7 @@
               <input
                 type="url"
                 bind:value={config.ctaLink}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 placeholder="https://..."
               />
             </label>
