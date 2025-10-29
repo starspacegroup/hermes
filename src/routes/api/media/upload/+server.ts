@@ -10,8 +10,8 @@ const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
  * POST upload media file to R2 and create library entry
  */
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
-  if (!platform?.env?.DB || !platform?.env?.MEDIA_BUCKET) {
-    throw error(503, 'Storage not available');
+  if (!platform?.env?.DB) {
+    throw error(503, 'Database not available');
   }
 
   try {
@@ -42,22 +42,32 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
     const mediaType = isImage ? 'image' : 'video';
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop() || '';
-    const filename = `${siteId}/${mediaType}s/${timestamp}-${randomString}.${extension}`;
+    let url: string;
 
-    // Upload to R2
-    const arrayBuffer = await file.arrayBuffer();
-    await platform.env.MEDIA_BUCKET.put(filename, arrayBuffer, {
-      httpMetadata: {
-        contentType: file.type
-      }
-    });
+    // Check if R2 bucket is available (production/preview)
+    if (platform?.env?.MEDIA_BUCKET) {
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const extension = file.name.split('.').pop() || '';
+      const filename = `${siteId}/${mediaType}s/${timestamp}-${randomString}.${extension}`;
 
-    // Generate URL (in production, this would use a custom domain or CDN)
-    const url = `/api/media/${filename}`;
+      // Upload to R2
+      const arrayBuffer = await file.arrayBuffer();
+      await platform.env.MEDIA_BUCKET.put(filename, arrayBuffer, {
+        httpMetadata: {
+          contentType: file.type
+        }
+      });
+
+      // Generate URL
+      url = `/api/media/${filename}`;
+    } else {
+      // Development fallback: convert to data URL
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      url = `data:${file.type};base64,${base64}`;
+    }
 
     // Get image dimensions if it's an image
     let width: number | undefined;
