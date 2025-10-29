@@ -165,6 +165,44 @@
     }
   }
 
+  /**
+   * Save temporary media to newly created product - exposed for parent component to call
+   */
+  export async function saveTempMediaToProduct(newProductId: string) {
+    if (!productMedia.length) return;
+
+    try {
+      // Save each media item to the product
+      for (let i = 0; i < productMedia.length; i++) {
+        const media = productMedia[i];
+        const response = await fetch(`/api/products/${newProductId}/media`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            mediaLibraryId: media.id,
+            displayOrder: i
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add media ${media.filename} to product`);
+        }
+      }
+
+      // Update internal state
+      productId = newProductId;
+      await loadProductMedia();
+      await invalidateAll();
+      toastStore.success(`${productMedia.length} media file(s) added to product`);
+    } catch (error) {
+      console.error('Error saving temporary media:', error);
+      toastStore.error('Failed to add media to product');
+      throw error;
+    }
+  }
+
   function handleDragStart(event: DragEvent, media: ProductMedia) {
     draggedItem = media;
     if (event.dataTransfer) {
@@ -244,7 +282,9 @@
       <div class="modal" role="dialog" on:click|stopPropagation>
         <MediaBrowser onSelect={handleMediaSelected} selectedIds={productMedia.map((m) => m.id)} />
         <div class="modal-actions">
-          <button class="cancel-btn" on:click={() => (showMediaBrowser = false)}>Close</button>
+          <button type="button" class="cancel-btn" on:click={() => (showMediaBrowser = false)}>
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -285,7 +325,11 @@
             <p class="media-filename">{media.filename}</p>
             <p class="media-type">{media.type}</p>
           </div>
-          <button class="remove-btn" on:click={() => handleRemoveMedia(media)}>
+          <button
+            type="button"
+            class="remove-btn"
+            on:click|stopPropagation={() => handleRemoveMedia(media)}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
             </svg>

@@ -190,10 +190,21 @@
           throw new Error('Failed to create product');
         }
 
+        const newProduct = (await response.json()) as Product;
         toastStore.success(`Product "${formName}" created successfully`);
+
+        // Save any temporary media to the newly created product
+        if (productMediaManager && newProduct.id) {
+          try {
+            await productMediaManager.saveTempMediaToProduct(newProduct.id);
+          } catch (error) {
+            console.error('Failed to save media to new product:', error);
+            // Don't fail the whole operation, product is already created
+          }
+        }
       }
 
-      // Save media order changes if any exist
+      // Save media order changes if any exist (for editing)
       if (productMediaManager && editingProductId) {
         try {
           await productMediaManager.saveMediaOrder();

@@ -85,6 +85,7 @@
     <h3>Media Library</h3>
     <div class="filter-tabs">
       <button
+        type="button"
         class="filter-tab"
         class:active={filterType === 'all'}
         on:click={() => {
@@ -95,6 +96,7 @@
         All
       </button>
       <button
+        type="button"
         class="filter-tab"
         class:active={filterType === 'image'}
         on:click={() => {
@@ -105,6 +107,7 @@
         Images
       </button>
       <button
+        type="button"
         class="filter-tab"
         class:active={filterType === 'video'}
         on:click={() => {
@@ -153,13 +156,21 @@
             {/if}
           </div>
           <div class="media-actions">
-            <button class="action-btn select-btn" on:click={() => handleSelect(item)}>
+            <button
+              type="button"
+              class="action-btn select-btn"
+              on:click|stopPropagation={() => handleSelect(item)}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"></path>
               </svg>
               Select
             </button>
-            <button class="action-btn delete-btn" on:click={() => handleDelete(item)}>
+            <button
+              type="button"
+              class="action-btn delete-btn"
+              on:click|stopPropagation={() => handleDelete(item)}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path
                   d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
