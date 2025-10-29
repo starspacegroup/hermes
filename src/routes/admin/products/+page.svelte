@@ -426,16 +426,6 @@
             />
           </div>
 
-          <div class="form-group">
-            <label for="product-image">Image URL</label>
-            <input
-              type="url"
-              id="product-image"
-              bind:value={formImage}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
-
           <div class="form-group full-width">
             <label for="product-tags">Tags (comma-separated)</label>
             <input
@@ -448,11 +438,9 @@
         </div>
 
         <!-- Product Media Manager -->
-        {#if isEditing && editingProductId}
-          <div class="form-group full-width">
-            <ProductMediaManager productId={editingProductId} />
-          </div>
-        {/if}
+        <div class="form-group full-width">
+          <ProductMediaManager productId={editingProductId || ''} />
+        </div>
 
         <div class="modal-actions">
           <button type="button" class="cancel-btn" on:click={closeProductModal}>Cancel</button>
