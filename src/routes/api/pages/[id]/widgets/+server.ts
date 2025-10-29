@@ -41,7 +41,17 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
     }
 
     const widgetData: pagesDb.CreateWidgetData = {
-      type: data.type as 'single_product' | 'product_list' | 'text' | 'image',
+      type: data.type as
+        | 'single_product'
+        | 'product_list'
+        | 'text'
+        | 'image'
+        | 'hero'
+        | 'button'
+        | 'spacer'
+        | 'columns'
+        | 'heading'
+        | 'divider',
       config: data.config,
       position: data.position
     };

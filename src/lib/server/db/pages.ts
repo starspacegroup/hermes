@@ -20,7 +20,17 @@ export interface DBPage {
 export interface DBPageWidget {
   id: string;
   page_id: string;
-  type: 'single_product' | 'product_list' | 'text' | 'image';
+  type:
+    | 'single_product'
+    | 'product_list'
+    | 'text'
+    | 'image'
+    | 'hero'
+    | 'button'
+    | 'spacer'
+    | 'columns'
+    | 'heading'
+    | 'divider';
   config: string; // JSON string
   position: number;
   created_at: number;
@@ -42,13 +52,33 @@ export interface UpdatePageData {
 }
 
 export interface CreateWidgetData {
-  type: 'single_product' | 'product_list' | 'text' | 'image';
+  type:
+    | 'single_product'
+    | 'product_list'
+    | 'text'
+    | 'image'
+    | 'hero'
+    | 'button'
+    | 'spacer'
+    | 'columns'
+    | 'heading'
+    | 'divider';
   config: WidgetConfig;
   position: number;
 }
 
 export interface UpdateWidgetData {
-  type?: 'single_product' | 'product_list' | 'text' | 'image';
+  type?:
+    | 'single_product'
+    | 'product_list'
+    | 'text'
+    | 'image'
+    | 'hero'
+    | 'button'
+    | 'spacer'
+    | 'columns'
+    | 'heading'
+    | 'divider';
   config?: WidgetConfig;
   position?: number;
 }

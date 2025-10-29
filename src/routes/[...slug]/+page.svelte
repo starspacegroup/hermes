@@ -3,6 +3,12 @@
   import ImageWidget from '$lib/components/widgets/ImageWidget.svelte';
   import SingleProductWidget from '$lib/components/widgets/SingleProductWidget.svelte';
   import ProductListWidget from '$lib/components/widgets/ProductListWidget.svelte';
+  import HeroWidget from '$lib/components/widgets/HeroWidget.svelte';
+  import ButtonWidget from '$lib/components/widgets/ButtonWidget.svelte';
+  import SpacerWidget from '$lib/components/widgets/SpacerWidget.svelte';
+  import DividerWidget from '$lib/components/widgets/DividerWidget.svelte';
+  import ColumnsWidget from '$lib/components/widgets/ColumnsWidget.svelte';
+  import HeadingWidget from '$lib/components/widgets/HeadingWidget.svelte';
   import type { PageData } from './$types';
 
   export let data: PageData;
@@ -43,6 +49,18 @@
           <SingleProductWidget config={widget.config} />
         {:else if widget.type === 'product_list'}
           <ProductListWidget config={widget.config} />
+        {:else if widget.type === 'hero'}
+          <HeroWidget config={widget.config} />
+        {:else if widget.type === 'button'}
+          <ButtonWidget config={widget.config} />
+        {:else if widget.type === 'spacer'}
+          <SpacerWidget config={widget.config} />
+        {:else if widget.type === 'divider'}
+          <DividerWidget config={widget.config} />
+        {:else if widget.type === 'columns'}
+          <ColumnsWidget config={widget.config} />
+        {:else if widget.type === 'heading'}
+          <HeadingWidget config={widget.config} />
         {/if}
       </div>
     {/each}

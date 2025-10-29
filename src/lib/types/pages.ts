@@ -4,7 +4,19 @@
 
 export type PageStatus = 'draft' | 'published';
 
-export type WidgetType = 'single_product' | 'product_list' | 'text' | 'image';
+export type WidgetType =
+  | 'single_product'
+  | 'product_list'
+  | 'text'
+  | 'image'
+  | 'hero'
+  | 'button'
+  | 'spacer'
+  | 'columns'
+  | 'heading'
+  | 'divider';
+
+export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
 export interface Page {
   id: string;
@@ -27,13 +39,79 @@ export interface PageWidget {
   updated_at: number;
 }
 
+// Responsive value type - allows different values per breakpoint
+export interface ResponsiveValue<T> {
+  mobile?: T;
+  tablet?: T;
+  desktop: T;
+}
+
+// Spacing configuration
+export interface SpacingConfig {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+}
+
+// Typography configuration
+export interface TypographyConfig {
+  fontSize?: number;
+  fontWeight?:
+    | 'normal'
+    | 'bold'
+    | '100'
+    | '200'
+    | '300'
+    | '400'
+    | '500'
+    | '600'
+    | '700'
+    | '800'
+    | '900';
+  lineHeight?: number;
+  letterSpacing?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+}
+
+// Border configuration
+export interface BorderConfig {
+  width?: number;
+  style?: 'none' | 'solid' | 'dashed' | 'dotted';
+  color?: string;
+  radius?: number;
+}
+
+// Background configuration
+export interface BackgroundConfig {
+  color?: string;
+  image?: string;
+  size?: 'cover' | 'contain' | 'auto';
+  position?: string;
+  repeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
+}
+
+// Common style properties that support responsive design
+export interface ResponsiveStyles {
+  display?: ResponsiveValue<'block' | 'flex' | 'grid' | 'none'>;
+  width?: ResponsiveValue<string>;
+  height?: ResponsiveValue<string>;
+  padding?: ResponsiveValue<SpacingConfig>;
+  margin?: ResponsiveValue<SpacingConfig>;
+  textAlign?: ResponsiveValue<'left' | 'center' | 'right' | 'justify'>;
+}
+
 // Widget configuration types
 export interface WidgetConfig {
   // Common fields
   id?: string;
+  styles?: ResponsiveStyles;
 
   // Single product widget
   productId?: string;
+  showPrice?: boolean;
+  showDescription?: boolean;
+  layout?: 'card' | 'inline' | 'detailed';
 
   // Product list widget
   category?: string;
@@ -41,16 +119,65 @@ export interface WidgetConfig {
   limit?: number;
   sortBy?: 'name' | 'price' | 'created_at';
   sortOrder?: 'asc' | 'desc';
+  columns?: ResponsiveValue<number>;
 
   // Text widget
   text?: string;
-  alignment?: 'left' | 'center' | 'right';
+  html?: string;
+  alignment?: 'left' | 'center' | 'right' | 'justify';
+  typography?: TypographyConfig;
+  textColor?: string;
+  fontSize?: number;
+  lineHeight?: number;
+
+  // Heading widget
+  level?: 1 | 2 | 3 | 4 | 5 | 6;
+  heading?: string;
 
   // Image widget
   src?: string;
   alt?: string;
-  width?: number;
-  height?: number;
+  width?: number | string;
+  imageWidth?: number | string;
+  imageHeight?: number | string;
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none';
+  link?: string;
+
+  // Hero widget
+  title?: string;
+  subtitle?: string;
+  backgroundImage?: string;
+  backgroundColor?: string;
+  heroHeight?: ResponsiveValue<string>;
+  overlay?: boolean;
+  overlayOpacity?: number;
+  ctaText?: string;
+  ctaLink?: string;
+  contentAlign?: 'left' | 'center' | 'right';
+
+  // Button widget
+  label?: string;
+  url?: string;
+  variant?: 'primary' | 'secondary' | 'outline' | 'text';
+  size?: 'small' | 'medium' | 'large';
+  fullWidth?: ResponsiveValue<boolean>;
+  icon?: string;
+  openInNewTab?: boolean;
+
+  // Spacer widget
+  space?: ResponsiveValue<number>;
+
+  // Columns widget
+  columnCount?: ResponsiveValue<number>;
+  gap?: ResponsiveValue<number>;
+  verticalAlign?: 'stretch' | 'start' | 'center' | 'end';
+  children?: PageWidget[];
+
+  // Divider widget
+  thickness?: number;
+  dividerColor?: string;
+  dividerStyle?: 'solid' | 'dashed' | 'dotted';
+  spacing?: ResponsiveValue<number>;
 }
 
 export interface PageWithWidgets extends Page {

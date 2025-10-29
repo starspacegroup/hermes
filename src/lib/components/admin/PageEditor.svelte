@@ -1,6 +1,11 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { toastStore } from '$lib/stores/toast';
-  import type { PageWidget, WidgetType, WidgetConfig } from '$lib/types/pages';
+  import type { PageWidget, WidgetType, WidgetConfig, Breakpoint } from '$lib/types/pages';
+  import WidgetRenderer from './WidgetRenderer.svelte';
+  import WidgetLibrary from './WidgetLibrary.svelte';
+  import WidgetPropertiesPanel from './WidgetPropertiesPanel.svelte';
+  import BreakpointSwitcher from './BreakpointSwitcher.svelte';
 
   export let pageId: string | null = null;
   export let initialTitle = '';
@@ -19,9 +24,40 @@
   let slug = initialSlug;
   let status = initialStatus;
   let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
-  let showWidgetPicker = false;
-  let editingWidget: PageWidget | null = null;
+  let selectedWidget: PageWidget | null = null;
+  let _hoveredWidgetId: string | null = null;
+  let currentBreakpoint: Breakpoint = 'desktop';
+  let showWidgetLibrary = true;
+  let showPropertiesPanel = true;
   let draggedIndex: number | null = null;
+  let _dropTargetIndex: number | null = null;
+  let saving = false;
+  let lastSaved: Date | null = null;
+  let autoSaveInterval: number | null = null;
+
+  // History management
+  let history: PageWidget[][] = [];
+  let historyIndex = -1;
+  const MAX_HISTORY = 50;
+
+  // Track the last initialWidgets to detect changes
+  let lastInitialWidgets = JSON.stringify(initialWidgets);
+
+  // Update widgets when initialWidgets change (after save/reload)
+  $: {
+    const currentInitialWidgets = JSON.stringify(initialWidgets);
+    if (currentInitialWidgets !== lastInitialWidgets) {
+      lastInitialWidgets = currentInitialWidgets;
+      widgets = JSON.parse(JSON.stringify(initialWidgets));
+      // Also update page data when reloading
+      title = initialTitle;
+      slug = initialSlug;
+      status = initialStatus;
+      // Reset history when data reloads
+      history = [JSON.parse(JSON.stringify(widgets))];
+      historyIndex = 0;
+    }
+  }
 
   // Update slug when title changes (only for new pages)
   $: if (!pageId && title && (!slug || slug.trim() === '')) {
@@ -31,6 +67,103 @@
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
+  }
+
+  function selectWidget(widgetId: string) {
+    selectedWidget = widgets.find((w) => w.id === widgetId) || null;
+  }
+
+  onMount(() => {
+    // Initialize history with current state
+    saveToHistory();
+
+    // Setup auto-save
+    autoSaveInterval = window.setInterval(() => {
+      autoSave();
+    }, 30000); // Auto-save every 30 seconds
+
+    // Setup keyboard shortcuts
+    document.addEventListener('keydown', handleKeyDown);
+  });
+
+  onDestroy(() => {
+    if (autoSaveInterval) {
+      clearInterval(autoSaveInterval);
+    }
+    document.removeEventListener('keydown', handleKeyDown);
+  });
+
+  function handleKeyDown(e: KeyboardEvent) {
+    // Undo: Ctrl+Z
+    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+    // Redo: Ctrl+Y or Ctrl+Shift+Z
+    else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+      e.preventDefault();
+      redo();
+    }
+    // Delete widget
+    else if (e.key === 'Delete' && selectedWidget) {
+      e.preventDefault();
+      removeWidgetById(selectedWidget.id);
+    }
+    // Duplicate widget
+    else if (e.ctrlKey && e.key === 'd' && selectedWidget) {
+      e.preventDefault();
+      duplicateWidget(selectedWidget.id);
+    }
+  }
+
+  function saveToHistory() {
+    // Remove any history after current index
+    history = history.slice(0, historyIndex + 1);
+
+    // Add current state
+    history.push(JSON.parse(JSON.stringify(widgets)));
+
+    // Limit history size
+    if (history.length > MAX_HISTORY) {
+      history.shift();
+    } else {
+      historyIndex++;
+    }
+  }
+
+  function undo() {
+    if (historyIndex > 0) {
+      historyIndex--;
+      widgets = JSON.parse(JSON.stringify(history[historyIndex]));
+      toastStore.info('Undo');
+    }
+  }
+
+  function redo() {
+    if (historyIndex < history.length - 1) {
+      historyIndex++;
+      widgets = JSON.parse(JSON.stringify(history[historyIndex]));
+      toastStore.info('Redo');
+    }
+  }
+
+  async function autoSave() {
+    if (!title || !slug || saving) return;
+
+    // Only auto-save if there are changes
+    const hasChanges = JSON.stringify(widgets) !== JSON.stringify(initialWidgets);
+    if (!hasChanges) return;
+
+    try {
+      saving = true;
+      await onSave({ title, slug, status: 'draft', widgets });
+      lastSaved = new Date();
+      // Don't show toast for auto-save to avoid spam
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    } finally {
+      saving = false;
+    }
   }
 
   function addWidget(type: WidgetType) {
@@ -44,28 +177,149 @@
       updated_at: Date.now()
     };
     widgets = [...widgets, newWidget];
-    showWidgetPicker = false;
-    editingWidget = newWidget;
+    saveToHistory();
+    selectWidget(newWidget.id);
+
+    // Auto-save the page with the new widget
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
   }
 
   function getDefaultConfig(type: WidgetType): WidgetConfig {
     switch (type) {
       case 'text':
         return { text: 'Enter your text here', alignment: 'left' };
+      case 'heading':
+        return { heading: 'Heading Text', level: 2 };
       case 'image':
-        return { src: '', alt: '', width: 800, height: 600 };
+        return { src: '', alt: '', imageWidth: '100%', imageHeight: 'auto' };
+      case 'hero':
+        return {
+          title: 'Hero Title',
+          subtitle: 'Hero subtitle text',
+          heroHeight: { desktop: '500px', tablet: '400px', mobile: '300px' },
+          contentAlign: 'center'
+        };
+      case 'button':
+        return {
+          label: 'Click Here',
+          url: '#',
+          variant: 'primary',
+          size: 'medium',
+          fullWidth: { desktop: false, tablet: false, mobile: true }
+        };
+      case 'spacer':
+        return { space: { desktop: 40, tablet: 30, mobile: 20 } };
+      case 'divider':
+        return {
+          thickness: 1,
+          dividerColor: '#e0e0e0',
+          dividerStyle: 'solid',
+          spacing: { desktop: 20, tablet: 15, mobile: 10 }
+        };
+      case 'columns':
+        return {
+          columnCount: { desktop: 2, tablet: 2, mobile: 1 },
+          gap: { desktop: 20 },
+          verticalAlign: 'stretch'
+        };
       case 'single_product':
-        return { productId: '' };
+        return { productId: '', layout: 'card', showPrice: true, showDescription: true };
       case 'product_list':
-        return { category: '', limit: 6, sortBy: 'created_at', sortOrder: 'desc' };
+        return {
+          category: '',
+          limit: 6,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+          columns: { desktop: 3, tablet: 2, mobile: 1 }
+        };
       default:
         return {};
     }
   }
 
-  function removeWidget(index: number) {
-    widgets = widgets.filter((_, i) => i !== index);
+  function removeWidgetById(widgetId: string) {
+    widgets = widgets.filter((w) => w.id !== widgetId);
+    if (selectedWidget?.id === widgetId) {
+      selectedWidget = null;
+    }
+    saveToHistory();
+
+    // Auto-save after removing widget
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
+  }
+
+  function duplicateWidget(widgetId: string) {
+    const widget = widgets.find((w) => w.id === widgetId);
+    if (!widget) return;
+
+    const index = widgets.findIndex((w) => w.id === widgetId);
+    const duplicated: PageWidget = {
+      ...JSON.parse(JSON.stringify(widget)),
+      id: `temp-${Date.now()}-${Math.random()}`,
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+
+    widgets = [...widgets.slice(0, index + 1), duplicated, ...widgets.slice(index + 1)];
     updateWidgetPositions();
+    saveToHistory();
+    selectedWidget = duplicated;
+    toastStore.success('Widget duplicated');
+
+    // Auto-save after duplicating widget
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
+  }
+
+  function moveWidgetUp(widgetId: string) {
+    const index = widgets.findIndex((w) => w.id === widgetId);
+    if (index <= 0) return;
+
+    const newWidgets = [...widgets];
+    const temp = newWidgets[index - 1];
+    newWidgets[index - 1] = newWidgets[index];
+    newWidgets[index] = temp;
+    widgets = newWidgets;
+    updateWidgetPositions();
+    saveToHistory();
+
+    // Auto-save after moving widget
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
+  }
+
+  function moveWidgetDown(widgetId: string) {
+    const index = widgets.findIndex((w) => w.id === widgetId);
+    if (index >= widgets.length - 1) return;
+
+    const newWidgets = [...widgets];
+    const temp = newWidgets[index];
+    newWidgets[index] = newWidgets[index + 1];
+    newWidgets[index + 1] = temp;
+    widgets = newWidgets;
+    updateWidgetPositions();
+    saveToHistory();
+
+    // Auto-save after moving widget
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
+  }
+
+  function updateWidgetConfig(widgetId: string, config: WidgetConfig) {
+    widgets = widgets.map((w) => {
+      if (w.id === widgetId) {
+        return { ...w, config: { ...w.config, ...config }, updated_at: Date.now() };
+      }
+      return w;
+    });
+    saveToHistory();
   }
 
   function moveWidget(fromIndex: number, toIndex: number) {
@@ -74,6 +328,12 @@
     newWidgets.splice(toIndex, 0, removed);
     widgets = newWidgets;
     updateWidgetPositions();
+    saveToHistory();
+
+    // Auto-save after drag-and-drop
+    if (pageId && title && slug) {
+      setTimeout(() => autoSave(), 100);
+    }
   }
 
   function updateWidgetPositions() {
@@ -102,7 +362,16 @@
       return;
     }
 
-    await onSave({ title, slug, status, widgets });
+    try {
+      saving = true;
+      await onSave({ title, slug, status, widgets });
+      lastSaved = new Date();
+      toastStore.success('Page saved successfully');
+    } catch (_error) {
+      toastStore.error('Failed to save page');
+    } finally {
+      saving = false;
+    }
   }
 
   function getWidgetLabel(type: WidgetType): string {
@@ -121,300 +390,358 @@
   }
 </script>
 
-<div class="page-editor">
-  <div class="editor-header">
-    <input type="text" bind:value={title} placeholder="Page Title" class="title-input" required />
-    <div class="header-actions">
+<div class="wysiwyg-editor">
+  <!-- Top Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input type="text" bind:value={title} placeholder="Page Title" class="title-input" required />
+      <input type="text" bind:value={slug} placeholder="/page-url" class="slug-input" required />
+    </div>
+
+    <div class="toolbar-center">
+      <BreakpointSwitcher bind:currentBreakpoint />
+    </div>
+
+    <div class="toolbar-right">
+      <button
+        type="button"
+        class="icon-btn"
+        title="Undo (Ctrl+Z)"
+        on:click={undo}
+        disabled={historyIndex <= 0}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M3 7v6h6M21 17a9 9 0 11-9-9 9 9 0 019 9h0"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="icon-btn"
+        title="Redo (Ctrl+Y)"
+        on:click={redo}
+        disabled={historyIndex >= history.length - 1}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M21 7v6h-6M3 17a9 9 0 019-9 9 9 0 019 9h0"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <div class="divider"></div>
       <select bind:value={status} class="status-select">
         <option value="draft">Draft</option>
         <option value="published">Published</option>
       </select>
-      <button type="button" class="cancel-btn" on:click={onCancel}>Cancel</button>
-      <button type="button" class="save-btn" on:click={handleSubmit}>
-        {pageId ? 'Update' : 'Create'} Page
+      {#if saving}
+        <span class="save-status saving">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            class="spinner"
+          >
+            <circle cx="12" cy="12" r="10" stroke-width="3" opacity="0.25" />
+            <path d="M12 2a10 10 0 0110 10" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          Saving...
+        </span>
+      {:else if lastSaved}
+        <span class="save-status saved">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M20 6L9 17l-5-5"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Saved {lastSaved.toLocaleTimeString()}
+        </span>
+      {/if}
+      <button type="button" class="btn-secondary" on:click={onCancel}>Cancel</button>
+      <button type="button" class="btn-primary" on:click={handleSubmit} disabled={saving}>
+        {saving ? 'Saving...' : pageId ? 'Update' : 'Create'}
       </button>
     </div>
   </div>
 
-  <div class="editor-body">
-    <div class="page-settings">
-      <label>
-        <span>URL Slug</span>
-        <input type="text" bind:value={slug} placeholder="/page-url" class="slug-input" required />
-      </label>
-    </div>
-
-    <div class="widgets-section">
-      <div class="section-header">
-        <h3>Page Content</h3>
-        <button type="button" class="add-widget-btn" on:click={() => (showWidgetPicker = true)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"></path>
-          </svg>
-          Add Widget
-        </button>
-      </div>
-
-      {#if widgets.length === 0}
-        <div class="empty-widgets">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+  <!-- Main Editor Area -->
+  <div class="editor-main">
+    <!-- Left Sidebar - Widget Library -->
+    <div class="sidebar-left" class:collapsed={!showWidgetLibrary}>
+      <div class="sidebar-header">
+        <h3>Widgets</h3>
+        <button
+          type="button"
+          class="icon-btn"
+          on:click={() => (showWidgetLibrary = !showWidgetLibrary)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path
-              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+              d="M15 18l-6-6 6-6"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
-            ></path>
-            <path d="M14 2v6h6" stroke-width="2" stroke-linecap="round"></path>
+            />
           </svg>
-          <p>No widgets yet. Click "Add Widget" to start building your page.</p>
+        </button>
+      </div>
+      {#if showWidgetLibrary}
+        <div class="sidebar-content">
+          <WidgetLibrary onSelectWidget={addWidget} />
         </div>
-      {:else}
-        <div class="widgets-list">
-          {#each widgets as widget, index}
-            <div
-              class="widget-item"
-              role="button"
-              tabindex="0"
-              draggable="true"
-              on:dragstart={() => handleDragStart(index)}
-              on:dragover={(e) => handleDragOver(e, index)}
-              on:dragend={handleDragEnd}
-            >
-              <div class="widget-header">
-                <div class="widget-info">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    {#if widget.type === 'text'}
-                      <path d="M4 7h16M4 12h16M4 17h10" stroke-width="2" stroke-linecap="round"
-                      ></path>
-                    {:else if widget.type === 'image'}
-                      <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"></rect>
-                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                      <path
-                        d="M21 15l-5-5L5 21"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      ></path>
-                    {:else if widget.type === 'single_product'}
-                      <path
-                        d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
-                        stroke-width="2"
-                      ></path>
-                    {:else if widget.type === 'product_list'}
-                      <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" stroke-width="2"
-                      ></path>
-                    {/if}
-                  </svg>
-                  <span>{getWidgetLabel(widget.type)}</span>
+      {/if}
+    </div>
+
+    <!-- Center Canvas -->
+    <div class="canvas-area">
+      <div
+        class="canvas-container"
+        class:mobile={currentBreakpoint === 'mobile'}
+        class:tablet={currentBreakpoint === 'tablet'}
+      >
+        {#if widgets.length === 0}
+          <div class="empty-canvas">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2" />
+              <path d="M12 8v8M8 12h8" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <h3>Start Building Your Page</h3>
+            <p>Select a widget from the library on the left to add content</p>
+          </div>
+        {:else}
+          <div class="widgets-canvas">
+            {#each widgets as widget, index}
+              <div
+                class="canvas-widget"
+                class:selected={selectedWidget?.id === widget.id}
+                draggable="true"
+                on:dragstart={() => handleDragStart(index)}
+                on:dragover={(e) => handleDragOver(e, index)}
+                on:dragend={handleDragEnd}
+                on:click={() => selectWidget(widget.id)}
+                on:keydown={(e) => e.key === 'Enter' && selectWidget(widget.id)}
+                role="button"
+                tabindex="0"
+              >
+                <div class="widget-controls">
+                  <div class="widget-label">{getWidgetLabel(widget.type)}</div>
+                  <div class="widget-actions">
+                    <button
+                      type="button"
+                      class="icon-btn-sm"
+                      title="Move Up"
+                      on:click|stopPropagation={() => moveWidgetUp(widget.id)}
+                      disabled={index === 0}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M18 15l-6-6-6 6"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn-sm"
+                      title="Move Down"
+                      on:click|stopPropagation={() => moveWidgetDown(widget.id)}
+                      disabled={index === widgets.length - 1}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M6 9l6 6 6-6"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn-sm"
+                      title="Duplicate"
+                      on:click|stopPropagation={() => duplicateWidget(widget.id)}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" />
+                        <path
+                          d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                          stroke-width="2"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-btn-sm"
+                      title="Delete"
+                      on:click|stopPropagation={() => removeWidgetById(widget.id)}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div class="widget-actions">
-                  <button
-                    type="button"
-                    class="widget-action-btn"
-                    on:click={() => (editingWidget = widget)}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                        stroke-width="2"
-                      ></path>
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    class="widget-action-btn"
-                    on:click={() => removeWidget(index)}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
-                    </svg>
-                  </button>
+                <div class="widget-render">
+                  <WidgetRenderer {widget} {currentBreakpoint} />
                 </div>
               </div>
-              <div class="widget-preview">
-                {#if widget.type === 'text'}
-                  <p>{widget.config.text || 'No content'}</p>
-                {:else if widget.type === 'single_product'}
-                  <p>Product ID: {widget.config.productId || 'Not set'}</p>
-                {:else if widget.type === 'product_list'}
-                  <p>Category: {widget.config.category || 'All'} | Limit: {widget.config.limit}</p>
-                {/if}
-              </div>
-            </div>
-          {/each}
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Right Sidebar - Properties Panel -->
+    <div class="sidebar-right" class:collapsed={!showPropertiesPanel || !selectedWidget}>
+      <div class="sidebar-header">
+        <h3>Properties</h3>
+        <button
+          type="button"
+          class="icon-btn"
+          on:click={() => (showPropertiesPanel = !showPropertiesPanel)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M9 18l6-6-6-6"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+      {#if showPropertiesPanel && selectedWidget}
+        <div class="sidebar-content">
+          <WidgetPropertiesPanel
+            widget={selectedWidget}
+            {currentBreakpoint}
+            onUpdate={(config) => {
+              if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
+            }}
+            onClose={() => (selectedWidget = null)}
+          />
         </div>
       {/if}
     </div>
   </div>
 </div>
 
-{#if showWidgetPicker}
-  <div
-    class="modal-overlay"
-    role="button"
-    tabindex="0"
-    on:click={() => (showWidgetPicker = false)}
-    on:keydown={(e) => e.key === 'Escape' && (showWidgetPicker = false)}
-  >
-    <div class="modal-content" role="dialog" aria-modal="true">
-      <h2>Add Widget</h2>
-      <div class="widget-types">
-        <button type="button" class="widget-type-card" on:click={() => addWidget('text')}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M4 7h16M4 12h16M4 17h10" stroke-width="2" stroke-linecap="round"></path>
-          </svg>
-          <span>Text Content</span>
-          <p>Add text, paragraphs, and formatted content</p>
-        </button>
-        <button type="button" class="widget-type-card" on:click={() => addWidget('image')}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <path
-              d="M21 15l-5-5L5 21"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          <span>Image</span>
-          <p>Display an image with customizable size</p>
-        </button>
-        <button type="button" class="widget-type-card" on:click={() => addWidget('single_product')}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
-              stroke-width="2"
-            ></path>
-          </svg>
-          <span>Single Product</span>
-          <p>Showcase a specific product</p>
-        </button>
-        <button type="button" class="widget-type-card" on:click={() => addWidget('product_list')}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" stroke-width="2"></path>
-          </svg>
-          <span>Product List</span>
-          <p>Display multiple products with filters</p>
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-{#if editingWidget}
-  <div
-    class="modal-overlay"
-    role="button"
-    tabindex="0"
-    on:click={() => (editingWidget = null)}
-    on:keydown={(e) => e.key === 'Escape' && (editingWidget = null)}
-  >
-    <div class="modal-content" role="dialog" aria-modal="true">
-      <h2>Edit {getWidgetLabel(editingWidget.type)}</h2>
-      <div class="widget-config">
-        {#if editingWidget.type === 'text'}
-          <label>
-            <span>Text Content</span>
-            <textarea bind:value={editingWidget.config.text} rows="5"></textarea>
-          </label>
-          <label>
-            <span>Alignment</span>
-            <select bind:value={editingWidget.config.alignment}>
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-            </select>
-          </label>
-        {:else if editingWidget.type === 'image'}
-          <label>
-            <span>Image URL</span>
-            <input type="url" bind:value={editingWidget.config.src} placeholder="https://..." />
-          </label>
-          <label>
-            <span>Alt Text</span>
-            <input type="text" bind:value={editingWidget.config.alt} />
-          </label>
-        {:else if editingWidget.type === 'single_product'}
-          <label>
-            <span>Product ID</span>
-            <input type="text" bind:value={editingWidget.config.productId} />
-          </label>
-        {:else if editingWidget.type === 'product_list'}
-          <label>
-            <span>Category (optional)</span>
-            <input type="text" bind:value={editingWidget.config.category} />
-          </label>
-          <label>
-            <span>Number of Products</span>
-            <input type="number" bind:value={editingWidget.config.limit} min="1" max="24" />
-          </label>
-          <label>
-            <span>Sort By</span>
-            <select bind:value={editingWidget.config.sortBy}>
-              <option value="name">Name</option>
-              <option value="price">Price</option>
-              <option value="created_at">Date Created</option>
-            </select>
-          </label>
-        {/if}
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="cancel-btn" on:click={() => (editingWidget = null)}>
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
 <style>
-  .page-editor {
-    background: var(--color-bg-primary);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px var(--color-shadow-light);
-    overflow: hidden;
+  .wysiwyg-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--color-bg-secondary);
   }
 
-  .editor-header {
+  /* Toolbar */
+  .toolbar {
     display: flex;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--color-border-secondary);
     align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--color-bg-primary);
+    border-bottom: 1px solid var(--color-border-secondary);
+    gap: 1.5rem;
+  }
+
+  .toolbar-left,
+  .toolbar-center,
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .title-input {
-    flex: 1;
-    font-size: 1.5rem;
+    font-size: 1.125rem;
     font-weight: 600;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
+    min-width: 200px;
   }
 
-  .header-actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
+  .slug-input {
+    font-family: monospace;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    min-width: 180px;
+  }
+
+  .icon-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .icon-btn:hover:not(:disabled) {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .divider {
+    width: 1px;
+    height: 24px;
+    background: var(--color-border-secondary);
   }
 
   .status-select {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
     background: var(--color-bg-secondary);
@@ -422,236 +749,273 @@
     cursor: pointer;
   }
 
-  .cancel-btn,
-  .save-btn {
+  .save-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .save-status.saving {
+    color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .save-status.saved {
+    color: var(--color-text-secondary);
+  }
+
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .btn-secondary,
+  .btn-primary {
     padding: 0.5rem 1rem;
     border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    border: none;
   }
 
-  .cancel-btn {
+  .btn-secondary {
     background: transparent;
     border: 1px solid var(--color-border-secondary);
     color: var(--color-text-primary);
   }
 
-  .save-btn {
+  .btn-primary {
     background: var(--color-primary);
-    border: none;
     color: var(--color-text-inverse);
   }
 
-  .editor-body {
-    padding: 1.5rem;
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
-  .page-settings {
-    margin-bottom: 2rem;
-  }
-
-  .page-settings label {
-    display: block;
-  }
-
-  .page-settings label span {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: var(--color-text-secondary);
-  }
-
-  .slug-input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 6px;
-    background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
-    font-family: monospace;
-  }
-
-  .section-header {
+  /* Main Editor Area */
+  .editor-main {
     display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Sidebars */
+  .sidebar-left,
+  .sidebar-right {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    border-right: 1px solid var(--color-border-secondary);
+    transition: width 0.3s ease;
+    overflow: hidden;
+  }
+
+  .sidebar-left {
+    width: 300px;
+  }
+
+  .sidebar-left.collapsed {
+    width: 0;
+  }
+
+  .sidebar-right {
+    width: 350px;
+    border-right: none;
+    border-left: 1px solid var(--color-border-secondary);
+  }
+
+  .sidebar-right.collapsed {
+    width: 0;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-border-secondary);
   }
 
-  .section-header h3 {
+  .sidebar-header h3 {
     margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
     color: var(--color-text-primary);
   }
 
-  .add-widget-btn {
+  .sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  /* Canvas Area */
+  .canvas-area {
+    flex: 1;
     display: flex;
+    justify-content: center;
+    padding: 2rem;
+    overflow-y: auto;
+    background: var(--color-bg-secondary);
+  }
+
+  .canvas-container {
+    width: 100%;
+    max-width: 1200px;
+    background: var(--color-bg-primary);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--color-shadow-light);
+    min-height: 600px;
+    transition: max-width 0.3s ease;
+  }
+
+  .canvas-container.tablet {
+    max-width: 768px;
+  }
+
+  .canvas-container.mobile {
+    max-width: 375px;
+  }
+
+  .empty-canvas {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--color-secondary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  .empty-widgets {
-    text-align: center;
-    padding: 3rem 1rem;
+    justify-content: center;
+    min-height: 600px;
     color: var(--color-text-secondary);
+    text-align: center;
+    padding: 2rem;
   }
 
-  .empty-widgets svg {
+  .empty-canvas svg {
     opacity: 0.3;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
 
-  .widgets-list {
+  .empty-canvas h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--color-text-primary);
+  }
+
+  .empty-canvas p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  /* Widgets Canvas */
+  .widgets-canvas {
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
 
-  .widget-item {
-    border: 1px solid var(--color-border-secondary);
+  .canvas-widget {
+    position: relative;
+    border: 2px solid transparent;
     border-radius: 8px;
-    padding: 1rem;
-    background: var(--color-bg-secondary);
-    cursor: move;
+    transition: all 0.2s;
+    cursor: pointer;
   }
 
-  .widget-header {
-    display: flex;
+  .canvas-widget:hover {
+    border-color: var(--color-border-secondary);
+  }
+
+  .canvas-widget.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .widget-controls {
+    display: none;
+    position: absolute;
+    top: -2.5rem;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px 6px 0 0;
+    padding: 0.5rem;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
+    z-index: 10;
   }
 
-  .widget-info {
+  .canvas-widget:hover .widget-controls,
+  .canvas-widget.selected .widget-controls {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    color: var(--color-text-primary);
+  }
+
+  .widget-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
   }
 
   .widget-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
-  .widget-action-btn {
+  .icon-btn-sm {
     padding: 0.25rem;
     background: transparent;
-    border: none;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-  }
-
-  .widget-preview {
-    padding: 0.75rem;
-    background: var(--color-bg-primary);
+    border: 1px solid transparent;
     border-radius: 4px;
-    font-size: 0.875rem;
     color: var(--color-text-secondary);
-  }
-
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: var(--color-bg-primary);
-    padding: 2rem;
-    border-radius: 12px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-
-  .modal-content h2 {
-    margin: 0 0 1.5rem 0;
-    color: var(--color-text-primary);
-  }
-
-  .widget-types {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-
-  .widget-type-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1.5rem 1rem;
-    background: var(--color-bg-secondary);
-    border: 2px solid var(--color-border-secondary);
-    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
   }
 
-  .widget-type-card:hover {
-    border-color: var(--color-primary);
-    transform: translateY(-2px);
-  }
-
-  .widget-type-card span {
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .widget-type-card p {
-    margin: 0;
-    font-size: 0.75rem;
-    color: var(--color-text-secondary);
-    text-align: center;
-  }
-
-  .widget-config {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .widget-config label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .widget-config label span {
-    font-weight: 500;
-    color: var(--color-text-secondary);
-  }
-
-  .widget-config input,
-  .widget-config textarea,
-  .widget-config select {
-    padding: 0.75rem;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 6px;
+  .icon-btn-sm:hover:not(:disabled) {
     background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
+    border-color: var(--color-border-secondary);
+    color: var(--color-primary);
   }
 
-  .modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    justify-content: flex-end;
+  .icon-btn-sm:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .widget-render {
+    padding: 1rem;
+    min-height: 60px;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .toolbar {
+      flex-wrap: wrap;
+    }
+
+    .sidebar-left,
+    .sidebar-right {
+      position: absolute;
+      height: 100%;
+      z-index: 100;
+    }
+
+    .canvas-area {
+      padding: 1rem;
+    }
   }
 </style>
