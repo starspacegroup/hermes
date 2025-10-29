@@ -165,7 +165,7 @@
 
 <section class="pricing" id="pricing">
   <div class="section-header">
-    <h2>🚀 StarSpace Store Pricing</h2>
+    <h2>🚀 Hermes Pricing</h2>
     <p class="pricing-tagline">Zero monthly fees. We win when you win.</p>
     <p class="pricing-subtitle">Every store gets full access — we only earn a small % per sale.</p>
   </div>
@@ -204,7 +204,7 @@
       <div class="revenue-table">
         <div class="table-header">
           <span>Monthly Sales</span>
-          <span>Total Fee (Stripe + StarSpace)</span>
+          <span>Total Transaction Fee</span>
         </div>
         {#each revenueShareTiers as tier}
           <div class="table-row" class:highlight={tier.highlight}>
