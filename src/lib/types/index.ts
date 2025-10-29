@@ -38,3 +38,6 @@ export type {
   PageFormData,
   WidgetFormData
 } from './pages';
+
+// Re-export media types
+export type { MediaType, ProductMedia, MediaLibraryItem, MediaUploadResult } from './media';

@@ -14,8 +14,9 @@ describe('Database Connection Utilities', () => {
   describe('getDB', () => {
     it('should return database from platform', () => {
       const mockDB = {} as D1Database;
+      const mockBucket = {} as R2Bucket;
       const platform = {
-        env: { DB: mockDB },
+        env: { DB: mockDB, MEDIA_BUCKET: mockBucket },
         context: {} as ExecutionContext,
         caches: {} as CacheStorage & { default: Cache }
       };
@@ -29,8 +30,9 @@ describe('Database Connection Utilities', () => {
     });
 
     it('should throw error when platform.env.DB is undefined', () => {
+      const mockBucket = {} as R2Bucket;
       const platform = {
-        env: {} as { DB: D1Database },
+        env: { MEDIA_BUCKET: mockBucket } as { DB: D1Database; MEDIA_BUCKET: R2Bucket },
         context: {} as ExecutionContext,
         caches: {} as CacheStorage & { default: Cache }
       };

@@ -12,3 +12,4 @@ export * from './products.js';
 export * from './users.js';
 export * from './orders.js';
 export * from './pages.js';
+export * from './media.js';
