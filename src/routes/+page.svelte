@@ -48,11 +48,11 @@
 
   const pricingFeatures = [
     'Unlimited products',
-    'Custom domain or store.starspace.group/yourbrand',
+    'Free custom domain (optional)',
     'AI-powered builder (voice + text)',
     'Real-time analytics',
     'Secure checkout (credit card/crypto)',
-    '24/7 support'
+    'AI product video generator'
   ];
 
   const revenueShareTiers = [
