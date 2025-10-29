@@ -31,7 +31,12 @@
 >
   <div class="toast-content">
     <span class="toast-icon">{getToastIcon(toast.type)}</span>
-    <span class="toast-message">{toast.message}</span>
+    <div class="toast-text">
+      <span class="toast-message">{toast.message}</span>
+      {#if toast.link}
+        <a href={toast.link.href} class="toast-link">{toast.link.text}</a>
+      {/if}
+    </div>
   </div>
   <button class="toast-close" on:click={handleClose} aria-label="Close notification"> ✕ </button>
 </div>
@@ -79,6 +84,12 @@
     flex: 1;
   }
 
+  .toast-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
   .toast-icon {
     display: flex;
     align-items: center;
@@ -88,6 +99,7 @@
     border-radius: 50%;
     font-weight: bold;
     font-size: 0.875rem;
+    flex-shrink: 0;
   }
 
   .toast-success .toast-icon {
@@ -114,6 +126,27 @@
     color: var(--color-text-primary);
     font-weight: 500;
     line-height: 1.4;
+  }
+
+  .toast-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .toast-link:hover {
+    text-decoration: underline;
+  }
+
+  .toast-link:focus {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .toast-close {
