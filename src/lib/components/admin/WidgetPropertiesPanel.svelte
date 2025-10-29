@@ -1,5 +1,8 @@
 <script lang="ts">
   import type { PageWidget, WidgetConfig, Breakpoint } from '$lib/types/pages';
+  import type { MediaLibraryItem } from '$lib/types';
+  import MediaBrowser from './MediaBrowser.svelte';
+  import MediaUpload from './MediaUpload.svelte';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
@@ -8,6 +11,7 @@
 
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
   let lastWidgetId = widget.id;
+  let showMediaBrowser = false;
 
   // Initialize config when component mounts or widget changes
   function initializeConfig() {
@@ -44,6 +48,17 @@
 
   function handleUpdate() {
     onUpdate(config);
+  }
+
+  function handleMediaUploaded(media: MediaLibraryItem) {
+    config.backgroundImage = media.url;
+    handleUpdate();
+  }
+
+  function handleMediaSelected(media: MediaLibraryItem) {
+    config.backgroundImage = media.url;
+    showMediaBrowser = false;
+    handleUpdate();
   }
 
   function getWidgetLabel(type: string): string {
@@ -294,15 +309,39 @@
             </label>
           </div>
           <div class="form-group">
-            <label>
-              <span>Background Image URL</span>
-              <input
-                type="url"
-                bind:value={config.backgroundImage}
-                on:input={handleUpdate}
-                placeholder="https://..."
-              />
+            <label for="background-image">
+              <span>Background Image</span>
             </label>
+            {#if config.backgroundImage}
+              <div class="media-preview">
+                <img src={config.backgroundImage} alt="Background" />
+                <button
+                  type="button"
+                  class="btn-remove"
+                  on:click={() => {
+                    config.backgroundImage = '';
+                    handleUpdate();
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            {/if}
+            <div class="media-actions">
+              <MediaUpload onMediaUploaded={handleMediaUploaded} />
+              <button
+                type="button"
+                class="btn-secondary"
+                on:click={() => (showMediaBrowser = !showMediaBrowser)}
+              >
+                {showMediaBrowser ? 'Hide' : 'Browse'} Library
+              </button>
+            </div>
+            {#if showMediaBrowser}
+              <div class="media-browser-container">
+                <MediaBrowser onSelect={handleMediaSelected} />
+              </div>
+            {/if}
           </div>
           <div class="form-group">
             <label>
@@ -934,5 +973,72 @@
     font-size: 0.75rem;
     color: var(--color-text-secondary);
     font-style: italic;
+  }
+
+  .media-preview {
+    position: relative;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .media-preview img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .media-preview .btn-remove {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .media-preview .btn-remove:hover {
+    background: rgba(220, 38, 38, 1);
+  }
+
+  .media-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .media-actions :global(.upload-button) {
+    flex: 1;
+  }
+
+  .btn-secondary {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .media-browser-container {
+    margin-top: 1rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 400px;
   }
 </style>
