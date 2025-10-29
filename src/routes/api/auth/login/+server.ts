@@ -2,10 +2,13 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 // Demo authentication credentials - in production, this would validate against the database with bcrypt
+// Regular user password: TfppPEsXnfZluUi52ne538O
+// Admin user password: 4a6lJebYdNkr2zjq5j59rTt
+// Platform engineer password: Set via PLATFORM_ENGINEER_PASSWORD environment variable
 const demoCredentials = [
   {
     email: 'user@hermes.local',
-    password: 'user123Pass',
+    password: 'TfppPEsXnfZluUi52ne538O',
     user: {
       id: 'user-1',
       email: 'user@hermes.local',
@@ -15,34 +18,35 @@ const demoCredentials = [
   },
   {
     email: 'owner@hermes.local',
-    password: 'owner456Pass',
+    password: '4a6lJebYdNkr2zjq5j59rTt',
     user: {
       id: 'admin-1',
       email: 'owner@hermes.local',
       name: 'Site Owner',
       role: 'admin' as const
     }
-  },
-  {
-    email: 'engineer@hermes.local',
-    password: 'engineer789Pass',
-    user: {
+  }
+];
+
+const mockLogin = (email: string, password: string, platformPassword?: string) => {
+  // Check platform engineer credentials from environment variable
+  if (email === 'engineer@hermes.local' && platformPassword && password === platformPassword) {
+    return {
       id: 'engineer-1',
       email: 'engineer@hermes.local',
       name: 'Platform Engineer',
       role: 'platform_engineer' as const
-    }
+    };
   }
-];
 
-const mockLogin = (email: string, password: string) => {
+  // Check standard demo credentials
   const credential = demoCredentials.find(
     (cred) => cred.email === email && cred.password === password
   );
   return credential ? credential.user : null;
 };
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, platform }) => {
   try {
     const data = (await request.json()) as {
       email?: string;
@@ -53,7 +57,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       return json({ success: false, error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = mockLogin(data.email, data.password);
+    // Get platform engineer password from environment
+    const platformPassword = platform?.env?.PLATFORM_ENGINEER_PASSWORD as string | undefined;
+
+    const user = mockLogin(data.email, data.password, platformPassword);
 
     if (user) {
       // Set session cookie

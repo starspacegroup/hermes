@@ -78,12 +78,13 @@ VALUES
     '["footwear", "running", "sports"]'
   );
 
--- Insert demo users for default site with stronger passwords
+-- Insert demo users for default site
 -- These are demo accounts for development and testing purposes
+-- Note: Currently using simple authentication for demo purposes
 
 -- Regular User Account
 -- Email: user@hermes.local
--- Password: user123Pass
+-- Password: TfppPEsXnfZluUi52ne538O (23-character random alphanumeric)
 INSERT INTO users (id, site_id, email, name, password_hash, role)
 VALUES (
   'user-1',
@@ -96,7 +97,7 @@ VALUES (
 
 -- Site Owner/Admin Account
 -- Email: owner@hermes.local
--- Password: owner456Pass
+-- Password: 4a6lJebYdNkr2zjq5j59rTt (23-character random alphanumeric)
 INSERT INTO users (id, site_id, email, name, password_hash, role)
 VALUES (
   'admin-1',
@@ -109,7 +110,9 @@ VALUES (
 
 -- Platform Engineer Account
 -- Email: engineer@hermes.local
--- Password: engineer789Pass
+-- Password: Set via PLATFORM_ENGINEER_PASSWORD environment variable
+-- For local dev: Add to .dev.vars file
+-- For production: Set via: wrangler secret put PLATFORM_ENGINEER_PASSWORD
 INSERT INTO users (id, site_id, email, name, password_hash, role)
 VALUES (
   'engineer-1',

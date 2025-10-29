@@ -1,0 +1,6 @@
+# Local development environment variables
+# Copy this file to .dev.vars and set your own values
+# .dev.vars is gitignored and should never be committed
+
+# Platform Engineer Password (required for engineer@hermes.local login)
+PLATFORM_ENGINEER_PASSWORD=your_secure_password_here

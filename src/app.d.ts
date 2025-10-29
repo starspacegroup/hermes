@@ -16,11 +16,12 @@ declare global {
       env: {
         DB: D1Database;
         MEDIA_BUCKET: R2Bucket;
+        PLATFORM_ENGINEER_PASSWORD?: string;
       };
       context: ExecutionContext;
-      caches: CacheStorage & { default: Cache };
+      caches: CacheStorage & { default: Cache; };
     }
   }
 }
 
-export {};
+export { };

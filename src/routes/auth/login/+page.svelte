@@ -107,32 +107,33 @@
       <button
         type="button"
         class="credential-group clickable"
-        on:click={() => fillCredentials('user@hermes.local', 'user123Pass')}
+        on:click={() => fillCredentials('user@hermes.local', 'TfppPEsXnfZluUi52ne538O')}
         disabled={isLoading}
       >
         <p class="credential-title">Regular User:</p>
         <p>Email: user@hermes.local</p>
-        <p>Password: user123Pass</p>
+        <p>Password: TfppPEsXnfZluUi52ne538O</p>
       </button>
       <button
         type="button"
         class="credential-group clickable"
-        on:click={() => fillCredentials('owner@hermes.local', 'owner456Pass')}
+        on:click={() => fillCredentials('owner@hermes.local', '4a6lJebYdNkr2zjq5j59rTt')}
         disabled={isLoading}
       >
         <p class="credential-title">Site Owner (Admin):</p>
         <p>Email: owner@hermes.local</p>
-        <p>Password: owner456Pass</p>
+        <p>Password: 4a6lJebYdNkr2zjq5j59rTt</p>
       </button>
       <button
         type="button"
         class="credential-group clickable"
-        on:click={() => fillCredentials('engineer@hermes.local', 'engineer789Pass')}
+        on:click={() => fillCredentials('engineer@hermes.local', '')}
         disabled={isLoading}
+        title="Password must be set via PLATFORM_ENGINEER_PASSWORD environment variable"
       >
         <p class="credential-title">Platform Engineer:</p>
         <p>Email: engineer@hermes.local</p>
-        <p>Password: engineer789Pass</p>
+        <p>Password: (Set via env var)</p>
       </button>
     </div>
   </div>
