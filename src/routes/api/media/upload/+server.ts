@@ -65,7 +65,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     } else {
       // Development fallback: convert to data URL
       const arrayBuffer = await file.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const base64 = btoa(String.fromCharCode(...uint8Array));
       url = `data:${file.type};base64,${base64}`;
     }
 
