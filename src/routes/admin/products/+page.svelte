@@ -1,6 +1,7 @@
 <script lang="ts">
   import { toastStore } from '$lib/stores/toast';
   import { invalidateAll } from '$app/navigation';
+  import ProductMediaManager from '$lib/components/admin/ProductMediaManager.svelte';
   import type { Product, ProductType } from '$lib/types';
 
   export let data;
@@ -445,6 +446,13 @@
             />
           </div>
         </div>
+
+        <!-- Product Media Manager -->
+        {#if isEditing && editingProductId}
+          <div class="form-group full-width">
+            <ProductMediaManager productId={editingProductId} />
+          </div>
+        {/if}
 
         <div class="modal-actions">
           <button type="button" class="cancel-btn" on:click={closeProductModal}>Cancel</button>
