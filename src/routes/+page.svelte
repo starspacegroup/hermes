@@ -51,7 +51,7 @@
     'Custom domain or store.starspace.group/yourbrand',
     'AI-powered builder (voice + text)',
     'Real-time analytics',
-    'Secure checkout (Stripe/crypto)',
+    'Secure checkout (credit card/crypto)',
     '24/7 support'
   ];
 
@@ -198,7 +198,7 @@
     <div class="revenue-share">
       <div class="revenue-header">
         <span class="revenue-icon">💎</span>
-        <h3>Revenue Share (includes Stripe fees)</h3>
+        <h3>Revenue Share (includes payment processor fees)</h3>
       </div>
 
       <div class="revenue-table">
