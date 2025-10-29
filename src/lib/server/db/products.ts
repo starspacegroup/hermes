@@ -246,3 +246,30 @@ export async function updateProductStock(
 
   return await getProductById(db, siteId, productId);
 }
+
+/**
+ * Sync product image field with first media item
+ * Updates the product's image field to match the first product media item (by display_order)
+ * If no media items exist, keeps the current image
+ */
+export async function syncProductImageFromMedia(
+  db: D1Database,
+  siteId: string,
+  productId: string
+): Promise<void> {
+  // Get the first media item URL
+  const firstMedia = await executeOne<{ url: string }>(
+    db,
+    'SELECT url FROM product_media WHERE site_id = ? AND product_id = ? ORDER BY display_order ASC LIMIT 1',
+    [siteId, productId]
+  );
+
+  // Only update if we found media
+  if (firstMedia?.url) {
+    const timestamp = getCurrentTimestamp();
+    await db
+      .prepare('UPDATE products SET image = ?, updated_at = ? WHERE id = ? AND site_id = ?')
+      .bind(firstMedia.url, timestamp, productId, siteId)
+      .run();
+  }
+}

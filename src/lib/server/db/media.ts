@@ -305,3 +305,20 @@ export async function deleteMediaLibraryItem(
     .run();
   return (result.meta?.changes || 0) > 0;
 }
+
+/**
+ * Get the first media item URL for a product (by display_order)
+ * Returns the URL of the first image/video or null if none exist
+ */
+export async function getFirstProductMediaUrl(
+  db: D1Database,
+  siteId: string,
+  productId: string
+): Promise<string | null> {
+  const media = await executeOne<{ url: string }>(
+    db,
+    'SELECT url FROM product_media WHERE site_id = ? AND product_id = ? ORDER BY display_order ASC LIMIT 1',
+    [siteId, productId]
+  );
+  return media?.url || null;
+}

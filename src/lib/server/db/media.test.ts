@@ -6,6 +6,7 @@ import {
   getMediaLibrary,
   getMediaLibraryItemById,
   deleteMediaLibraryItem,
+  getFirstProductMediaUrl,
   type DBProductMedia,
   type DBMediaLibraryItem
 } from './media';
@@ -207,6 +208,34 @@ describe('Product Media Repository', () => {
       const result = await deleteMediaLibraryItem(mockDB, siteId, 'nonexistent');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('getFirstProductMediaUrl', () => {
+    it('should return first media URL ordered by display_order', async () => {
+      const mockFirst = vi.fn().mockResolvedValue({ url: '/media/first.jpg' });
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getFirstProductMediaUrl(mockDB, siteId, productId);
+
+      expect(mockPrepare).toHaveBeenCalledWith(
+        'SELECT url FROM product_media WHERE site_id = ? AND product_id = ? ORDER BY display_order ASC LIMIT 1'
+      );
+      expect(mockBind).toHaveBeenCalledWith(siteId, productId);
+      expect(result).toBe('/media/first.jpg');
+    });
+
+    it('should return null when no media exists', async () => {
+      const mockFirst = vi.fn().mockResolvedValue(null);
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getFirstProductMediaUrl(mockDB, siteId, productId);
+
+      expect(result).toBeNull();
     });
   });
 });

@@ -18,9 +18,30 @@ export const GET: RequestHandler = async ({ params, platform }) => {
     }
 
     const headers = new Headers();
-    object.writeHttpMetadata(headers);
+
+    // Manually set headers instead of using writeHttpMetadata to avoid serialization issues
+    if (object.httpMetadata?.contentType) {
+      headers.set('content-type', object.httpMetadata.contentType);
+    }
+    if (object.httpMetadata?.contentLanguage) {
+      headers.set('content-language', object.httpMetadata.contentLanguage);
+    }
+    if (object.httpMetadata?.contentDisposition) {
+      headers.set('content-disposition', object.httpMetadata.contentDisposition);
+    }
+    if (object.httpMetadata?.contentEncoding) {
+      headers.set('content-encoding', object.httpMetadata.contentEncoding);
+    }
+    if (object.httpMetadata?.cacheControl) {
+      headers.set('cache-control', object.httpMetadata.cacheControl);
+    } else {
+      headers.set('cache-control', 'public, max-age=31536000, immutable');
+    }
+    if (object.httpMetadata?.cacheExpiry) {
+      headers.set('expires', new Date(object.httpMetadata.cacheExpiry).toUTCString());
+    }
+
     headers.set('etag', object.httpEtag);
-    headers.set('cache-control', 'public, max-age=31536000, immutable');
 
     return new Response(object.body, {
       headers

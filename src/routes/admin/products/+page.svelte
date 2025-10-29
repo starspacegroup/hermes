@@ -34,6 +34,9 @@
   let formType: ProductType = 'physical';
   let formTags = '';
 
+  // Reference to ProductMediaManager component
+  let productMediaManager: ProductMediaManager | undefined;
+
   $: filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,6 +191,16 @@
         }
 
         toastStore.success(`Product "${formName}" created successfully`);
+      }
+
+      // Save media order changes if any exist
+      if (productMediaManager && editingProductId) {
+        try {
+          await productMediaManager.saveMediaOrder();
+        } catch (error) {
+          // Error already logged and toasted by saveMediaOrder
+          console.error('Failed to save media order, but product saved:', error);
+        }
       }
 
       closeProductModal();
@@ -439,7 +452,7 @@
 
         <!-- Product Media Manager -->
         <div class="form-group full-width">
-          <ProductMediaManager productId={editingProductId || ''} />
+          <ProductMediaManager bind:this={productMediaManager} productId={editingProductId || ''} />
         </div>
 
         <div class="modal-actions">

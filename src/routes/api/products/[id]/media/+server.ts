@@ -8,7 +8,8 @@ import {
   deleteProductMedia,
   getMediaLibraryItemById,
   incrementMediaUsedCount,
-  decrementMediaUsedCount
+  decrementMediaUsedCount,
+  syncProductImageFromMedia
 } from '$lib/server/db';
 
 /**
@@ -95,6 +96,9 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
     // Increment used count
     await incrementMediaUsedCount(db, siteId, data.mediaLibraryId);
 
+    // Sync product image to first media item
+    await syncProductImageFromMedia(db, siteId, productId);
+
     return json(
       {
         id: productMedia.id,
@@ -124,7 +128,7 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
 /**
  * PATCH update media order
  */
-export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
+export const PATCH: RequestHandler = async ({ params, request, platform, locals }) => {
   if (!platform?.env?.DB) {
     throw error(503, 'Database not available');
   }
@@ -132,6 +136,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
   try {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
+    const productId = params.id;
 
     const data = (await request.json()) as {
       updates: Array<{ id: string; displayOrder: number }>;
@@ -141,6 +146,9 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
     for (const update of data.updates) {
       await updateProductMediaOrder(db, siteId, update.id, update.displayOrder);
     }
+
+    // Sync product image to first media item after reordering
+    await syncProductImageFromMedia(db, siteId, productId);
 
     return json({ success: true });
   } catch (err) {
@@ -155,7 +163,7 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 /**
  * DELETE remove media from product
  */
-export const DELETE: RequestHandler = async ({ request, platform, locals }) => {
+export const DELETE: RequestHandler = async ({ params, request, platform, locals }) => {
   if (!platform?.env?.DB) {
     throw error(503, 'Database not available');
   }
@@ -163,6 +171,7 @@ export const DELETE: RequestHandler = async ({ request, platform, locals }) => {
   try {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
+    const productId = params.id;
 
     const data = (await request.json()) as { id: string; mediaLibraryId?: string };
 
@@ -176,6 +185,9 @@ export const DELETE: RequestHandler = async ({ request, platform, locals }) => {
     if (data.mediaLibraryId) {
       await decrementMediaUsedCount(db, siteId, data.mediaLibraryId);
     }
+
+    // Sync product image to first media item after deletion
+    await syncProductImageFromMedia(db, siteId, productId);
 
     return json({ success: true });
   } catch (err) {

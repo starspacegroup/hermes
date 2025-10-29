@@ -1,13 +1,17 @@
 # Product Media Management
 
-This document describes the product media management feature that allows site owners to add, manage, and display photos and videos for their products.
+This document describes the product media management feature that allows site
+owners to add, manage, and display photos and videos for their products.
 
 ## Features
 
-- **Multiple Media Per Product**: Add unlimited images and videos to each product
+- **Multiple Media Per Product**: Add unlimited images and videos to each
+  product
 - **Media Upload**: Direct upload with drag-and-drop support
 - **Media Library**: Reusable media library across all products
 - **Drag & Drop Reordering**: Easily reorder media items on products
+- **Automatic Thumbnail Sync**: The first media item (by display order)
+  automatically becomes the product's thumbnail image
 - **Usage Tracking**: Track which products use each media item
 - **R2 Storage**: Media stored in Cloudflare R2 for optimal performance
 
@@ -107,16 +111,33 @@ Response: { success: boolean }
 2. **Reordering Media**:
    - Drag media items in the list to reorder them
    - Changes are saved automatically
+   - The first media item becomes the product's thumbnail automatically
 
 3. **Removing Media**:
    - Click the × button on any media item to remove it from the product
    - Media remains in the library for reuse
+   - If the first media item is removed, the next item becomes the product
+     thumbnail
 
 4. **Managing Media Library**:
    - Click "Browse Media Library" in any product editor
    - Filter by type (All, Images, Videos)
    - Delete unused media items
    - View usage count for each item
+
+### Product Thumbnail Behavior
+
+The product's main `image` field is automatically synchronized with the first
+media item in the Product Media list:
+
+- **When media is added**: If it's added at the beginning (display_order = 0),
+  it becomes the product thumbnail
+- **When media is reordered**: The new first item automatically becomes the
+  product thumbnail
+- **When media is removed**: If the first item is removed, the next item (if
+  any) becomes the thumbnail
+- **Fallback**: If no product media exists, the product's existing image field
+  remains unchanged
 
 ### Supported File Types
 
@@ -164,7 +185,8 @@ wrangler r2 bucket create hermes-media-preview
 
 All media operations are scoped by `site_id`:
 
-- Media files are stored in R2 with the structure: `{site_id}/images/{filename}` and `{site_id}/videos/{filename}`
+- Media files are stored in R2 with the structure: `{site_id}/images/{filename}`
+  and `{site_id}/videos/{filename}`
 - Database queries are automatically scoped to the current site
 - Media library is isolated per site
 
@@ -206,7 +228,8 @@ Complete media management for products:
 
 ### Media Library
 
-- `getMediaLibrary(db, siteId, type?)` - Get all library items (optionally filtered by type)
+- `getMediaLibrary(db, siteId, type?)` - Get all library items (optionally
+  filtered by type)
 - `getMediaLibraryItemById(db, siteId, itemId)` - Get single library item
 - `createMediaLibraryItem(db, siteId, data)` - Add item to library
 - `incrementMediaUsedCount(db, siteId, itemId)` - Increase usage count
@@ -236,4 +259,8 @@ Potential improvements for the future:
 3. **Bulk Upload**: Upload multiple files at once
 4. **Image Editor**: Basic editing capabilities (crop, rotate)
 5. **CDN Integration**: Custom domain for media serving
-6. **Product Display**: Update product detail pages to show multiple media items in a gallery. Currently, the implementation provides the complete admin interface for managing media, but the frontend product pages still display only the single `image` field. A future enhancement would add a media gallery component to product detail pages to showcase all uploaded photos and videos.
+6. **Product Display**: Update product detail pages to show multiple media items
+   in a gallery. Currently, the implementation provides the complete admin
+   interface for managing media, but the frontend product pages still display
+   only the single `image` field. A future enhancement would add a media gallery
+   component to product detail pages to showcase all uploaded photos and videos.

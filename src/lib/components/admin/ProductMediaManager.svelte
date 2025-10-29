@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import MediaUpload from './MediaUpload.svelte';
   import MediaBrowser from './MediaBrowser.svelte';
@@ -11,6 +12,7 @@
   let isLoading = true;
   let showMediaBrowser = false;
   let draggedItem: ProductMedia | null = null;
+  let hasUnsavedOrderChanges = false;
 
   onMount(async () => {
     if (productId) {
@@ -90,6 +92,7 @@
       }
 
       await loadProductMedia();
+      await invalidateAll(); // Refresh parent page data to show updated product image
       toastStore.success('Media added to product');
     } catch (error) {
       console.error('Error adding media to product:', error);
@@ -120,6 +123,7 @@
       }
 
       await loadProductMedia();
+      await invalidateAll(); // Refresh parent page data to show updated product image
       toastStore.success('Media removed from product');
     } catch (error) {
       console.error('Error removing media:', error);
@@ -127,8 +131,11 @@
     }
   }
 
-  async function updateMediaOrder() {
-    if (!productId) return;
+  /**
+   * Save media order to server - exposed for parent component to call
+   */
+  export async function saveMediaOrder() {
+    if (!productId || !hasUnsavedOrderChanges) return;
 
     try {
       const updates = productMedia.map((media, index) => ({
@@ -148,10 +155,13 @@
         throw new Error('Failed to update media order');
       }
 
+      hasUnsavedOrderChanges = false;
+      await invalidateAll(); // Refresh parent page data to show updated product image
       toastStore.success('Media order updated');
     } catch (error) {
       console.error('Error updating media order:', error);
       toastStore.error('Failed to update media order');
+      throw error; // Re-throw so parent can handle
     }
   }
 
@@ -191,9 +201,9 @@
       displayOrder: index
     }));
 
-    // Update on server if product exists
+    // Mark that we have unsaved changes
     if (productId) {
-      updateMediaOrder();
+      hasUnsavedOrderChanges = true;
     }
 
     draggedItem = null;
