@@ -282,6 +282,8 @@
     font-weight: 600;
     color: var(--color-text-primary);
     margin-bottom: 0.25rem !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .demo-credentials p {
@@ -289,6 +291,8 @@
     font-size: 0.9rem;
     margin: 0.25rem 0;
     transition: color var(--transition-normal);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .demo-credentials strong {
@@ -296,13 +300,63 @@
     transition: color var(--transition-normal);
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 768px) {
+    .login-container {
+      padding: 1rem;
+      min-height: calc(100vh - 150px);
+    }
+
     .login-card {
-      padding: 2rem;
+      padding: 1.5rem;
+      max-width: 100%;
     }
 
     .login-header h1 {
       font-size: 1.5rem;
+    }
+
+    .demo-credentials p {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    .credential-title {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .login-card {
+      padding: 1.25rem;
+    }
+
+    .login-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .login-header h1 {
+      font-size: 1.4rem;
+    }
+
+    .login-header p {
+      font-size: 0.9rem;
+    }
+
+    .demo-credentials p {
+      font-size: 0.8rem;
+    }
+
+    .credential-title {
+      font-size: 0.85rem;
+    }
+
+    input {
+      padding: 0.65rem;
+      font-size: 0.95rem;
+    }
+
+    label {
+      font-size: 0.85rem;
     }
   }
 </style>

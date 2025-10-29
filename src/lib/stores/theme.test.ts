@@ -28,15 +28,15 @@ describe('Theme Store', () => {
       unsubscribe();
     });
 
-    it('should handle ocean theme', () => {
-      themeStore.setTheme('ocean');
+    it('should set the theme to system', () => {
+      themeStore.setTheme('system');
 
       let currentTheme: string | undefined;
       const unsubscribe = themeStore.subscribe((theme) => {
         currentTheme = theme;
       });
 
-      expect(currentTheme).toBe('ocean');
+      expect(currentTheme).toBe('system');
       unsubscribe();
     });
   });
@@ -68,8 +68,8 @@ describe('Theme Store', () => {
       unsubscribe();
     });
 
-    it('should toggle from ocean to light', () => {
-      themeStore.setTheme('ocean');
+    it('should toggle from system to light', () => {
+      themeStore.setTheme('system');
       themeStore.toggleTheme();
 
       let currentTheme: string | undefined;
@@ -92,7 +92,7 @@ describe('Theme Store', () => {
       });
 
       // Just verify it has a valid theme value
-      expect(['light', 'dark', 'ocean']).toContain(currentTheme);
+      expect(['light', 'dark', 'system']).toContain(currentTheme);
       unsubscribe();
     });
   });

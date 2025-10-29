@@ -305,6 +305,7 @@
     color: var(--color-text-secondary);
     font-weight: 500;
     transition: color var(--transition-normal);
+    white-space: nowrap;
   }
 
   .step.active .step-label {
@@ -317,6 +318,7 @@
     background: var(--color-border-primary);
     margin: 0 1rem;
     transition: background-color var(--transition-normal);
+    min-width: 20px;
   }
 
   .step-connector.completed {
@@ -333,6 +335,7 @@
     transition:
       background-color var(--transition-normal),
       color var(--transition-normal);
+    word-wrap: break-word;
   }
 
   .step-content {
@@ -343,6 +346,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
   }
 
   .order-summary {
@@ -384,10 +388,12 @@
     height: 50px;
     object-fit: cover;
     border-radius: 4px;
+    flex-shrink: 0;
   }
 
   .item-info {
     flex: 1;
+    min-width: 0;
   }
 
   .item-info h4 {
@@ -395,6 +401,9 @@
     color: var(--color-text-primary);
     font-size: 0.9rem;
     transition: color var(--transition-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .item-info p {
@@ -408,6 +417,7 @@
     color: var(--color-text-primary);
     font-weight: 500;
     transition: color var(--transition-normal);
+    white-space: nowrap;
   }
 
   .summary-totals {
@@ -437,23 +447,104 @@
   }
 
   @media (max-width: 768px) {
+    .checkout-container {
+      padding: 0 0.5rem;
+      margin: 1rem auto;
+    }
+
     .checkout-header {
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.5rem;
       text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .checkout-header h1 {
+      font-size: 1.5rem;
     }
 
     .checkout-content {
       grid-template-columns: 1fr;
-    }
-
-    .step-navigation {
-      flex-direction: column;
       gap: 1rem;
     }
 
-    .step-navigation :global(.btn) {
+    .checkout-main {
+      padding: 1.25rem;
+    }
+
+    .checkout-steps {
+      margin-bottom: 1.5rem;
+    }
+
+    .step-label {
+      font-size: 0.85rem;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      font-size: 0.85rem;
+    }
+
+    .step-connector {
+      margin: 0 0.5rem;
+      min-width: 10px;
+    }
+
+    .step-navigation {
+      flex-direction: column-reverse;
+      gap: 0.75rem;
+    }
+
+    .step-navigation :global(button) {
       width: 100%;
+    }
+
+    .order-summary {
+      padding: 1rem;
+    }
+
+    .order-summary h3 {
+      font-size: 1.1rem;
+    }
+
+    .summary-item {
+      padding: 0.5rem 0;
+    }
+
+    .summary-item img {
+      width: 40px;
+      height: 40px;
+    }
+
+    .item-info h4 {
+      font-size: 0.85rem;
+    }
+
+    .item-info p {
+      font-size: 0.75rem;
+    }
+
+    .item-price {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .checkout-main {
+      padding: 1rem;
+    }
+
+    .step-label {
+      display: none;
+    }
+
+    .step {
+      justify-content: center;
+    }
+
+    .step-connector {
+      margin: 0 0.25rem;
     }
   }
 </style>

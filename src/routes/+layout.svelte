@@ -55,7 +55,9 @@
         </div>
 
         <div class="nav-actions">
-          <ThemeToggle />
+          {#if !$authState.isAuthenticated}
+            <ThemeToggle />
+          {/if}
 
           {#if $authState.isAuthenticated}
             {#if canAccessAdmin}
@@ -103,6 +105,76 @@
                     <div class="account-info-name">{$authState.user?.name}</div>
                     <div class="account-info-email">{$authState.user?.email}</div>
                     <div class="account-info-role">{$authState.user?.role}</div>
+                  </div>
+                  <div class="account-divider"></div>
+                  <div class="theme-selector">
+                    <div class="theme-selector-label">Theme</div>
+                    <div class="theme-options">
+                      <button
+                        class="theme-option"
+                        class:active={$themeStore === 'light'}
+                        on:click={() => themeStore.setTheme('light')}
+                        aria-label="Light theme"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <circle cx="12" cy="12" r="5"></circle>
+                          <line x1="12" y1="1" x2="12" y2="3"></line>
+                          <line x1="12" y1="21" x2="12" y2="23"></line>
+                          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                          <line x1="1" y1="12" x2="3" y2="12"></line>
+                          <line x1="21" y1="12" x2="23" y2="12"></line>
+                          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <span class="theme-option-text">Light</span>
+                      </button>
+                      <button
+                        class="theme-option"
+                        class:active={$themeStore === 'dark'}
+                        on:click={() => themeStore.setTheme('dark')}
+                        aria-label="Dark theme"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <span class="theme-option-text">Dark</span>
+                      </button>
+                      <button
+                        class="theme-option"
+                        class:active={$themeStore === 'system'}
+                        on:click={() => themeStore.setTheme('system')}
+                        aria-label="System theme"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                          <line x1="8" y1="21" x2="16" y2="21"></line>
+                          <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        <span class="theme-option-text">System</span>
+                      </button>
+                    </div>
                   </div>
                   <div class="account-divider"></div>
                   <button class="account-menu-item" on:click={handleLogout}>
@@ -462,6 +534,57 @@
     height: 1px;
     background: var(--color-border-secondary);
     transition: background-color var(--transition-normal);
+  }
+
+  .theme-selector {
+    padding: 0.875rem 1rem;
+  }
+
+  .theme-selector-label {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .theme-options {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .theme-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .theme-option:hover {
+    background: var(--color-bg-accent);
+    border-color: var(--color-border-primary);
+    color: var(--color-text-primary);
+  }
+
+  .theme-option.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-text-inverse);
+  }
+
+  .theme-option-text {
+    font-size: 0.7rem;
   }
 
   .account-menu-item {
