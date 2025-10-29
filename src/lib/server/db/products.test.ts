@@ -7,6 +7,7 @@ import {
   updateProduct,
   deleteProduct,
   updateProductStock,
+  syncProductImageFromMedia,
   type DBProduct,
   type CreateProductData
 } from './products';
@@ -248,6 +249,47 @@ describe('Products Repository', () => {
       const result = await updateProductStock(mockDB, siteId, 'nonexistent', 5);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('syncProductImageFromMedia', () => {
+    it('should update product image to first media item URL', async () => {
+      const mockFirstMedia = { url: '/media/first-image.jpg' };
+      const mockFirst = vi.fn().mockResolvedValue(mockFirstMedia);
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockRun = vi.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const mockBindUpdate = vi.fn().mockReturnValue({ run: mockRun });
+      const mockPrepare = vi
+        .fn()
+        .mockReturnValueOnce({ bind: mockBind })
+        .mockReturnValueOnce({ bind: mockBindUpdate });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await syncProductImageFromMedia(mockDB, siteId, 'product-1');
+
+      expect(mockPrepare).toHaveBeenNthCalledWith(
+        1,
+        'SELECT url FROM product_media WHERE site_id = ? AND product_id = ? ORDER BY display_order ASC LIMIT 1'
+      );
+      expect(mockBind).toHaveBeenCalledWith(siteId, 'product-1');
+      expect(mockPrepare).toHaveBeenNthCalledWith(
+        2,
+        'UPDATE products SET image = ?, updated_at = ? WHERE id = ? AND site_id = ?'
+      );
+    });
+
+    it('should not update product image when no media exists', async () => {
+      const mockFirst = vi.fn().mockResolvedValue(null);
+      const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      await syncProductImageFromMedia(mockDB, siteId, 'product-1');
+
+      expect(mockPrepare).toHaveBeenCalledTimes(1);
+      expect(mockPrepare).toHaveBeenCalledWith(
+        'SELECT url FROM product_media WHERE site_id = ? AND product_id = ? ORDER BY display_order ASC LIMIT 1'
+      );
     });
   });
 });

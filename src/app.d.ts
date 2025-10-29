@@ -15,6 +15,7 @@ declare global {
     interface Platform {
       env: {
         DB: D1Database;
+        MEDIA_BUCKET: R2Bucket;
       };
       context: ExecutionContext;
       caches: CacheStorage & { default: Cache };

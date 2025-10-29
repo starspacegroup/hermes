@@ -1,10 +1,11 @@
 <script>
   import Button from '../../../lib/components/Button.svelte';
+  import ProductMediaGallery from '../../../lib/components/ProductMediaGallery.svelte';
   import { cartStore, cartItems } from '../../../lib/stores/cart.ts';
 
   export let data;
 
-  const { product } = data;
+  const { product, media } = data;
 
   $: cartQuantity = cartStore.getItemQuantity($cartItems, product.id);
 
@@ -27,8 +28,8 @@
 </svelte:head>
 
 <div class="product-detail">
-  <div class="product-image">
-    <img src={product.image} alt={product.name} />
+  <div class="product-media-section">
+    <ProductMediaGallery {media} productName={product.name} fallbackImage={product.image} />
   </div>
 
   <div class="product-info">
@@ -85,11 +86,9 @@
       box-shadow var(--transition-normal);
   }
 
-  .product-image img {
-    width: 100%;
-    height: 400px;
-    object-fit: cover;
-    border-radius: 8px;
+  .product-media-section {
+    display: flex;
+    flex-direction: column;
   }
 
   .product-info {
@@ -204,10 +203,6 @@
     .product-detail {
       grid-template-columns: 1fr;
       padding: 1rem;
-    }
-
-    .product-image img {
-      height: 300px;
     }
 
     h1 {

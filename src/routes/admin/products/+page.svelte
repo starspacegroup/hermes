@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { goto, invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
-  import { invalidateAll } from '$app/navigation';
-  import type { Product, ProductType } from '$lib/types';
+  import type { Product } from '$lib/types';
 
   export let data;
   let products: Product[] = data.products;
@@ -9,29 +9,11 @@
   // Watch for data updates
   $: products = data.products;
 
-  // Constants
-  const DEFAULT_PRODUCT_IMAGE =
-    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
-  const DEFAULT_CATEGORY = 'Uncategorized';
-
   let searchQuery = '';
   let selectedCategory = 'all';
   let showDeleteConfirm = false;
-  let showProductModal = false;
   let productToDelete: Product | null = null;
-  let isEditing = false;
-  let editingProductId: string | null = null;
   let isSubmitting = false;
-
-  // Form fields
-  let formName = '';
-  let formDescription = '';
-  let formPrice = 0;
-  let formImage = '';
-  let formCategory = '';
-  let formStock = 0;
-  let formType: ProductType = 'physical';
-  let formTags = '';
 
   $: filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -44,24 +26,11 @@
   $: categories = ['all', ...new Set(products.map((p) => p.category))];
 
   function handleAddProduct() {
-    isEditing = false;
-    editingProductId = null;
-    resetForm();
-    showProductModal = true;
+    goto('/admin/products/add');
   }
 
   function handleEditProduct(product: Product) {
-    isEditing = true;
-    editingProductId = product.id;
-    formName = product.name;
-    formDescription = product.description;
-    formPrice = product.price;
-    formImage = product.image;
-    formCategory = product.category;
-    formStock = product.stock;
-    formType = product.type;
-    formTags = product.tags.join(', ');
-    showProductModal = true;
+    goto(`/admin/products/${product.id}/edit`);
   }
 
   function handleDeleteClick(product: Product) {
@@ -105,24 +74,6 @@
     showDeleteConfirm = false;
   }
 
-  function resetForm() {
-    formName = '';
-    formDescription = '';
-    formPrice = 0;
-    formImage = '';
-    formCategory = '';
-    formStock = 0;
-    formType = 'physical';
-    formTags = '';
-  }
-
-  function closeProductModal() {
-    showProductModal = false;
-    resetForm();
-    isEditing = false;
-    editingProductId = null;
-  }
-
   function clearSearch() {
     searchQuery = '';
   }
@@ -130,74 +81,6 @@
   function handleSearchKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       clearSearch();
-    }
-  }
-
-  async function handleSubmitProduct() {
-    if (isSubmitting) return;
-
-    // Validate form - allow price of 0 for free products
-    if (!formName || !formDescription || formPrice < 0) {
-      toastStore.error('Please fill in all required fields');
-      return;
-    }
-
-    isSubmitting = true;
-
-    const productData = {
-      name: formName,
-      description: formDescription,
-      price: formPrice,
-      image: formImage || DEFAULT_PRODUCT_IMAGE,
-      category: formCategory || DEFAULT_CATEGORY,
-      stock: formStock,
-      type: formType,
-      tags: formTags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0)
-    };
-
-    try {
-      if (isEditing && editingProductId) {
-        const response = await fetch('/api/products', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ id: editingProductId, ...productData })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update product');
-        }
-
-        toastStore.success(`Product "${formName}" updated successfully`);
-      } else {
-        const response = await fetch('/api/products', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(productData)
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create product');
-        }
-
-        toastStore.success(`Product "${formName}" created successfully`);
-      }
-
-      closeProductModal();
-
-      // Refresh the page data
-      await invalidateAll();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toastStore.error(isEditing ? 'Failed to update product' : 'Failed to create product');
-    } finally {
-      isSubmitting = false;
     }
   }
 </script>
@@ -341,118 +224,6 @@
         <button class="cancel-btn" on:click={cancelDelete}>Cancel</button>
         <button class="confirm-delete-btn" on:click={confirmDelete}>Delete</button>
       </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Product Create/Edit Modal -->
-{#if showProductModal}
-  <div
-    class="modal-overlay"
-    role="button"
-    tabindex="0"
-    on:click={closeProductModal}
-    on:keydown={(e) => e.key === 'Escape' && closeProductModal()}
-  >
-    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="modal product-modal" role="dialog" on:click|stopPropagation>
-      <h2>{isEditing ? 'Edit Product' : 'Add New Product'}</h2>
-      <form on:submit|preventDefault={handleSubmitProduct}>
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="product-name">Product Name *</label>
-            <input
-              type="text"
-              id="product-name"
-              bind:value={formName}
-              placeholder="Enter product name"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="product-price">Price *</label>
-            <input
-              type="number"
-              id="product-price"
-              bind:value={formPrice}
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div class="form-group full-width">
-            <label for="product-description">Description *</label>
-            <textarea
-              id="product-description"
-              bind:value={formDescription}
-              placeholder="Enter product description"
-              rows="3"
-              required
-            ></textarea>
-          </div>
-
-          <div class="form-group">
-            <label for="product-category">Category</label>
-            <input
-              type="text"
-              id="product-category"
-              bind:value={formCategory}
-              placeholder="e.g., Electronics"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="product-type">Type</label>
-            <select id="product-type" bind:value={formType}>
-              <option value="physical">Physical Product</option>
-              <option value="digital">Digital Download</option>
-              <option value="service">Service</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="product-stock">Stock</label>
-            <input
-              type="number"
-              id="product-stock"
-              bind:value={formStock}
-              min="0"
-              placeholder="0"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="product-image">Image URL</label>
-            <input
-              type="url"
-              id="product-image"
-              bind:value={formImage}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
-
-          <div class="form-group full-width">
-            <label for="product-tags">Tags (comma-separated)</label>
-            <input
-              type="text"
-              id="product-tags"
-              bind:value={formTags}
-              placeholder="e.g., wireless, premium, audio"
-            />
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="cancel-btn" on:click={closeProductModal}>Cancel</button>
-          <button type="submit" class="submit-btn">
-            {isEditing ? 'Update Product' : 'Create Product'}
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 {/if}
@@ -837,87 +608,12 @@
     background: var(--color-danger-hover);
   }
 
-  .product-modal {
-    max-width: 600px;
-  }
-
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-group.full-width {
-    grid-column: 1 / -1;
-  }
-
-  .form-group label {
-    color: var(--color-text-primary);
-    font-weight: 500;
-    font-size: 0.875rem;
-    transition: color var(--transition-normal);
-  }
-
-  .form-group input,
-  .form-group textarea,
-  .form-group select {
-    padding: 0.75rem;
-    background: var(--color-bg-secondary);
-    border: 2px solid var(--color-border-secondary);
-    border-radius: 6px;
-    color: var(--color-text-primary);
-    font-size: 1rem;
-    transition:
-      background-color var(--transition-normal),
-      border-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .form-group input:focus,
-  .form-group textarea:focus,
-  .form-group select:focus {
-    outline: none;
-    border-color: var(--color-border-focus);
-  }
-
-  .form-group textarea {
-    resize: vertical;
-    font-family: inherit;
-  }
-
-  .submit-btn {
-    flex: 1;
-    padding: 0.75rem;
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color var(--transition-normal);
-  }
-
-  .submit-btn:hover {
-    background: var(--color-primary-hover);
-  }
-
   @media (max-width: 768px) {
     h1 {
       font-size: 1.5rem;
     }
 
     .products-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .form-grid {
       grid-template-columns: 1fr;
     }
   }
