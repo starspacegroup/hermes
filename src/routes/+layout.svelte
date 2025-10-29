@@ -14,7 +14,9 @@
 
   $: totalItems = cartStore.getTotalItems($cartStore);
   $: isAdminPage = $page.url.pathname.startsWith('/admin');
-  $: canAccessAdmin = authStore.canAccessAdmin();
+  $: canAccessAdmin =
+    $authState.isAuthenticated &&
+    ($authState.user?.role === 'admin' || $authState.user?.role === 'platform_engineer');
 
   onMount(() => {
     themeStore.initTheme();
@@ -60,22 +62,6 @@
           {/if}
 
           {#if $authState.isAuthenticated}
-            {#if canAccessAdmin}
-              <a href="/admin/dashboard" class="admin-link">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <rect x="3" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"
-                  ></rect>
-                  <rect x="14" y="3" width="7" height="7" stroke-width="2" stroke-linecap="round"
-                  ></rect>
-                  <rect x="14" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"
-                  ></rect>
-                  <rect x="3" y="14" width="7" height="7" stroke-width="2" stroke-linecap="round"
-                  ></rect>
-                </svg>
-                <span class="admin-text">Admin</span>
-              </a>
-            {/if}
-
             <div class="account-menu-container">
               <button class="account-button" on:click={toggleAccountMenu} aria-label="Account menu">
                 <div class="account-avatar">
@@ -177,6 +163,52 @@
                     </div>
                   </div>
                   <div class="account-divider"></div>
+                  {#if canAccessAdmin}
+                    <a href="/admin/dashboard" class="account-menu-item">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <rect
+                          x="3"
+                          y="3"
+                          width="7"
+                          height="7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></rect>
+                        <rect
+                          x="14"
+                          y="3"
+                          width="7"
+                          height="7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></rect>
+                        <rect
+                          x="14"
+                          y="14"
+                          width="7"
+                          height="7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></rect>
+                        <rect
+                          x="3"
+                          y="14"
+                          width="7"
+                          height="7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></rect>
+                      </svg>
+                      Admin Dashboard
+                    </a>
+                    <div class="account-divider"></div>
+                  {/if}
                   <button class="account-menu-item" on:click={handleLogout}>
                     <svg
                       width="18"
@@ -398,7 +430,6 @@
     gap: 1rem;
   }
 
-  .admin-link,
   .cart-link,
   .login-link {
     display: flex;
@@ -412,14 +443,12 @@
     position: relative;
   }
 
-  .admin-link:hover,
   .cart-link:hover,
   .login-link:hover {
     background-color: var(--color-bg-accent);
     color: var(--color-primary);
   }
 
-  .admin-text,
   .cart-text,
   .login-text {
     font-weight: 500;
@@ -601,6 +630,7 @@
     color: var(--color-text-primary);
     cursor: pointer;
     text-align: left;
+    text-decoration: none;
     font-size: 0.9rem;
     font-weight: 500;
     transition: all var(--transition-normal);
@@ -761,7 +791,6 @@
       font-size: 1.5rem;
     }
 
-    .admin-text,
     .cart-text,
     .login-text,
     .account-name {
