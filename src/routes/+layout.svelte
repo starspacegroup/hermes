@@ -358,12 +358,15 @@
   .logo {
     text-decoration: none;
     color: inherit;
+    display: flex;
+    align-items: center;
   }
 
   .logo h1 {
     color: var(--color-primary);
     font-size: 1.75rem;
     margin: 0;
+    line-height: 1;
     transition: color var(--transition-normal);
     font-weight: 800;
   }
