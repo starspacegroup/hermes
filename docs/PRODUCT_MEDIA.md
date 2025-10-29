@@ -164,7 +164,7 @@ wrangler r2 bucket create hermes-media-preview
 
 All media operations are scoped by `site_id`:
 
-- Media files are stored in R2 with the structure: `{site_id}/images/` or `{site_id}/videos/`
+- Media files are stored in R2 with the structure: `{site_id}/images/{filename}` and `{site_id}/videos/{filename}`
 - Database queries are automatically scoped to the current site
 - Media library is isolated per site
 
@@ -218,7 +218,7 @@ Complete media management for products:
 Run media tests:
 
 ```bash
-npm test src/lib/server/db/media.test.ts
+npm run test src/lib/server/db/media.test.ts
 ```
 
 All tests:
@@ -236,4 +236,4 @@ Potential improvements for the future:
 3. **Bulk Upload**: Upload multiple files at once
 4. **Image Editor**: Basic editing capabilities (crop, rotate)
 5. **CDN Integration**: Custom domain for media serving
-6. **Product Display**: Update product detail pages to show multiple media items in a gallery
+6. **Product Display**: Update product detail pages to show multiple media items in a gallery. Currently, the implementation provides the complete admin interface for managing media, but the frontend product pages still display only the single `image` field. A future enhancement would add a media gallery component to product detail pages to showcase all uploaded photos and videos.
