@@ -5,6 +5,9 @@
 
   export let onSelect: (media: MediaLibraryItem[]) => void = () => {};
   export let selectedIds: string[] = [];
+  export let showTitle: boolean = true;
+  export let showAddButton: boolean = true;
+  export let showFooter: boolean = true;
 
   let mediaItems: MediaLibraryItem[] = [];
   let isLoading = true;
@@ -70,10 +73,9 @@
     } else {
       internalSelectedIds = [...internalSelectedIds, item.id];
     }
-  }
 
-  function handleAddSelected() {
-    const selectedMedia = mediaItems.filter((item) => internalSelectedIds.includes(item.id));
+    // Notify parent of selection changes
+    const selectedMedia = mediaItems.filter((media) => internalSelectedIds.includes(media.id));
     onSelect(selectedMedia);
   }
 
@@ -87,12 +89,19 @@
     return new Date(timestamp * 1000).toLocaleDateString();
   }
 
+  function handleAddSelected() {
+    const selectedMedia = mediaItems.filter((media) => internalSelectedIds.includes(media.id));
+    onSelect(selectedMedia);
+  }
+
   $: filteredItems = mediaItems;
 </script>
 
 <div class="media-browser">
   <div class="browser-header">
-    <h3>Media Library</h3>
+    {#if showTitle}
+      <h3>Select Media</h3>
+    {/if}
     <div class="filter-tabs">
       <button
         type="button"
@@ -200,9 +209,14 @@
     {/if}
   </div>
 
-  {#if internalSelectedIds.length > 0}
+  {#if showFooter && showAddButton}
     <div class="browser-footer">
-      <button type="button" class="add-selected-btn" on:click={handleAddSelected}>
+      <button
+        type="button"
+        class="add-selected-btn"
+        on:click={handleAddSelected}
+        disabled={internalSelectedIds.length === 0}
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round" />
         </svg>
@@ -221,8 +235,8 @@
 
   .browser-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 1rem;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--color-border-secondary);
@@ -232,6 +246,8 @@
   .browser-header h3 {
     margin: 0;
     color: var(--color-text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
     transition: color var(--transition-normal);
   }
 
@@ -465,5 +481,19 @@
 
   .add-selected-btn:active {
     transform: translateY(0);
+  }
+
+  .add-selected-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+    box-shadow: none;
+  }
+
+  .add-selected-btn:disabled:hover {
+    transform: none;
+    background: var(--color-bg-tertiary);
+    box-shadow: none;
   }
 </style>

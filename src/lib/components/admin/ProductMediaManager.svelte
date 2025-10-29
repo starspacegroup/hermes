@@ -13,6 +13,7 @@
   let showMediaBrowser = false;
   let draggedItem: ProductMedia | null = null;
   let hasUnsavedOrderChanges = false;
+  let selectedMediaItems: MediaLibraryItem[] = [];
 
   onMount(async () => {
     if (productId) {
@@ -47,16 +48,22 @@
     await addMediaToProduct(media);
   }
 
-  async function handleMediaSelected(mediaArray: MediaLibraryItem[]) {
+  function handleMediaSelected(mediaArray: MediaLibraryItem[]) {
+    // Update selection with the provided array
+    selectedMediaItems = mediaArray;
+  }
+
+  async function handleAddSelectedMedia() {
+    if (selectedMediaItems.length === 0) return;
+
     // Add all selected media items
-    for (const media of mediaArray) {
+    for (const media of selectedMediaItems) {
       await addMediaToProduct(media);
     }
 
-    if (mediaArray.length > 0) {
-      toastStore.success(`${mediaArray.length} media item(s) added to product`);
-    }
+    toastStore.success(`${selectedMediaItems.length} media item(s) added to product`);
 
+    selectedMediaItems = [];
     showMediaBrowser = false;
   }
 
@@ -279,16 +286,53 @@
   <!-- Media Browser Modal -->
   {#if showMediaBrowser}
     <div
-      class="modal-overlay"
+      class="media-browser-modal"
       role="button"
       tabindex="0"
-      on:click={() => (showMediaBrowser = false)}
+      on:click|self={() => (showMediaBrowser = false)}
       on:keydown={(e) => e.key === 'Escape' && (showMediaBrowser = false)}
     >
-      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <div class="modal" role="dialog" on:click|stopPropagation>
-        <MediaBrowser onSelect={handleMediaSelected} selectedIds={productMedia.map((m) => m.id)} />
+      <div class="media-browser-content">
+        <div class="media-browser-header">
+          <h3>Media Library</h3>
+          <div class="header-actions">
+            {#if selectedMediaItems.length > 0}
+              <span class="selection-count">
+                {selectedMediaItems.length} selected
+              </span>
+            {/if}
+            <button
+              type="button"
+              class="modal-close-btn"
+              on:click={() => (showMediaBrowser = false)}
+              title="Close"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="media-browser-body">
+          <MediaBrowser
+            onSelect={handleMediaSelected}
+            selectedIds={productMedia.map((m) => m.id)}
+            showFooter={false}
+          />
+        </div>
+        <div class="media-browser-footer">
+          <button type="button" class="btn-cancel" on:click={() => (showMediaBrowser = false)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn-add"
+            disabled={selectedMediaItems.length === 0}
+            on:click={handleAddSelectedMedia}
+          >
+            Add Selected ({selectedMediaItems.length})
+          </button>
+        </div>
       </div>
     </div>
   {/if}
@@ -380,32 +424,144 @@
     background: var(--color-secondary-hover);
   }
 
-  .modal-overlay {
+  .media-browser-modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
+    z-index: 10000;
+    padding: 2rem;
   }
 
-  .modal {
+  .media-browser-content {
     background: var(--color-bg-primary);
     border-radius: 12px;
-    padding: 2rem;
-    max-width: 900px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 8px 24px var(--color-shadow-dark);
+    width: 95vw;
+    height: 90vh;
+    max-width: 1400px;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     transition:
       background-color var(--transition-normal),
       box-shadow var(--transition-normal);
+  }
+
+  .media-browser-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+    flex-shrink: 0;
+    transition: border-color var(--transition-normal);
+  }
+
+  .media-browser-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    transition: color var(--transition-normal);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .selection-count {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .modal-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-close-btn:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
+  .media-browser-body {
+    flex: 1;
+    overflow: auto;
+    padding: 2rem;
+  }
+
+  .media-browser-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-border-secondary);
+    flex-shrink: 0;
+    transition: border-color var(--transition-normal);
+  }
+
+  .btn-cancel {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .btn-add {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-add:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .loading-text,

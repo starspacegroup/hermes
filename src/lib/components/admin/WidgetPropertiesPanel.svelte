@@ -392,6 +392,7 @@
                     <MediaBrowser
                       onSelect={handleMediaSelected}
                       selectedIds={selectedMediaItems.map((item) => item.id)}
+                      showFooter={false}
                     />
                   </div>
                   <div class="media-browser-footer">
