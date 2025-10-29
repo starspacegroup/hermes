@@ -52,7 +52,7 @@
         </svg>
       </button>
       <h1>Hermes Admin</h1>
-      <a href="/" class="open-site-link-mobile" aria-label="Open main site">
+      <a href="/" class="open-site-link-mobile" aria-label="Open main site" on:click={closeSidebar}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path
             d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
@@ -76,7 +76,7 @@
         </button>
       </div>
 
-      <a href="/" class="open-site-link" aria-label="Open main site">
+      <a href="/" class="open-site-link" aria-label="Open main site" on:click={closeSidebar}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path
             d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"

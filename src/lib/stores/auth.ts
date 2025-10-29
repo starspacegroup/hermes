@@ -18,7 +18,7 @@ export interface AuthState {
 const getInitialAuthState = (): AuthState => {
   if (browser) {
     try {
-      const stored = sessionStorage.getItem('auth');
+      const stored = localStorage.getItem('auth');
       if (stored) {
         const parsed = JSON.parse(stored);
         return {
@@ -28,7 +28,7 @@ const getInitialAuthState = (): AuthState => {
         };
       }
     } catch (error) {
-      console.error('Failed to load auth from sessionStorage:', error);
+      console.error('Failed to load auth from localStorage:', error);
     }
   }
   return {
@@ -40,17 +40,17 @@ const getInitialAuthState = (): AuthState => {
 
 export const authState: Writable<AuthState> = writable(getInitialAuthState());
 
-// Persist auth changes to sessionStorage
+// Persist auth changes to localStorage
 if (browser) {
   authState.subscribe((state) => {
     try {
       if (state.user) {
-        sessionStorage.setItem('auth', JSON.stringify({ user: state.user }));
+        localStorage.setItem('auth', JSON.stringify({ user: state.user }));
       } else {
-        sessionStorage.removeItem('auth');
+        localStorage.removeItem('auth');
       }
     } catch (error) {
-      console.error('Failed to save auth to sessionStorage:', error);
+      console.error('Failed to save auth to localStorage:', error);
     }
   });
 }
