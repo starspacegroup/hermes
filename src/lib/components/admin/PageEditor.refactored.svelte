@@ -4,10 +4,8 @@
   import type { PageWidget, WidgetType, WidgetConfig, Breakpoint } from '$lib/types/pages';
   import EditorToolbar from './EditorToolbar.svelte';
   import EditorCanvas from './EditorCanvas.svelte';
-  import EditorSidebar from './EditorSidebar.svelte';
   import WidgetLibrary from './WidgetLibrary.svelte';
   import WidgetPropertiesPanel from './WidgetPropertiesPanel.svelte';
-  import ExitConfirmationModal from './ExitConfirmationModal.svelte';
   import { HistoryManager } from '$lib/utils/editor/historyManager';
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
@@ -40,8 +38,6 @@
   let draggedIndex: number | null = null;
   let saving = false;
   let lastSaved: Date | null = null;
-  let showExitConfirmation = false;
-  let hasUnsavedChanges = false;
 
   // Managers
   let historyManager: HistoryManager;
@@ -50,15 +46,6 @@
 
   // Track the last initialWidgets to detect changes
   let lastInitialWidgets = JSON.stringify(initialWidgets);
-
-  // Check for unsaved changes
-  $: {
-    hasUnsavedChanges =
-      title !== initialTitle ||
-      slug !== initialSlug ||
-      status !== initialStatus ||
-      JSON.stringify(widgets) !== JSON.stringify(initialWidgets);
-  }
 
   // Update widgets when initialWidgets change (after save/reload)
   $: {
@@ -286,23 +273,6 @@
       saving = false;
     }
   }
-
-  function handleCancel() {
-    if (hasUnsavedChanges) {
-      showExitConfirmation = true;
-    } else {
-      onCancel();
-    }
-  }
-
-  function confirmExit() {
-    showExitConfirmation = false;
-    onCancel();
-  }
-
-  function cancelExit() {
-    showExitConfirmation = false;
-  }
 </script>
 
 <div class="wysiwyg-editor">
@@ -320,20 +290,36 @@
       undo: handleUndo,
       redo: handleRedo,
       save: handleSubmit,
-      cancel: handleCancel
+      cancel: onCancel
     }}
   />
 
   <div class="editor-main">
     <!-- Left Sidebar - Widget Library -->
-    <EditorSidebar
-      title="Widgets"
-      side="left"
-      collapsed={!showWidgetLibrary}
-      events={{ toggle: () => (showWidgetLibrary = !showWidgetLibrary) }}
-    >
-      <WidgetLibrary onSelectWidget={addWidget} />
-    </EditorSidebar>
+    <div class="sidebar-left" class:collapsed={!showWidgetLibrary}>
+      <div class="sidebar-header">
+        <h3>Widgets</h3>
+        <button
+          type="button"
+          class="icon-btn"
+          on:click={() => (showWidgetLibrary = !showWidgetLibrary)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M15 18l-6-6 6-6"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+      {#if showWidgetLibrary}
+        <div class="sidebar-content">
+          <WidgetLibrary onSelectWidget={addWidget} />
+        </div>
+      {/if}
+    </div>
 
     <!-- Center Canvas -->
     <EditorCanvas
@@ -354,31 +340,38 @@
     />
 
     <!-- Right Sidebar - Properties Panel -->
-    <EditorSidebar
-      title="Properties"
-      side="right"
-      collapsed={!showPropertiesPanel || !selectedWidget}
-      events={{ toggle: () => (showPropertiesPanel = !showPropertiesPanel) }}
-    >
-      {#if selectedWidget}
-        <WidgetPropertiesPanel
-          widget={selectedWidget}
-          {currentBreakpoint}
-          onUpdate={(config) => {
-            if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
-          }}
-          onClose={() => (selectedWidget = null)}
-        />
+    <div class="sidebar-right" class:collapsed={!showPropertiesPanel || !selectedWidget}>
+      <div class="sidebar-header">
+        <h3>Properties</h3>
+        <button
+          type="button"
+          class="icon-btn"
+          on:click={() => (showPropertiesPanel = !showPropertiesPanel)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M9 18l6-6-6-6"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+      {#if showPropertiesPanel && selectedWidget}
+        <div class="sidebar-content">
+          <WidgetPropertiesPanel
+            widget={selectedWidget}
+            {currentBreakpoint}
+            onUpdate={(config) => {
+              if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
+            }}
+            onClose={() => (selectedWidget = null)}
+          />
+        </div>
       {/if}
-    </EditorSidebar>
+    </div>
   </div>
-
-  <!-- Exit Confirmation Modal -->
-  <ExitConfirmationModal
-    isOpen={showExitConfirmation}
-    onConfirm={confirmExit}
-    onCancel={cancelExit}
-  />
 </div>
 
 <style>
@@ -393,5 +386,79 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+  }
+
+  .sidebar-left,
+  .sidebar-right {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    border-right: 1px solid var(--color-border-secondary);
+    transition: width 0.3s ease;
+    overflow: hidden;
+  }
+
+  .sidebar-left {
+    width: 300px;
+  }
+
+  .sidebar-left.collapsed {
+    width: 0;
+  }
+
+  .sidebar-right {
+    width: 350px;
+    border-right: none;
+    border-left: 1px solid var(--color-border-secondary);
+  }
+
+  .sidebar-right.collapsed {
+    width: 0;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .sidebar-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .icon-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .icon-btn:hover {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar-left,
+    .sidebar-right {
+      position: absolute;
+      height: 100%;
+      z-index: 100;
+    }
   }
 </style>

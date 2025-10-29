@@ -131,43 +131,12 @@
   <title>Edit Page - Hermes Admin</title>
 </svelte:head>
 
-<div class="edit-page-container">
-  <div class="page-header">
-    <h1>Edit Page</h1>
-    <p>Modify your page using the WYSIWYG editor</p>
-  </div>
-
-  <PageEditor
-    pageId={data.page.id}
-    initialTitle={data.page.title}
-    initialSlug={data.page.slug}
-    initialStatus={data.page.status}
-    initialWidgets={data.widgets}
-    onSave={handleSave}
-    onCancel={handleCancel}
-  />
-</div>
-
-<style>
-  .edit-page-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  h1 {
-    color: var(--color-text-primary);
-    font-size: 2rem;
-    margin: 0 0 0.5rem 0;
-    transition: color var(--transition-normal);
-  }
-
-  .page-header p {
-    color: var(--color-text-secondary);
-    margin: 0;
-    transition: color var(--transition-normal);
-  }
-</style>
+<PageEditor
+  pageId={data.page.id}
+  initialTitle={data.page.title}
+  initialSlug={data.page.slug}
+  initialStatus={data.page.status}
+  initialWidgets={data.widgets}
+  onSave={handleSave}
+  onCancel={handleCancel}
+/>

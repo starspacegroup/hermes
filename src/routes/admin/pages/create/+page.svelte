@@ -64,43 +64,12 @@
   <title>Create Page - Hermes Admin</title>
 </svelte:head>
 
-<div class="create-page-container">
-  <div class="page-header">
-    <h1>Create New Page</h1>
-    <p>Build your page using the WYSIWYG editor</p>
-  </div>
-
-  <PageEditor
-    pageId={null}
-    initialTitle=""
-    initialSlug=""
-    initialStatus="draft"
-    initialWidgets={[]}
-    onSave={handleSave}
-    onCancel={handleCancel}
-  />
-</div>
-
-<style>
-  .create-page-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  h1 {
-    color: var(--color-text-primary);
-    font-size: 2rem;
-    margin: 0 0 0.5rem 0;
-    transition: color var(--transition-normal);
-  }
-
-  .page-header p {
-    color: var(--color-text-secondary);
-    margin: 0;
-    transition: color var(--transition-normal);
-  }
-</style>
+<PageEditor
+  pageId={null}
+  initialTitle=""
+  initialSlug=""
+  initialStatus="draft"
+  initialWidgets={[]}
+  onSave={handleSave}
+  onCancel={handleCancel}
+/>
