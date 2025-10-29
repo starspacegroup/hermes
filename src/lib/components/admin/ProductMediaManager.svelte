@@ -249,7 +249,7 @@
 </script>
 
 <div class="product-media-manager">
-  <h4>Product Media</h4>
+  <h4>Photos/Videos</h4>
 
   <!-- Upload Section -->
   <div class="upload-section">
@@ -264,7 +264,7 @@
         <circle cx="8.5" cy="8.5" r="1.5" stroke-width="2"></circle>
         <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round"></path>
       </svg>
-      Browse Media Library
+      Browse Library
     </button>
   </div>
 

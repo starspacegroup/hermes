@@ -122,42 +122,51 @@
 
 <div class="product-form">
   <form on:submit|preventDefault={handleSubmit}>
+    <!-- Product Media Manager -->
+    <div class="form-group">
+      <ProductMediaManager bind:this={productMediaManager} productId={product?.id || ''} />
+    </div>
+
+    <!-- Product Name -->
+    <div class="form-group">
+      <label for="product-name">Name *</label>
+      <input
+        type="text"
+        id="product-name"
+        bind:value={formName}
+        placeholder="Enter product name"
+        required
+      />
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label for="product-description">Description *</label>
+      <textarea
+        id="product-description"
+        bind:value={formDescription}
+        placeholder="Enter product description"
+        rows="4"
+        required
+      ></textarea>
+    </div>
+
+    <!-- Price -->
+    <div class="form-group">
+      <label for="product-price">Price *</label>
+      <input
+        type="number"
+        id="product-price"
+        bind:value={formPrice}
+        min="0"
+        step="0.01"
+        placeholder="0.00"
+        required
+      />
+    </div>
+
+    <!-- Product Details Grid -->
     <div class="form-grid">
-      <div class="form-group">
-        <label for="product-name">Product Name *</label>
-        <input
-          type="text"
-          id="product-name"
-          bind:value={formName}
-          placeholder="Enter product name"
-          required
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="product-price">Price *</label>
-        <input
-          type="number"
-          id="product-price"
-          bind:value={formPrice}
-          min="0"
-          step="0.01"
-          placeholder="0.00"
-          required
-        />
-      </div>
-
-      <div class="form-group full-width">
-        <label for="product-description">Description *</label>
-        <textarea
-          id="product-description"
-          bind:value={formDescription}
-          placeholder="Enter product description"
-          rows="3"
-          required
-        ></textarea>
-      </div>
-
       <div class="form-group">
         <label for="product-category">Category</label>
         <input
@@ -178,24 +187,20 @@
       </div>
 
       <div class="form-group">
-        <label for="product-stock">Stock</label>
+        <label for="product-stock">Stock Quantity</label>
         <input type="number" id="product-stock" bind:value={formStock} min="0" placeholder="0" />
-      </div>
-
-      <div class="form-group full-width">
-        <label for="product-tags">Tags (comma-separated)</label>
-        <input
-          type="text"
-          id="product-tags"
-          bind:value={formTags}
-          placeholder="e.g., wireless, premium, audio"
-        />
       </div>
     </div>
 
-    <!-- Product Media Manager -->
-    <div class="form-group full-width">
-      <ProductMediaManager bind:this={productMediaManager} productId={product?.id || ''} />
+    <!-- Tags -->
+    <div class="form-group">
+      <label for="product-tags">Tags</label>
+      <input
+        type="text"
+        id="product-tags"
+        bind:value={formTags}
+        placeholder="e.g., wireless, premium, audio"
+      />
     </div>
 
     <div class="form-actions">
@@ -209,48 +214,57 @@
 
 <style>
   .product-form {
-    background: var(--color-bg-primary);
-    border-radius: var(--radius-lg);
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
+    background: transparent;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
   }
 
   .form-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 
   .form-group {
     display: flex;
     flex-direction: column;
-  }
-
-  .form-group.full-width {
-    grid-column: 1 / -1;
+    gap: 0.5rem;
   }
 
   label {
-    margin-bottom: 0.5rem;
     font-weight: 500;
-    color: var(--color-text-primary);
-    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   input,
   textarea,
   select {
-    padding: 0.75rem;
-    border: 2px solid var(--color-border-secondary);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    background: var(--color-bg-secondary);
+    padding: 0.75rem 0;
+    border: none;
+    border-bottom: 1px solid var(--color-border-secondary);
+    border-radius: 0;
+    font-size: 1rem;
+    background: transparent;
     color: var(--color-text-primary);
-    transition: all var(--transition-normal);
+    transition: border-color 0.2s ease;
+    font-family: inherit;
   }
 
-  /* Style number input spinners */
+  input:hover,
+  textarea:hover,
+  select:hover {
+    border-bottom-color: var(--color-text-tertiary);
+  }
+
   input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -262,50 +276,69 @@
     appearance: textfield;
   }
 
-  /* Custom number input styling with visible controls */
-  input[type='number'] {
-    padding-right: 0.5rem;
-  }
-
   input:focus,
   textarea:focus,
   select:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    border-bottom-color: var(--color-primary);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
   }
 
   textarea {
     resize: vertical;
     font-family: inherit;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    padding-right: 1.5rem;
+    appearance: none;
+  }
+
+  /* Style select dropdown options */
+  select option {
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    padding: 0.5rem;
   }
 
   .form-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border-secondary);
   }
 
   .cancel-btn,
   .submit-btn {
     padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-md);
+    border-radius: 6px;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all 0.15s ease;
     border: none;
   }
 
   .cancel-btn {
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-secondary);
+    background: transparent;
+    color: var(--color-text-secondary);
   }
 
   .cancel-btn:hover {
-    background: var(--color-bg-accent);
+    color: var(--color-text-primary);
   }
 
   .submit-btn {
@@ -318,17 +351,24 @@
   }
 
   .submit-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   @media (max-width: 768px) {
     .form-grid {
       grid-template-columns: 1fr;
+      gap: 1.75rem;
     }
 
-    .product-form {
-      padding: 1rem;
+    .form-actions {
+      flex-direction: column-reverse;
+    }
+
+    .cancel-btn,
+    .submit-btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>
