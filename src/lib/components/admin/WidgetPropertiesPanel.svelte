@@ -12,6 +12,7 @@
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
   let lastWidgetId = widget.id;
   let showMediaBrowser = false;
+  let selectedMediaItems: MediaLibraryItem[] = [];
 
   // Initialize config when component mounts or widget changes
   function initializeConfig() {
@@ -55,10 +56,25 @@
     handleUpdate();
   }
 
-  function handleMediaSelected(media: MediaLibraryItem) {
-    config.backgroundImage = media.url;
+  function handleMediaSelected(media: MediaLibraryItem[]) {
+    // Update selection with the provided array
+    selectedMediaItems = media;
+  }
+
+  function handleAddSelectedMedia() {
+    if (selectedMediaItems.length > 0) {
+      // For now, just use the first selected item for background image
+      // In the future, this could be extended to support multiple images
+      config.backgroundImage = selectedMediaItems[0].url;
+      selectedMediaItems = [];
+      showMediaBrowser = false;
+      handleUpdate();
+    }
+  }
+
+  function handleCancelMediaBrowser() {
+    selectedMediaItems = [];
     showMediaBrowser = false;
-    handleUpdate();
   }
 
   function getWidgetLabel(type: string): string {
@@ -338,8 +354,60 @@
               </button>
             </div>
             {#if showMediaBrowser}
-              <div class="media-browser-container">
-                <MediaBrowser onSelect={handleMediaSelected} />
+              <div
+                class="media-browser-modal"
+                role="button"
+                tabindex="0"
+                on:click|self={handleCancelMediaBrowser}
+                on:keydown={(e) => e.key === 'Escape' && handleCancelMediaBrowser()}
+              >
+                <div class="media-browser-content">
+                  <div class="media-browser-header">
+                    <h3>Media Library</h3>
+                    <div class="header-actions">
+                      {#if selectedMediaItems.length > 0}
+                        <span class="selection-count">
+                          {selectedMediaItems.length} selected
+                        </span>
+                      {/if}
+                      <button
+                        type="button"
+                        class="modal-close-btn"
+                        on:click={handleCancelMediaBrowser}
+                        title="Close"
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="media-browser-body">
+                    <MediaBrowser
+                      onSelect={handleMediaSelected}
+                      selectedIds={selectedMediaItems.map((item) => item.id)}
+                    />
+                  </div>
+                  <div class="media-browser-footer">
+                    <button type="button" class="btn-cancel" on:click={handleCancelMediaBrowser}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-add"
+                      disabled={selectedMediaItems.length === 0}
+                      on:click={handleAddSelectedMedia}
+                    >
+                      Add Selected ({selectedMediaItems.length})
+                    </button>
+                  </div>
+                </div>
               </div>
             {/if}
           </div>
@@ -1034,11 +1102,134 @@
     background: var(--color-bg-tertiary);
   }
 
-  .media-browser-container {
-    margin-top: 1rem;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
+  .media-browser-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 2rem;
+  }
+
+  .media-browser-content {
+    background: var(--color-bg-primary);
+    border-radius: 12px;
+    width: 95vw;
+    height: 90vh;
+    max-width: 1400px;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    max-height: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .media-browser-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+    flex-shrink: 0;
+  }
+
+  .media-browser-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .selection-count {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+  }
+
+  .modal-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-close-btn:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
+  .media-browser-body {
+    flex: 1;
+    overflow: auto;
+    padding: 2rem;
+  }
+
+  .media-browser-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-border-secondary);
+    flex-shrink: 0;
+  }
+
+  .btn-cancel {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .btn-add {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-add:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

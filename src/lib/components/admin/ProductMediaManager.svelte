@@ -47,8 +47,16 @@
     await addMediaToProduct(media);
   }
 
-  async function handleMediaSelected(media: MediaLibraryItem) {
-    await addMediaToProduct(media);
+  async function handleMediaSelected(mediaArray: MediaLibraryItem[]) {
+    // Add all selected media items
+    for (const media of mediaArray) {
+      await addMediaToProduct(media);
+    }
+
+    if (mediaArray.length > 0) {
+      toastStore.success(`${mediaArray.length} media item(s) added to product`);
+    }
+
     showMediaBrowser = false;
   }
 
@@ -93,10 +101,10 @@
 
       await loadProductMedia();
       await invalidateAll(); // Refresh parent page data to show updated product image
-      toastStore.success('Media added to product');
+      // Don't show individual toast - MediaUpload will show summary toast
     } catch (error) {
       console.error('Error adding media to product:', error);
-      toastStore.error('Failed to add media to product');
+      throw error; // Re-throw so MediaUpload can handle the error toast
     }
   }
 
@@ -281,11 +289,6 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div class="modal" role="dialog" on:click|stopPropagation>
         <MediaBrowser onSelect={handleMediaSelected} selectedIds={productMedia.map((m) => m.id)} />
-        <div class="modal-actions">
-          <button type="button" class="cancel-btn" on:click={() => (showMediaBrowser = false)}>
-            Close
-          </button>
-        </div>
       </div>
     </div>
   {/if}
@@ -403,29 +406,6 @@
     transition:
       background-color var(--transition-normal),
       box-shadow var(--transition-normal);
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-  }
-
-  .cancel-btn {
-    padding: 0.75rem 1.5rem;
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .cancel-btn:hover {
-    background: var(--color-bg-accent);
   }
 
   .loading-text,

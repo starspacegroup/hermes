@@ -8,55 +8,92 @@
   let fileInput: HTMLInputElement;
   let isUploading = false;
   let uploadProgress = 0;
+  let uploadingCount = 0;
+  let totalFilesCount = 0;
 
   async function handleFileSelect(event: Event) {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
+    const files = target.files;
 
-    if (!file) return;
+    if (!files || files.length === 0) return;
 
-    await uploadFile(file);
+    await uploadFiles(Array.from(files));
 
     // Reset input
     target.value = '';
   }
 
-  async function uploadFile(file: File) {
+  async function uploadFiles(files: File[]) {
+    if (files.length === 0) return;
+
     isUploading = true;
+    totalFilesCount = files.length;
+    uploadingCount = 0;
     uploadProgress = 0;
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    const uploadPromises = files.map(async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      // Get image dimensions if it's an image
-      if (file.type.startsWith('image/')) {
-        const dimensions = await getImageDimensions(file);
-        formData.append('dimensions', JSON.stringify(dimensions));
+        // Get image dimensions if it's an image
+        if (file.type.startsWith('image/')) {
+          const dimensions = await getImageDimensions(file);
+          formData.append('dimensions', JSON.stringify(dimensions));
+        }
+
+        const response = await fetch('/api/media/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(error || 'Failed to upload media');
+        }
+
+        const media = (await response.json()) as MediaLibraryItem;
+        onMediaUploaded(media);
+
+        uploadingCount++;
+        uploadProgress = Math.round((uploadingCount / totalFilesCount) * 100);
+
+        return { success: true, media, filename: file.name };
+      } catch (error) {
+        console.error('Upload error for', file.name, ':', error);
+        return {
+          success: false,
+          filename: file.name,
+          error: error instanceof Error ? error.message : 'Upload failed'
+        };
       }
+    });
 
-      const response = await fetch('/api/media/upload', {
-        method: 'POST',
-        body: formData
-      });
+    const results = await Promise.all(uploadPromises);
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || 'Failed to upload media');
-      }
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
-      const media = (await response.json()) as MediaLibraryItem;
-      toastStore.success('Media uploaded successfully');
-      onMediaUploaded(media);
-    } catch (error) {
-      console.error('Upload error:', error);
-      toastStore.error(
-        error instanceof Error ? error.message : 'Failed to upload media. Please try again.'
-      );
-    } finally {
-      isUploading = false;
-      uploadProgress = 0;
+    if (successCount > 0) {
+      toastStore.success(`${successCount} file(s) uploaded successfully`);
     }
+
+    if (failureCount > 0) {
+      const failedFiles = results
+        .filter((r) => !r.success)
+        .map((r) => r.filename)
+        .join(', ');
+      toastStore.error(`Failed to upload ${failureCount} file(s): ${failedFiles}`);
+    }
+
+    isUploading = false;
+    uploadProgress = 0;
+    uploadingCount = 0;
+    totalFilesCount = 0;
+  }
+
+  async function _uploadFile(file: File) {
+    await uploadFiles([file]);
   }
 
   function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
@@ -72,9 +109,9 @@
 
   function handleDrop(event: DragEvent) {
     event.preventDefault();
-    const file = event.dataTransfer?.files[0];
-    if (file) {
-      uploadFile(file);
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      uploadFiles(Array.from(files));
     }
   }
 
@@ -97,6 +134,7 @@
     bind:this={fileInput}
     on:change={handleFileSelect}
     {accept}
+    multiple
     style="display: none;"
   />
 
@@ -121,7 +159,10 @@
           stroke-linecap="round"
         ></circle>
       </svg>
-      <p>Uploading...</p>
+      <p>Uploading {uploadingCount} of {totalFilesCount} file{totalFilesCount > 1 ? 's' : ''}...</p>
+      {#if totalFilesCount > 1}
+        <p class="progress-percentage">{uploadProgress}%</p>
+      {/if}
     </div>
   {:else}
     <div class="upload-prompt">
@@ -194,6 +235,12 @@
     color: var(--color-text-secondary);
     margin: 0;
     transition: color var(--transition-normal);
+  }
+
+  .progress-percentage {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-primary);
   }
 
   @keyframes spin {

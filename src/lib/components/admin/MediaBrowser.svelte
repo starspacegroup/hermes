@@ -3,12 +3,13 @@
   import { toastStore } from '$lib/stores/toast';
   import type { MediaLibraryItem } from '$lib/types';
 
-  export let onSelect: (media: MediaLibraryItem) => void = () => {};
+  export let onSelect: (media: MediaLibraryItem[]) => void = () => {};
   export let selectedIds: string[] = [];
 
   let mediaItems: MediaLibraryItem[] = [];
   let isLoading = true;
   let filterType: 'all' | 'image' | 'video' = 'all';
+  let internalSelectedIds: string[] = [...selectedIds];
 
   onMount(async () => {
     await loadMedia();
@@ -63,8 +64,17 @@
     }
   }
 
-  function handleSelect(item: MediaLibraryItem) {
-    onSelect(item);
+  function toggleSelect(item: MediaLibraryItem) {
+    if (internalSelectedIds.includes(item.id)) {
+      internalSelectedIds = internalSelectedIds.filter((id) => id !== item.id);
+    } else {
+      internalSelectedIds = [...internalSelectedIds, item.id];
+    }
+  }
+
+  function handleAddSelected() {
+    const selectedMedia = mediaItems.filter((item) => internalSelectedIds.includes(item.id));
+    onSelect(selectedMedia);
   }
 
   function formatFileSize(bytes: number): string {
@@ -136,16 +146,30 @@
       </div>
     {:else}
       {#each filteredItems as item (item.id)}
-        <div class="media-item" class:selected={selectedIds.includes(item.id)}>
-          <div class="media-preview">
-            {#if item.type === 'image'}
-              <img src={item.url} alt={item.filename} />
-            {:else}
-              <video src={item.url} controls preload="metadata">
-                <track kind="captions" />
-              </video>
-            {/if}
-          </div>
+        <div class="media-item" class:selected={internalSelectedIds.includes(item.id)}>
+          <button
+            type="button"
+            class="media-preview-button"
+            on:click={() => toggleSelect(item)}
+            title="Click to select"
+          >
+            <div class="media-preview">
+              <div class="selection-checkbox" class:checked={internalSelectedIds.includes(item.id)}>
+                {#if internalSelectedIds.includes(item.id)}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M20 6L9 17l-5-5" stroke-width="3" stroke-linecap="round" />
+                  </svg>
+                {/if}
+              </div>
+              {#if item.type === 'image'}
+                <img src={item.url} alt={item.filename} />
+              {:else}
+                <video src={item.url} preload="metadata">
+                  <track kind="captions" />
+                </video>
+              {/if}
+            </div>
+          </button>
           <div class="media-info">
             <p class="media-filename" title={item.filename}>{item.filename}</p>
             <p class="media-meta">
@@ -158,18 +182,9 @@
           <div class="media-actions">
             <button
               type="button"
-              class="action-btn select-btn"
-              on:click|stopPropagation={() => handleSelect(item)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"></path>
-              </svg>
-              Select
-            </button>
-            <button
-              type="button"
               class="action-btn delete-btn"
               on:click|stopPropagation={() => handleDelete(item)}
+              title="Delete media"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path
@@ -184,6 +199,17 @@
       {/each}
     {/if}
   </div>
+
+  {#if internalSelectedIds.length > 0}
+    <div class="browser-footer">
+      <button type="button" class="add-selected-btn" on:click={handleAddSelected}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        Add Selected ({internalSelectedIds.length})
+      </button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -266,7 +292,17 @@
     background-color: var(--color-bg-secondary);
   }
 
+  .media-preview-button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: block;
+  }
+
   .media-preview {
+    position: relative;
     width: 100%;
     height: 150px;
     overflow: hidden;
@@ -279,6 +315,38 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
+  }
+
+  .selection-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: 24px;
+    height: 24px;
+    border: 2px solid white;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .selection-checkbox.checked {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .selection-checkbox svg {
+    color: white;
+  }
+
+  .media-preview-button:hover .selection-checkbox:not(.checked) {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: var(--color-primary);
   }
 
   .media-info {
@@ -312,6 +380,7 @@
 
   .media-actions {
     display: flex;
+    justify-content: flex-end;
     gap: 0.5rem;
     padding: 0.75rem;
     border-top: 1px solid var(--color-border-secondary);
@@ -319,28 +388,19 @@
   }
 
   .action-btn {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     border: none;
     border-radius: 4px;
     font-size: 0.875rem;
     cursor: pointer;
     transition:
       background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .select-btn {
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-  }
-
-  .select-btn:hover {
-    background: var(--color-primary-hover);
+      color var(--transition-normal),
+      transform var(--transition-normal);
   }
 
   .delete-btn {
@@ -351,6 +411,7 @@
   .delete-btn:hover {
     background: var(--color-danger);
     color: var(--color-text-inverse);
+    transform: scale(1.05);
   }
 
   .loading-state,
@@ -369,5 +430,40 @@
 
   .empty-state p {
     margin: 0;
+  }
+
+  .browser-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-secondary);
+    display: flex;
+    justify-content: flex-end;
+    transition: border-color var(--transition-normal);
+  }
+
+  .add-selected-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: 0 2px 8px var(--color-primary-alpha);
+  }
+
+  .add-selected-btn:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--color-primary-alpha);
+  }
+
+  .add-selected-btn:active {
+    transform: translateY(0);
   }
 </style>

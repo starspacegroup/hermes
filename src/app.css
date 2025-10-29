@@ -42,6 +42,24 @@
   --color-shadow-medium: rgba(239, 68, 68, 0.2);
   --color-shadow-dark: rgba(239, 68, 68, 0.35);
 
+  /* Data Type Colors */
+  --color-type-text: #2563eb; /* blue for TEXT types */
+  --color-type-integer: #059669; /* green for INTEGER types */
+  --color-type-real: #d97706; /* amber for REAL/NUMERIC types */
+  --color-type-blob: #7c3aed; /* purple for BLOB types */
+  --color-type-default: #374151; /* dark gray for unknown types */
+
+  /* Badge Colors */
+  --color-badge-pk: #dc2626; /* primary key */
+  --color-badge-required: #d97706; /* not null */
+  --color-badge-unique: #7c3aed; /* unique index */
+  --color-badge-view: #0369a1; /* view badge */
+
+  /* Platform Engineer Colors */
+  --color-engineer-gradient-start: #667eea;
+  --color-engineer-gradient-end: #764ba2;
+  --color-engineer-text: #ffffff;
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -103,6 +121,24 @@
   --color-shadow-light: rgba(236, 72, 153, 0.2);
   --color-shadow-medium: rgba(139, 92, 246, 0.25);
   --color-shadow-dark: rgba(91, 33, 182, 0.4);
+
+  /* Data Type Colors - Dark Theme */
+  --color-type-text: #60a5fa; /* brighter blue for TEXT types */
+  --color-type-integer: #34d399; /* brighter green for INTEGER types */
+  --color-type-real: #fbbf24; /* brighter amber for REAL/NUMERIC types */
+  --color-type-blob: #a78bfa; /* brighter purple for BLOB types */
+  --color-type-default: #d1d5db; /* lighter gray for unknown types */
+
+  /* Badge Colors - Dark Theme */
+  --color-badge-pk: #f87171; /* primary key */
+  --color-badge-required: #fbbf24; /* not null */
+  --color-badge-unique: #a78bfa; /* unique index */
+  --color-badge-view: #22d3ee; /* view badge */
+
+  /* Platform Engineer Colors - Dark Theme */
+  --color-engineer-gradient-start: #a78bfa;
+  --color-engineer-gradient-end: #ec4899;
+  --color-engineer-text: #0a0118;
 }
 
 * {

@@ -1,6 +1,14 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, getAllProducts, createProduct, updateProduct, deleteProduct } from '$lib/server/db';
+import {
+  getDB,
+  getAllProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getProductById,
+  syncProductImageFromMedia
+} from '$lib/server/db';
 
 // GET all products
 export const GET: RequestHandler = async ({ platform, locals }) => {
@@ -134,16 +142,26 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       throw error(404, 'Product not found');
     }
 
+    // Sync product image from media to ensure thumbnail is up to date
+    await syncProductImageFromMedia(db, siteId, data.id);
+
+    // Re-fetch the product to get the potentially updated image
+    const updatedDbProduct = await getProductById(db, siteId, data.id);
+
+    if (!updatedDbProduct) {
+      throw error(404, 'Product not found after update');
+    }
+
     const product = {
-      id: dbProduct.id,
-      name: dbProduct.name,
-      description: dbProduct.description,
-      price: dbProduct.price,
-      image: dbProduct.image,
-      category: dbProduct.category,
-      stock: dbProduct.stock,
-      type: dbProduct.type,
-      tags: JSON.parse(dbProduct.tags || '[]')
+      id: updatedDbProduct.id,
+      name: updatedDbProduct.name,
+      description: updatedDbProduct.description,
+      price: updatedDbProduct.price,
+      image: updatedDbProduct.image,
+      category: updatedDbProduct.category,
+      stock: updatedDbProduct.stock,
+      type: updatedDbProduct.type,
+      tags: JSON.parse(updatedDbProduct.tags || '[]')
     };
 
     return json(product);

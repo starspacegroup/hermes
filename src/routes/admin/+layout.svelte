@@ -187,6 +187,23 @@
           </svg>
           Settings
         </a>
+
+        {#if $authStore.user?.role === 'platform_engineer'}
+          <a
+            href="/admin/database"
+            class:active={currentPath.startsWith('/admin/database')}
+            on:click={closeSidebar}
+            class="platform-engineer-link"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <ellipse cx="12" cy="5" rx="9" ry="3" stroke-width="2"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" stroke-width="2"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" stroke-width="2"></path>
+            </svg>
+            Database Navigator
+            <span class="engineer-badge">PE</span>
+          </a>
+        {/if}
       </nav>
 
       <div class="sidebar-footer">
@@ -511,5 +528,39 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 150;
     }
+  }
+
+  /* Platform Engineer specific styles */
+  .platform-engineer-link {
+    position: relative;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-engineer-gradient-start) 10%, transparent) 0%,
+      color-mix(in srgb, var(--color-engineer-gradient-end) 10%, transparent) 100%
+    );
+    border-left: 3px solid var(--color-engineer-gradient-start);
+  }
+
+  .platform-engineer-link:hover {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-engineer-gradient-start) 20%, transparent) 0%,
+      color-mix(in srgb, var(--color-engineer-gradient-end) 20%, transparent) 100%
+    );
+  }
+
+  .engineer-badge {
+    margin-left: auto;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(
+      135deg,
+      var(--color-engineer-gradient-start) 0%,
+      var(--color-engineer-gradient-end) 100%
+    );
+    color: var(--color-engineer-text);
+    border-radius: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
   }
 </style>
