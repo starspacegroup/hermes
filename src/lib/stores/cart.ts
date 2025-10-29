@@ -1,6 +1,7 @@
 import { writable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { Product, CartItem } from '../types/index.js';
+import { toastStore } from './toast.js';
 
 // Initialize with persisted data if available
 const getInitialCartItems = (): CartItem[] => {
@@ -53,6 +54,13 @@ export const cartStore: CartStore = {
       } else {
         return [...items, { ...product, quantity }];
       }
+    });
+
+    // Show toast notification with link to cart
+    const message = `${product.name} added to cart`;
+    toastStore.success(message, 4000, {
+      text: 'View Cart',
+      href: '/cart'
     });
   },
 

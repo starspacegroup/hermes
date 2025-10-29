@@ -1,7 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { cartStore, cartItems } from './cart';
 import type { Product } from '../types/index';
+import { toastStore } from './toast';
+
+// Mock toastStore
+vi.mock('./toast', () => ({
+  toastStore: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    show: vi.fn(),
+    remove: vi.fn(),
+    clear: vi.fn(),
+    subscribe: vi.fn()
+  }
+}));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -52,6 +67,7 @@ describe('Cart Store', () => {
   beforeEach(() => {
     cartStore.clear();
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   describe('addItem', () => {
@@ -89,6 +105,15 @@ describe('Cart Store', () => {
       expect(items).toHaveLength(2);
       expect(items[0].id).toBe(mockProduct.id);
       expect(items[1].id).toBe(mockProduct2.id);
+    });
+
+    it('should show a success toast when adding an item', () => {
+      cartStore.addItem(mockProduct);
+
+      expect(toastStore.success).toHaveBeenCalledWith(`${mockProduct.name} added to cart`, 4000, {
+        text: 'View Cart',
+        href: '/cart'
+      });
     });
   });
 

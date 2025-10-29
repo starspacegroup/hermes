@@ -94,6 +94,18 @@ describe('Toast Store', () => {
 
       unsubscribe();
     });
+
+    it('should add a toast with a link', () => {
+      const link = { text: 'View Cart', href: '/cart' };
+      const unsubscribe = toastStore.subscribe((toasts) => {
+        if (toasts.length > 0) {
+          expect(toasts[0].link).toEqual(link);
+        }
+      });
+
+      toastStore.show('Item added', 'success', 3000, link);
+      unsubscribe();
+    });
   });
 
   describe('success', () => {
