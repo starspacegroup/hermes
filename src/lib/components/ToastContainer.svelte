@@ -12,11 +12,11 @@
 <style>
   .toast-container {
     position: fixed;
-    top: 1rem;
+    bottom: 1rem;
     right: 1rem;
-    z-index: 1000;
+    z-index: 10000;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: flex-end;
     pointer-events: none;
   }
@@ -27,7 +27,7 @@
 
   @media (max-width: 480px) {
     .toast-container {
-      top: 1rem;
+      bottom: 1rem;
       left: 1rem;
       right: 1rem;
       align-items: stretch;

@@ -366,9 +366,6 @@
       saving = true;
       await onSave({ title, slug, status, widgets });
       lastSaved = new Date();
-      toastStore.success('Page saved successfully');
-    } catch (_error) {
-      toastStore.error('Failed to save page');
     } finally {
       saving = false;
     }
