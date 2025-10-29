@@ -31,11 +31,13 @@ environment variable for security reasons.
 
 1. Create a `.dev.vars` file in the project root (copy from
    `.dev.vars.example`):
+
    ```bash
    cp .dev.vars.example .dev.vars
    ```
 
 2. Set your password in `.dev.vars`:
+
    ```
    PLATFORM_ENGINEER_PASSWORD=your_secure_password_here
    ```

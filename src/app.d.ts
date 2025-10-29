@@ -19,9 +19,9 @@ declare global {
         PLATFORM_ENGINEER_PASSWORD?: string;
       };
       context: ExecutionContext;
-      caches: CacheStorage & { default: Cache; };
+      caches: CacheStorage & { default: Cache };
     }
   }
 }
 
-export { };
+export {};

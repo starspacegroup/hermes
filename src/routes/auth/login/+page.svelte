@@ -104,37 +104,43 @@
 
     <div class="demo-credentials">
       <p><strong>Demo Credentials:</strong></p>
-      <button
-        type="button"
-        class="credential-group clickable"
-        on:click={() => fillCredentials('user@hermes.local', 'TfppPEsXnfZluUi52ne538O')}
-        disabled={isLoading}
-      >
+      <div class="credential-item">
         <p class="credential-title">Regular User:</p>
-        <p>Email: user@hermes.local</p>
-        <p>Password: TfppPEsXnfZluUi52ne538O</p>
-      </button>
-      <button
-        type="button"
-        class="credential-group clickable"
-        on:click={() => fillCredentials('owner@hermes.local', '4a6lJebYdNkr2zjq5j59rTt')}
-        disabled={isLoading}
-      >
+        <button
+          type="button"
+          class="credential-group clickable"
+          on:click={() => fillCredentials('user@hermes.local', 'TfppPEsXnfZluUi52ne538O')}
+          disabled={isLoading}
+        >
+          <p>Email: user@hermes.local</p>
+          <p>Password: TfppPEsXnfZluUi52ne538O</p>
+        </button>
+      </div>
+      <div class="credential-item">
         <p class="credential-title">Site Owner (Admin):</p>
-        <p>Email: owner@hermes.local</p>
-        <p>Password: 4a6lJebYdNkr2zjq5j59rTt</p>
-      </button>
-      <button
-        type="button"
-        class="credential-group clickable"
-        on:click={() => fillCredentials('engineer@hermes.local', '')}
-        disabled={isLoading}
-        title="Password must be set via PLATFORM_ENGINEER_PASSWORD environment variable"
-      >
+        <button
+          type="button"
+          class="credential-group clickable"
+          on:click={() => fillCredentials('owner@hermes.local', '4a6lJebYdNkr2zjq5j59rTt')}
+          disabled={isLoading}
+        >
+          <p>Email: owner@hermes.local</p>
+          <p>Password: 4a6lJebYdNkr2zjq5j59rTt</p>
+        </button>
+      </div>
+      <div class="credential-item">
         <p class="credential-title">Platform Engineer:</p>
-        <p>Email: engineer@hermes.local</p>
-        <p>Password: (Set via env var)</p>
-      </button>
+        <button
+          type="button"
+          class="credential-group clickable"
+          on:click={() => fillCredentials('engineer@hermes.local', '')}
+          disabled={isLoading}
+          title="Password must be set via PLATFORM_ENGINEER_PASSWORD environment variable"
+        >
+          <p>Email: engineer@hermes.local</p>
+          <p>Password: (Set via env var)</p>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -245,8 +251,20 @@
     margin-bottom: 1rem;
   }
 
+  .credential-item {
+    margin-bottom: 1.25rem;
+  }
+
+  .credential-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.5rem 0 !important;
+    font-size: 0.95rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
   .credential-group {
-    margin-bottom: 1rem;
     padding: 0.75rem;
     background: var(--color-bg-secondary);
     border-radius: 6px;
@@ -277,14 +295,6 @@
   .credential-group:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  .credential-title {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin-bottom: 0.25rem !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
   }
 
   .demo-credentials p {
