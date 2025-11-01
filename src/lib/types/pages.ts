@@ -108,6 +108,7 @@ export interface ResponsiveStyles {
 export interface WidgetConfig {
   // Common fields
   id?: string;
+  anchorName?: string; // Optional anchor name for linking to this widget (e.g., /#section-name)
   styles?: ResponsiveStyles;
 
   // Single product widget

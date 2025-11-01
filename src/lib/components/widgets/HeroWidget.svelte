@@ -28,6 +28,7 @@
 
 <div
   class="hero-widget"
+  id={config.anchorName || undefined}
   style="
     height: {heroHeight};
     background-image: {backgroundImage ? `url(${backgroundImage})` : 'none'};

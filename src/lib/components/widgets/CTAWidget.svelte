@@ -12,7 +12,11 @@
   $: backgroundColor = config.backgroundColor || '';
 </script>
 
-<div class="cta-widget" style={backgroundColor ? `background: ${backgroundColor};` : ''}>
+<div
+  class="cta-widget"
+  id={config.anchorName || undefined}
+  style={backgroundColor ? `background: ${backgroundColor};` : ''}
+>
   <div class="cta-content">
     <h2>{title}</h2>
     {#if subtitle}

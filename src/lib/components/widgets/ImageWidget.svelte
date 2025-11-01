@@ -9,7 +9,7 @@
 </script>
 
 {#if src}
-  <div class="image-widget">
+  <div class="image-widget" id={config.anchorName || undefined}>
     <img {src} {alt} style:max-width={width ? `${width}px` : '100%'} />
   </div>
 {/if}

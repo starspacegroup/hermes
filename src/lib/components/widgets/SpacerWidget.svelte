@@ -6,7 +6,7 @@
   $: space = config.space || 40;
 </script>
 
-<div class="spacer-widget" style="height: {space}px" />
+<div class="spacer-widget" id={config.anchorName || undefined} style="height: {space}px" />
 
 <style>
   .spacer-widget {

@@ -41,7 +41,7 @@
   `;
 </script>
 
-<div class="features-widget">
+<div class="features-widget" id={config.anchorName || undefined}>
   <div class="section-header">
     <h2>{title}</h2>
     {#if subtitle}

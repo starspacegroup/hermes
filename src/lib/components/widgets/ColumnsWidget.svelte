@@ -11,6 +11,7 @@
 
 <div
   class="columns-widget"
+  id={config.anchorName || undefined}
   style="
     display: grid;
     grid-template-columns: repeat({columnCount}, 1fr);

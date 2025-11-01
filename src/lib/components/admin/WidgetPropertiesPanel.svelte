@@ -298,6 +298,24 @@
   <div class="panel-content">
     {#if activeTab === 'content'}
       <div class="content-tab">
+        <!-- Common Anchor Name field for all widgets -->
+        <div class="form-group anchor-section">
+          <label>
+            <span>Anchor Name (Optional)</span>
+            <input
+              type="text"
+              bind:value={config.anchorName}
+              on:blur={handleUpdate}
+              placeholder="e.g., about-us, contact"
+              pattern="[a-z0-9-]+"
+              title="Use lowercase letters, numbers, and hyphens only"
+            />
+          </label>
+          <small class="help-text">
+            Set an anchor name to link directly to this section using /#anchor-name
+          </small>
+        </div>
+
         {#if widget.type === 'text'}
           <div class="form-group">
             <label>
@@ -1495,6 +1513,20 @@
 
   .form-group {
     margin-bottom: 1rem;
+  }
+
+  .anchor-section {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .help-text {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
   }
 
   .form-group label {

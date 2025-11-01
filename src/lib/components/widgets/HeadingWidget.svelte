@@ -9,7 +9,11 @@
   $: textColor = config.textColor || 'inherit';
 </script>
 
-<div class="heading-widget" style="text-align: {alignment}; color: {textColor};">
+<div
+  class="heading-widget"
+  id={config.anchorName || undefined}
+  style="text-align: {alignment}; color: {textColor};"
+>
   {#if level === 1}
     <h1>{heading}</h1>
   {:else if level === 2}

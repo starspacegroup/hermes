@@ -7,7 +7,7 @@
   $: alignment = config.alignment || 'left';
 </script>
 
-<div class="text-widget" style="text-align: {alignment}">
+<div class="text-widget" id={config.anchorName || undefined} style="text-align: {alignment}">
   {text}
 </div>
 

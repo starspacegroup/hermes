@@ -35,7 +35,7 @@
   });
 </script>
 
-<div class="single-product-widget">
+<div class="single-product-widget" id={config.anchorName || undefined}>
   {#if loading}
     <div class="loading">Loading product...</div>
   {:else if error}

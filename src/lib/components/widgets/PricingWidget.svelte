@@ -13,7 +13,7 @@
   $: ctaNote = config.ctaNote || '';
 </script>
 
-<div class="pricing-widget">
+<div class="pricing-widget" id={config.anchorName || undefined}>
   <div class="section-header">
     <h2>{title}</h2>
     {#if tagline}

@@ -11,6 +11,7 @@
 
 <div
   class="divider-widget"
+  id={config.anchorName || undefined}
   style="
     border-top: {thickness}px {dividerStyle} {dividerColor};
     margin: {spacing}px 0;

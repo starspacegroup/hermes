@@ -11,7 +11,7 @@
   $: alignment = config.alignment || 'left';
 </script>
 
-<div class="button-widget" style="text-align: {alignment}">
+<div class="button-widget" id={config.anchorName || undefined} style="text-align: {alignment}">
   <a href={url} class="btn btn-{variant} btn-{size}" class:btn-full={fullWidth}>
     {label}
   </a>
