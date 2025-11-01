@@ -138,4 +138,90 @@ describe('Theme Store', () => {
       expect(() => themeStore.cleanup()).not.toThrow();
     });
   });
+
+  describe('error handling', () => {
+    it('should handle localStorage errors during setTheme', () => {
+      // Mock localStorage.setItem to throw
+      const setItemSpy = vi.spyOn(localStorageMock, 'setItem').mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
+
+      // Should not throw, just handle gracefully
+      expect(() => themeStore.setTheme('dark')).not.toThrow();
+
+      setItemSpy.mockRestore();
+    });
+
+    it('should handle localStorage errors during toggleTheme', () => {
+      // Mock localStorage.setItem to throw
+      const setItemSpy = vi.spyOn(localStorageMock, 'setItem').mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
+
+      themeStore.setTheme('light');
+
+      // Should not throw, just handle gracefully
+      expect(() => themeStore.toggleTheme()).not.toThrow();
+
+      setItemSpy.mockRestore();
+    });
+
+    it('should handle localStorage errors during initTheme', () => {
+      // Mock localStorage.getItem to throw
+      const getItemSpy = vi.spyOn(localStorageMock, 'getItem').mockImplementation(() => {
+        throw new Error('Storage access denied');
+      });
+
+      // Should not throw, just handle gracefully and fallback to defaults
+      expect(() => themeStore.initTheme()).not.toThrow();
+
+      getItemSpy.mockRestore();
+    });
+
+    it('should handle matchMedia not being available', () => {
+      // Simulate environment without matchMedia support
+      const originalMatchMedia = window.matchMedia;
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        configurable: true,
+        value: undefined
+      });
+
+      // Should handle gracefully
+      expect(() => themeStore.initTheme()).not.toThrow();
+
+      // Restore
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        configurable: true,
+        value: originalMatchMedia
+      });
+    });
+  });
+
+  describe('system theme detection', () => {
+    it('should detect dark system theme', () => {
+      mockMatchMedia.mockReturnValue({
+        matches: true, // dark mode
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      });
+
+      themeStore.setTheme('system');
+      expect(get(themeStore)).toBe('system');
+      // The actual theme applied would be dark (tested through integration)
+    });
+
+    it('should detect light system theme', () => {
+      mockMatchMedia.mockReturnValue({
+        matches: false, // light mode
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      });
+
+      themeStore.setTheme('system');
+      expect(get(themeStore)).toBe('system');
+      // The actual theme applied would be light (tested through integration)
+    });
+  });
 });

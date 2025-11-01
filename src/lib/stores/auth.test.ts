@@ -268,4 +268,71 @@ describe('Auth Store', () => {
       expect(authStore.canAccessAdmin()).toBe(false);
     });
   });
+
+  describe('error handling', () => {
+    it('should handle API errors during login', async () => {
+      // Mock fetch to throw an error
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error('Network error')
+      );
+
+      const success = await authStore.login('owner@hermes.local', 'owner456Pass');
+
+      expect(success).toBe(false);
+
+      const state = get(authState);
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.isLoading).toBe(false);
+    });
+
+    it('should handle logout API errors gracefully', async () => {
+      // Mock successful login response
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          user: {
+            id: 'admin-1',
+            email: 'owner@hermes.local',
+            name: 'Site Owner',
+            role: 'admin'
+          }
+        })
+      });
+
+      await authStore.login('owner@hermes.local', 'owner456Pass');
+
+      // Mock logout endpoint to throw an error
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error('Network error')
+      );
+
+      // Logout should still work even if API call fails
+      authStore.logout();
+
+      const state = get(authState);
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+    });
+
+    it('should handle invalid response format from login API', async () => {
+      // Mock response with success but no user data
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true
+          // user is missing
+        })
+      });
+
+      const success = await authStore.login('owner@hermes.local', 'owner456Pass');
+
+      expect(success).toBe(false);
+
+      const state = get(authState);
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+    });
+  });
 });

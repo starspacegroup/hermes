@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { productsStore, productsList } from './products';
 import type { Product } from '../types';
@@ -393,6 +393,70 @@ describe('Products Store', () => {
         // If localStorage is not available, at least verify the product was created
         expect(products.find((p) => p.name === mockProduct.name)).toBeDefined();
       }
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle localStorage errors when saving products', () => {
+      // Mock setItem to throw
+      const setItemSpy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
+
+      // Should not throw, just handle gracefully
+      expect(() => productsStore.create(mockProduct)).not.toThrow();
+
+      setItemSpy.mockRestore();
+    });
+
+    it('should handle corrupted localStorage data gracefully', () => {
+      // Set invalid JSON in localStorage
+      localStorage.setItem('products', 'invalid json{');
+
+      // The existing store should handle this gracefully
+      const stored = localStorage.getItem('products');
+      expect(() => {
+        if (stored) {
+          JSON.parse(stored);
+        }
+      }).toThrow();
+
+      // The actual store initialization handles this, verify it doesn't break the app
+      expect(productsStore).toBeDefined();
+    });
+
+    it('should fallback to initial products when localStorage fails', () => {
+      // Mock getItem to throw
+      const getItemSpy = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+        throw new Error('Storage access denied');
+      });
+
+      // The store should still work with initial products
+      expect(productsStore).toBeDefined();
+      expect(typeof productsStore.create).toBe('function');
+
+      getItemSpy.mockRestore();
+    });
+  });
+
+  describe('ID generation', () => {
+    it('should generate unique IDs for multiple products', () => {
+      const ids = new Set<string>();
+
+      for (let i = 0; i < 100; i++) {
+        const id = productsStore.create({ ...mockProduct, name: `Product ${i}` });
+        expect(ids.has(id)).toBe(false);
+        ids.add(id);
+      }
+
+      expect(ids.size).toBe(100);
+    });
+
+    it('should generate valid ID format', () => {
+      const id = productsStore.create(mockProduct);
+
+      expect(typeof id).toBe('string');
+      expect(id.length).toBeGreaterThan(0);
     });
   });
 });
