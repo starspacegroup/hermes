@@ -526,7 +526,7 @@
     border-radius: 8px;
     box-shadow: 0 4px 12px var(--color-shadow-medium);
     min-width: 220px;
-    z-index: 1000;
+    z-index: 9999;
     transition: all var(--transition-normal);
   }
 
@@ -643,7 +643,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 999;
+    z-index: 9998;
     background: transparent;
   }
 

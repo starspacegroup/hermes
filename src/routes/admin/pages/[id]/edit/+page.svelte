@@ -7,6 +7,93 @@
 
   export let data: PageData;
 
+  async function handleSaveDraft(updateData: {
+    title: string;
+    slug: string;
+    widgets: PageWidget[];
+  }) {
+    try {
+      console.log('handleSaveDraft called with:', {
+        widgetCount: updateData.widgets.length,
+        widgets: updateData.widgets.map((w) => ({ id: w.id, type: w.type, position: w.position }))
+      });
+
+      // Create a new draft revision
+      const revisionResponse = await fetch(`/api/pages/${data.page.id}/revisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: updateData.title,
+          slug: updateData.slug,
+          status: 'draft',
+          widgets: updateData.widgets,
+          notes: 'Auto-saved draft'
+        })
+      });
+
+      if (!revisionResponse.ok) {
+        const error = await revisionResponse.text();
+        throw new Error(error || 'Failed to save draft');
+      }
+
+      toastStore.success('Draft saved successfully');
+      console.log('Draft revision created successfully');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toastStore.error(error instanceof Error ? error.message : 'Failed to save draft');
+    }
+  }
+
+  async function handlePublish(updateData: { title: string; slug: string; widgets: PageWidget[] }) {
+    try {
+      console.log('handlePublish called with:', {
+        widgetCount: updateData.widgets.length,
+        widgets: updateData.widgets.map((w) => ({ id: w.id, type: w.type, position: w.position }))
+      });
+
+      // Create a new published revision
+      const revisionResponse = await fetch(`/api/pages/${data.page.id}/revisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: updateData.title,
+          slug: updateData.slug,
+          status: 'published',
+          widgets: updateData.widgets,
+          notes: 'Published version'
+        })
+      });
+
+      if (!revisionResponse.ok) {
+        const error = await revisionResponse.text();
+        throw new Error(error || 'Failed to create revision');
+      }
+
+      const revision = (await revisionResponse.json()) as { id: string };
+
+      // Now publish this revision
+      const publishResponse = await fetch(
+        `/api/pages/${data.page.id}/revisions/${revision.id}/publish`,
+        {
+          method: 'POST'
+        }
+      );
+
+      if (!publishResponse.ok) {
+        throw new Error('Failed to publish revision');
+      }
+
+      toastStore.success('Page published successfully');
+      console.log('Page published successfully');
+
+      // Reload page data
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error publishing page:', error);
+      toastStore.error(error instanceof Error ? error.message : 'Failed to publish page');
+    }
+  }
+
   async function handleSave(updateData: {
     title: string;
     slug: string;
@@ -123,7 +210,8 @@
   }
 
   function handleCancel() {
-    goto('/admin/pages');
+    // Navigate to the public page
+    goto(data.page.slug);
   }
 </script>
 
@@ -138,5 +226,7 @@
   initialStatus={data.page.status}
   initialWidgets={data.widgets}
   onSave={handleSave}
+  onSaveDraft={handleSaveDraft}
+  onPublish={handlePublish}
   onCancel={handleCancel}
 />

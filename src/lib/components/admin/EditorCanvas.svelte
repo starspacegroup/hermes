@@ -39,7 +39,7 @@
       </div>
     {:else}
       <div class="widgets-canvas">
-        {#each widgets as widget, index}
+        {#each widgets as widget, index (widget.id)}
           <div
             class="canvas-widget"
             class:selected={selectedWidgetId === widget.id}

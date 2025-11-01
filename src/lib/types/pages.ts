@@ -198,3 +198,32 @@ export interface WidgetFormData {
   config: WidgetConfig;
   position: number;
 }
+
+// Page revision for history tracking
+export interface PageRevision {
+  id: string;
+  page_id: string;
+  revision_number: number;
+  title: string;
+  slug: string;
+  status: PageStatus;
+  widgets_snapshot: string; // JSON string of PageWidget[]
+  created_by?: string;
+  created_at: number;
+  is_published: boolean;
+  notes?: string;
+}
+
+// Parsed revision with widgets as objects
+export interface ParsedPageRevision extends Omit<PageRevision, 'widgets_snapshot'> {
+  widgets: PageWidget[];
+}
+
+// Form data for creating revisions
+export interface CreateRevisionData {
+  title: string;
+  slug: string;
+  status: PageStatus;
+  widgets: PageWidget[];
+  notes?: string;
+}

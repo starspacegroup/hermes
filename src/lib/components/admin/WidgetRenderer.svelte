@@ -140,14 +140,14 @@
       <div class="hero-content">
         <h1
           contenteditable="true"
-          on:blur={(e) => handleContentEdit('title', e)}
+          on:input={(e) => handleContentEdit('title', e)}
           on:keydown={(e) => e.key === 'Enter' && e.preventDefault()}
         >
           {widget.config.title || 'Hero Title'}
         </h1>
         <p
           contenteditable="true"
-          on:blur={(e) => handleContentEdit('subtitle', e)}
+          on:input={(e) => handleContentEdit('subtitle', e)}
           style="display: block;"
         >
           {widget.config.subtitle || 'Click to add subtitle'}

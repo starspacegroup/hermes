@@ -41,7 +41,8 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
     return {
       page,
       widgets,
-      isPreview: isPreview && page.status === 'draft'
+      isPreview: isPreview && page.status === 'draft',
+      isAdmin: locals.isAdmin || false
     };
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {

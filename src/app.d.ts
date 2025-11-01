@@ -9,6 +9,9 @@ declare global {
     interface Locals {
       siteId: string;
       isAdmin: boolean;
+      user?: {
+        id: string;
+      };
     }
     // interface PageData {}
     // interface PageState {}

@@ -4,6 +4,14 @@
   import PageEditor from '$lib/components/admin/PageEditor.svelte';
   import type { PageWidget } from '$lib/types/pages';
 
+  async function handleSaveDraft(data: { title: string; slug: string; widgets: PageWidget[] }) {
+    return handleSave({ ...data, status: 'draft' });
+  }
+
+  async function handlePublish(data: { title: string; slug: string; widgets: PageWidget[] }) {
+    return handleSave({ ...data, status: 'published' });
+  }
+
   async function handleSave(data: {
     title: string;
     slug: string;
@@ -56,7 +64,8 @@
   }
 
   function handleCancel() {
-    goto('/admin/pages');
+    // Navigate to home page since there's no published page yet
+    goto('/');
   }
 </script>
 
@@ -71,5 +80,7 @@
   initialStatus="draft"
   initialWidgets={[]}
   onSave={handleSave}
+  onSaveDraft={handleSaveDraft}
+  onPublish={handlePublish}
   onCancel={handleCancel}
 />

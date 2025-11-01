@@ -8,10 +8,12 @@
   import WidgetLibrary from './WidgetLibrary.svelte';
   import WidgetPropertiesPanel from './WidgetPropertiesPanel.svelte';
   import ExitConfirmationModal from './ExitConfirmationModal.svelte';
-  import { HistoryManager } from '$lib/utils/editor/historyManager';
+  import HistoryModal from './HistoryModal.svelte';
+  import { HistoryManager, type HistoryEntry } from '$lib/utils/editor/historyManager';
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
   import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
+  import type { ParsedPageRevision } from '$lib/types/pages';
 
   export let pageId: string | null = null;
   export let initialTitle = '';
@@ -22,6 +24,16 @@
     title: string;
     slug: string;
     status: 'draft' | 'published';
+    widgets: PageWidget[];
+  }) => Promise<void>;
+  export let onSaveDraft: (data: {
+    title: string;
+    slug: string;
+    widgets: PageWidget[];
+  }) => Promise<void>;
+  export let onPublish: (data: {
+    title: string;
+    slug: string;
     widgets: PageWidget[];
   }) => Promise<void>;
   export let onCancel: () => void;
@@ -39,9 +51,26 @@
   let showPropertiesPanel = true;
   let draggedIndex: number | null = null;
   let saving = false;
+  let publishing = false;
   let lastSaved: Date | null = null;
   let showExitConfirmation = false;
   let hasUnsavedChanges = false;
+
+  // Revision state
+  let revisions: Array<{
+    id: string;
+    revision_number: number;
+    created_at: number;
+    is_published: boolean;
+  }> = [];
+  let currentRevisionId: string | null = null;
+
+  // Undo/redo state
+  let canUndo = false;
+  let canRedo = false;
+  let showHistoryModal = false;
+  let historyModalType: 'undo' | 'redo' = 'undo';
+  let historyEntries: HistoryEntry[] = [];
 
   // Managers
   let historyManager: HistoryManager;
@@ -50,6 +79,36 @@
 
   // Track the last initialWidgets to detect changes
   let lastInitialWidgets = JSON.stringify(initialWidgets);
+
+  // Debounced history save - only save after 1 second of no changes
+  let historySaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  function debouncedHistorySave() {
+    if (historySaveTimeout) {
+      clearTimeout(historySaveTimeout);
+    }
+    historySaveTimeout = setTimeout(() => {
+      historyManager.saveState(widgets);
+      updateHistoryState();
+      historySaveTimeout = null;
+    }, 1000); // Wait 1 second after last change
+  }
+
+  // Helper function to update undo/redo state
+  function updateHistoryState() {
+    if (historyManager) {
+      canUndo = historyManager.canUndo();
+      canRedo = historyManager.canRedo();
+    }
+  }
+
+  // Helper function to refresh selected widget reference after state changes
+  function refreshSelectedWidget() {
+    if (selectedWidget) {
+      const updatedWidget = widgets.find((w) => w.id === selectedWidget?.id);
+      selectedWidget = updatedWidget || null;
+    }
+  }
 
   // Check for unsaved changes
   $: {
@@ -88,11 +147,12 @@
   onMount(() => {
     // Initialize managers
     historyManager = new HistoryManager(widgets);
+    updateHistoryState();
 
     autoSaveManager = new AutoSaveManager(
       async () => {
         if (!title || !slug) return;
-        await onSave({ title, slug, status: 'draft', widgets });
+        await handleSaveDraft();
       },
       () => {
         if (!title || !slug || saving) return false;
@@ -106,16 +166,22 @@
       redo: handleRedo,
       delete: () => selectedWidget && removeWidgetById(selectedWidget.id),
       duplicate: () => selectedWidget && duplicateWidget(selectedWidget.id),
-      save: handleSubmit
+      save: handleSaveDraft
     });
 
     autoSaveManager.start();
     keyboardManager.attach();
+
+    // Load revisions if editing existing page
+    if (pageId) {
+      loadRevisions();
+    }
   });
 
   onDestroy(() => {
     if (autoSaveManager) autoSaveManager.stop();
     if (keyboardManager) keyboardManager.detach();
+    if (historySaveTimeout) clearTimeout(historySaveTimeout);
   });
 
   function selectWidget(widgetId: string) {
@@ -126,6 +192,8 @@
     const newState = historyManager.undo();
     if (newState) {
       widgets = newState;
+      refreshSelectedWidget();
+      updateHistoryState();
       toastStore.info('Undo');
     }
   }
@@ -134,8 +202,36 @@
     const newState = historyManager.redo();
     if (newState) {
       widgets = newState;
+      refreshSelectedWidget();
+      updateHistoryState();
       toastStore.info('Redo');
     }
+  }
+
+  function showUndoHistory() {
+    historyModalType = 'undo';
+    historyEntries = historyManager.getUndoHistory();
+    showHistoryModal = true;
+  }
+
+  function showRedoHistory() {
+    historyModalType = 'redo';
+    historyEntries = historyManager.getRedoHistory();
+    showHistoryModal = true;
+  }
+
+  function handleHistorySelect(index: number) {
+    const newState = historyManager.jumpToState(index);
+    if (newState) {
+      widgets = newState;
+      refreshSelectedWidget();
+      updateHistoryState();
+      toastStore.success(`Jumped to state #${index + 1}`);
+    }
+  }
+
+  function closeHistoryModal() {
+    showHistoryModal = false;
   }
 
   function addWidget(type: WidgetType) {
@@ -150,6 +246,7 @@
     };
     widgets = [...widgets, newWidget];
     historyManager.saveState(widgets);
+    updateHistoryState();
     selectWidget(newWidget.id);
 
     if (pageId && title && slug) {
@@ -163,6 +260,7 @@
       selectedWidget = null;
     }
     historyManager.saveState(widgets);
+    updateHistoryState();
 
     if (pageId && title && slug) {
       setTimeout(() => autoSaveManager.autoSave(), 100);
@@ -184,6 +282,7 @@
     widgets = [...widgets.slice(0, index + 1), duplicated, ...widgets.slice(index + 1)];
     updateWidgetPositions();
     historyManager.saveState(widgets);
+    updateHistoryState();
     selectedWidget = duplicated;
     toastStore.success('Widget duplicated');
 
@@ -203,6 +302,7 @@
     widgets = newWidgets;
     updateWidgetPositions();
     historyManager.saveState(widgets);
+    updateHistoryState();
 
     if (pageId && title && slug) {
       setTimeout(() => autoSaveManager.autoSave(), 100);
@@ -220,6 +320,7 @@
     widgets = newWidgets;
     updateWidgetPositions();
     historyManager.saveState(widgets);
+    updateHistoryState();
 
     if (pageId && title && slug) {
       setTimeout(() => autoSaveManager.autoSave(), 100);
@@ -233,7 +334,10 @@
       }
       return w;
     });
-    historyManager.saveState(widgets);
+    // Refresh the selected widget reference to point to the updated widget
+    refreshSelectedWidget();
+    // Use debounced history save to avoid saving on every keystroke
+    debouncedHistorySave();
   }
 
   function moveWidget(fromIndex: number, toIndex: number) {
@@ -243,6 +347,7 @@
     widgets = newWidgets;
     updateWidgetPositions();
     historyManager.saveState(widgets);
+    updateHistoryState();
 
     if (pageId && title && slug) {
       setTimeout(() => autoSaveManager.autoSave(), 100);
@@ -267,6 +372,99 @@
 
   function handleDragEnd() {
     draggedIndex = null;
+  }
+
+  async function handleSaveDraft() {
+    if (!title || !slug) {
+      toastStore.error('Title and slug are required');
+      return;
+    }
+
+    try {
+      saving = true;
+      await onSaveDraft({ title, slug, widgets });
+      lastSaved = new Date();
+      if (autoSaveManager) {
+        autoSaveManager.setLastSaved(lastSaved);
+      }
+      await loadRevisions();
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function handlePublish() {
+    if (!title || !slug) {
+      toastStore.error('Title and slug are required');
+      return;
+    }
+
+    try {
+      publishing = true;
+      await onPublish({ title, slug, widgets });
+      status = 'published';
+      toastStore.success('Page published successfully');
+      await loadRevisions();
+    } finally {
+      publishing = false;
+    }
+  }
+
+  async function loadRevisions() {
+    if (!pageId) return;
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}/revisions`);
+      if (response.ok) {
+        revisions = await response.json();
+      }
+    } catch (error) {
+      console.error('Error loading revisions:', error);
+    }
+  }
+
+  async function loadRevision(revisionId: string) {
+    if (!pageId) return;
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}/revisions/${revisionId}`);
+      if (response.ok) {
+        const revision: ParsedPageRevision = await response.json();
+        title = revision.title;
+        slug = revision.slug;
+        widgets = revision.widgets;
+        currentRevisionId = revisionId;
+        historyManager.reset(widgets);
+        toastStore.info(`Loaded revision #${revision.revision_number}`);
+      }
+    } catch (error) {
+      console.error('Error loading revision:', error);
+      toastStore.error('Failed to load revision');
+    }
+  }
+
+  async function publishRevision(revisionId: string) {
+    if (!pageId) return;
+
+    try {
+      publishing = true;
+      const response = await fetch(`/api/pages/${pageId}/revisions/${revisionId}/publish`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        status = 'published';
+        toastStore.success('Revision published successfully');
+        await loadRevisions();
+      } else {
+        throw new Error('Failed to publish revision');
+      }
+    } catch (error) {
+      console.error('Error publishing revision:', error);
+      toastStore.error('Failed to publish revision');
+    } finally {
+      publishing = false;
+    }
   }
 
   async function handleSubmit() {
@@ -312,15 +510,24 @@
     bind:status
     bind:currentBreakpoint
     {saving}
+    {publishing}
     lastSaved={autoSaveManager?.getLastSaved() || lastSaved}
-    canUndo={historyManager?.canUndo() || false}
-    canRedo={historyManager?.canRedo() || false}
+    {canUndo}
+    {canRedo}
     {pageId}
+    {revisions}
+    {currentRevisionId}
+    onShowUndoHistory={showUndoHistory}
+    onShowRedoHistory={showRedoHistory}
     events={{
       undo: handleUndo,
       redo: handleRedo,
+      saveDraft: handleSaveDraft,
+      publish: handlePublish,
       save: handleSubmit,
-      cancel: handleCancel
+      cancel: handleCancel,
+      loadRevision,
+      publishRevision
     }}
   />
 
@@ -378,6 +585,16 @@
     isOpen={showExitConfirmation}
     onConfirm={confirmExit}
     onCancel={cancelExit}
+  />
+
+  <!-- History Modal -->
+  <HistoryModal
+    isOpen={showHistoryModal}
+    type={historyModalType}
+    entries={historyEntries}
+    currentIndex={historyManager?.getCurrentIndex() || 0}
+    onSelect={handleHistorySelect}
+    onClose={closeHistoryModal}
   />
 </div>
 

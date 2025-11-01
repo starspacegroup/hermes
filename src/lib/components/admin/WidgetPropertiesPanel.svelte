@@ -14,41 +14,68 @@
   let showMediaBrowser = false;
   let selectedMediaItems: MediaLibraryItem[] = [];
 
-  // Initialize config when component mounts or widget changes
-  function initializeConfig() {
-    const newConfig = JSON.parse(JSON.stringify(widget.config));
+  // Initialize config with defaults only for missing properties (not empty strings)
+  function initConfig(widgetConfig: WidgetConfig, applyDefaults: boolean = false): WidgetConfig {
+    const newConfig = { ...widgetConfig };
 
-    // Ensure hero widgets have all required properties with defaults
-    if (widget.type === 'hero') {
-      newConfig.backgroundColor = newConfig.backgroundColor || '#3b82f6';
-      newConfig.backgroundImage = newConfig.backgroundImage || '';
-      newConfig.title = newConfig.title || 'Hero Title';
-      newConfig.subtitle = newConfig.subtitle || '';
-      newConfig.overlay = newConfig.overlay ?? false;
-      newConfig.overlayOpacity = newConfig.overlayOpacity ?? 50;
-      newConfig.ctaText = newConfig.ctaText || '';
-      newConfig.ctaLink = newConfig.ctaLink || '#';
-      newConfig.contentAlign = newConfig.contentAlign || 'center';
-      newConfig.heroHeight = newConfig.heroHeight || {
-        desktop: '500px',
-        tablet: '400px',
-        mobile: '300px'
-      };
+    // Only apply defaults when explicitly requested (on widget switch)
+    if (applyDefaults && widget.type === 'hero') {
+      if (newConfig.backgroundColor === undefined) newConfig.backgroundColor = '#3b82f6';
+      if (newConfig.backgroundImage === undefined) newConfig.backgroundImage = '';
+      if (newConfig.title === undefined) newConfig.title = 'Hero Title';
+      if (newConfig.subtitle === undefined) newConfig.subtitle = '';
+      if (newConfig.overlay === undefined) newConfig.overlay = false;
+      if (newConfig.overlayOpacity === undefined) newConfig.overlayOpacity = 50;
+      if (newConfig.ctaText === undefined) newConfig.ctaText = '';
+      if (newConfig.ctaLink === undefined) newConfig.ctaLink = '#';
+      if (newConfig.contentAlign === undefined) newConfig.contentAlign = 'center';
+      if (newConfig.heroHeight === undefined) {
+        newConfig.heroHeight = {
+          desktop: '500px',
+          tablet: '400px',
+          mobile: '300px'
+        };
+      }
     }
 
-    lastWidgetId = widget.id;
     return newConfig;
   }
 
-  let config: WidgetConfig = initializeConfig();
+  let config: WidgetConfig = initConfig(widget.config, true);
+  let lastConfigString = JSON.stringify(widget.config);
+  let isLocalUpdate = false;
 
-  // Only reinitialize if the widget ID changes (different widget selected)
+  // Only sync when switching widgets
   $: if (widget.id !== lastWidgetId) {
-    config = initializeConfig();
+    lastWidgetId = widget.id;
+    config = initConfig(widget.config, true); // Apply defaults on widget switch
+    lastConfigString = JSON.stringify(widget.config);
+    showMediaBrowser = false;
+    selectedMediaItems = [];
+    isLocalUpdate = false;
+  }
+
+  // For same widget, sync widget.config TO config (canvas edits)
+  // Watch the widget prop itself to trigger on any change
+  $: if (widget && widget.id === lastWidgetId && !isLocalUpdate) {
+    const currentConfigString = JSON.stringify(widget.config);
+    if (currentConfigString !== lastConfigString) {
+      // External change detected (canvas edit)
+      lastConfigString = currentConfigString;
+      config = initConfig(widget.config, false); // Don't apply defaults, just copy
+    }
   }
 
   function handleUpdate() {
+    // Mark as local update to prevent sync back
+    isLocalUpdate = true;
+    lastConfigString = JSON.stringify(config);
+    // Send the updated config to parent
     onUpdate(config);
+    // Reset flag after a brief delay
+    setTimeout(() => {
+      isLocalUpdate = false;
+    }, 50);
   }
 
   function handleMediaUploaded(media: MediaLibraryItem) {
