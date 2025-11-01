@@ -84,6 +84,7 @@
     flex: 1;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     padding: 2rem;
     overflow-y: auto;
     background: var(--color-bg-secondary);
@@ -96,6 +97,7 @@
     border-radius: 8px;
     box-shadow: 0 2px 8px var(--color-shadow-light);
     min-height: 600px;
+    height: auto;
     transition: max-width 0.3s ease;
   }
 

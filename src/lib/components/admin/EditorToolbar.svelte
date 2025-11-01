@@ -19,6 +19,8 @@
     is_published: boolean;
   }> = [];
   export let currentRevisionId: string | null = null;
+  export let showWidgetLibrary = true;
+  export let showPropertiesPanel = true;
 
   interface Events {
     undo: () => void;
@@ -29,6 +31,8 @@
     cancel: () => void;
     loadRevision?: (revisionId: string) => void;
     publishRevision?: (revisionId: string) => void;
+    toggleWidgetLibrary: () => void;
+    togglePropertiesPanel: () => void;
   }
 
   export let events: Events;
@@ -111,6 +115,75 @@
   </div>
 
   <div class="toolbar-right">
+    <button
+      type="button"
+      class="icon-btn"
+      title="Toggle Widget Library"
+      on:click={events.toggleWidgetLibrary}
+      class:active={showWidgetLibrary}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect
+          x="3"
+          y="3"
+          width="7"
+          height="7"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          x="14"
+          y="3"
+          width="7"
+          height="7"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          x="3"
+          y="14"
+          width="7"
+          height="7"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <rect
+          x="14"
+          y="14"
+          width="7"
+          height="7"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="icon-btn"
+      title="Toggle Properties Panel"
+      on:click={events.togglePropertiesPanel}
+      class:active={showPropertiesPanel}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path
+          d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </button>
+    <div class="divider"></div>
     <button
       type="button"
       class="icon-btn"
@@ -360,6 +433,17 @@
   .icon-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  .icon-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .icon-btn.active:hover {
+    background: var(--color-primary-dark, #2563eb);
+    border-color: var(--color-primary-dark, #2563eb);
   }
 
   .divider {

@@ -14,6 +14,18 @@
   let showMediaBrowser = false;
   let selectedMediaItems: MediaLibraryItem[] = [];
 
+  // Feature card collapse/expand state - initialize with all features collapsed if widget is features type
+  let collapsedFeatures = new Set<number>(
+    widget.type === 'features' && widget.config.features
+      ? widget.config.features.map((_, i) => i)
+      : []
+  );
+
+  // Drag and drop state
+  let draggedIndex: number | null = null;
+  let dragOverIndex: number | null = null;
+  let dropPosition: 'before' | 'after' | null = null;
+
   // Initialize config with defaults only for missing properties (not empty strings)
   function initConfig(widgetConfig: WidgetConfig, applyDefaults: boolean = false): WidgetConfig {
     const newConfig = { ...widgetConfig };
@@ -38,6 +50,41 @@
       }
     }
 
+    if (applyDefaults && widget.type === 'features') {
+      if (newConfig.title === undefined) newConfig.title = 'Features';
+      if (newConfig.subtitle === undefined) newConfig.subtitle = '';
+      if (newConfig.features === undefined) {
+        newConfig.features = [
+          {
+            icon: '🎯',
+            title: 'Feature One',
+            description: 'Describe what makes this feature great'
+          },
+          {
+            icon: '✨',
+            title: 'Feature Two',
+            description: 'Explain the benefits of this feature'
+          },
+          {
+            icon: '🚀',
+            title: 'Feature Three',
+            description: 'Tell users why they need this'
+          }
+        ];
+      }
+      if (newConfig.cardBackground === undefined)
+        newConfig.cardBackground = 'var(--color-bg-primary)';
+      if (newConfig.cardBorderColor === undefined)
+        newConfig.cardBorderColor = 'var(--color-border-secondary)';
+      if (newConfig.cardBorderRadius === undefined) newConfig.cardBorderRadius = 12;
+      if (newConfig.featuresColumns === undefined) {
+        newConfig.featuresColumns = { desktop: 3, tablet: 2, mobile: 1 };
+      }
+      if (newConfig.featuresGap === undefined) {
+        newConfig.featuresGap = { desktop: 32, tablet: 24, mobile: 16 };
+      }
+    }
+
     return newConfig;
   }
 
@@ -53,6 +100,13 @@
     showMediaBrowser = false;
     selectedMediaItems = [];
     isLocalUpdate = false;
+
+    // Collapse all feature cards by default when switching to a features widget
+    if (widget.type === 'features' && config.features) {
+      collapsedFeatures = new Set(config.features.map((_, index) => index));
+    } else {
+      collapsedFeatures = new Set();
+    }
   }
 
   // For same widget, sync widget.config TO config (canvas edits)
@@ -102,6 +156,86 @@
   function handleCancelMediaBrowser() {
     selectedMediaItems = [];
     showMediaBrowser = false;
+  }
+
+  // Toggle feature card collapse/expand
+  function toggleFeatureCollapse(index: number) {
+    if (collapsedFeatures.has(index)) {
+      collapsedFeatures.delete(index);
+    } else {
+      collapsedFeatures.add(index);
+    }
+    collapsedFeatures = collapsedFeatures; // Trigger reactivity
+  }
+
+  // Drag and drop handlers for features
+  function handleDragStart(event: DragEvent, index: number) {
+    draggedIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/html', '');
+    }
+  }
+
+  function handleDragOver(event: DragEvent, index: number) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+
+    // Determine if we should drop before or after this item
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+    const mouseY = event.clientY;
+
+    dragOverIndex = index;
+    dropPosition = mouseY < midpoint ? 'before' : 'after';
+  }
+
+  function handleDragLeave() {
+    dragOverIndex = null;
+    dropPosition = null;
+  }
+
+  function handleDrop(event: DragEvent, dropIndex: number) {
+    event.preventDefault();
+
+    if (draggedIndex === null || !config.features) return;
+
+    const features = [...config.features];
+    const [draggedItem] = features.splice(draggedIndex, 1);
+
+    // Calculate the actual insertion index based on drop position
+    let insertIndex = dropIndex;
+    if (dropPosition === 'after') {
+      insertIndex = dropIndex + 1;
+    }
+
+    // Adjust if we're moving from before to after the drop point
+    if (draggedIndex < dropIndex && dropPosition === 'before') {
+      insertIndex = dropIndex;
+    } else if (draggedIndex < dropIndex && dropPosition === 'after') {
+      insertIndex = dropIndex;
+    } else if (draggedIndex > dropIndex && dropPosition === 'before') {
+      insertIndex = dropIndex;
+    } else if (draggedIndex > dropIndex && dropPosition === 'after') {
+      insertIndex = dropIndex + 1;
+    }
+
+    features.splice(insertIndex, 0, draggedItem);
+    config.features = features;
+    handleUpdate();
+
+    draggedIndex = null;
+    dragOverIndex = null;
+    dropPosition = null;
+  }
+
+  function handleDragEnd() {
+    draggedIndex = null;
+    dragOverIndex = null;
+    dropPosition = null;
   }
 
   function getWidgetLabel(type: string): string {
@@ -892,6 +1026,200 @@
               </select>
             </label>
           </div>
+        {:else if widget.type === 'features'}
+          <div class="form-group">
+            <label>
+              <span>Section Title</span>
+              <input
+                type="text"
+                bind:value={config.title}
+                on:blur={handleUpdate}
+                placeholder="Features"
+              />
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Section Subtitle</span>
+              <textarea
+                bind:value={config.subtitle}
+                on:blur={handleUpdate}
+                placeholder="Describe what makes your product special..."
+                rows="2"
+              />
+            </label>
+          </div>
+          <div class="form-group">
+            <div class="section-header">
+              <span>Feature Cards</span>
+              <button
+                type="button"
+                class="btn-add-item"
+                on:click={() => {
+                  if (!config.features) config.features = [];
+                  const newIndex = config.features.length;
+                  config.features = [
+                    ...config.features,
+                    { icon: '✨', title: 'New Feature', description: 'Describe this feature...' }
+                  ];
+                  // Collapse the newly added feature by default
+                  collapsedFeatures.add(newIndex);
+                  collapsedFeatures = collapsedFeatures; // Trigger reactivity
+                  handleUpdate();
+                }}
+              >
+                + Add Feature
+              </button>
+            </div>
+            <div class="items-list">
+              {#if config.features && config.features.length > 0}
+                {#each config.features as feature, index}
+                  <div
+                    class="item-card"
+                    class:collapsed={collapsedFeatures.has(index)}
+                    class:dragging={draggedIndex === index}
+                    class:drag-over-before={dragOverIndex === index && dropPosition === 'before'}
+                    class:drag-over-after={dragOverIndex === index && dropPosition === 'after'}
+                    role="listitem"
+                    draggable="true"
+                    on:dragstart={(e) => handleDragStart(e, index)}
+                    on:dragover={(e) => handleDragOver(e, index)}
+                    on:dragleave={handleDragLeave}
+                    on:drop={(e) => handleDrop(e, index)}
+                    on:dragend={handleDragEnd}
+                  >
+                    <div class="item-header">
+                      <div class="item-header-left">
+                        <button type="button" class="drag-handle" title="Drag to reorder">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <line
+                              x1="4"
+                              y1="8"
+                              x2="20"
+                              y2="8"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                            />
+                            <line
+                              x1="4"
+                              y1="16"
+                              x2="20"
+                              y2="16"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                            />
+                          </svg>
+                        </button>
+                        <span class="item-title">
+                          {feature.icon}
+                          {feature.title || `Feature ${index + 1}`}
+                        </span>
+                      </div>
+                      <div class="item-header-right">
+                        <button
+                          type="button"
+                          class="btn-collapse"
+                          on:click={() => toggleFeatureCollapse(index)}
+                          title={collapsedFeatures.has(index) ? 'Expand' : 'Collapse'}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <polyline
+                              points="6 9 12 15 18 9"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-remove-item"
+                          on:click={() => {
+                            if (config.features) {
+                              config.features = config.features.filter((_, i) => i !== index);
+                              handleUpdate();
+                            }
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    {#if !collapsedFeatures.has(index)}
+                      <div class="item-fields">
+                        <label>
+                          <span>Icon/Emoji</span>
+                          <input
+                            type="text"
+                            bind:value={feature.icon}
+                            on:input={handleUpdate}
+                            placeholder="🎯"
+                            maxlength="4"
+                          />
+                        </label>
+                        <label>
+                          <span>Title</span>
+                          <input
+                            type="text"
+                            bind:value={feature.title}
+                            on:input={handleUpdate}
+                            placeholder="Feature title"
+                          />
+                        </label>
+                        <label>
+                          <span>Description</span>
+                          <textarea
+                            bind:value={feature.description}
+                            on:input={handleUpdate}
+                            placeholder="Describe this feature..."
+                            rows="3"
+                          />
+                        </label>
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+              {:else}
+                <p class="empty-state">No features yet. Click "Add Feature" to get started.</p>
+              {/if}
+            </div>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Card Background Color</span>
+              <input type="color" bind:value={config.cardBackground} on:input={handleUpdate} />
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Card Border Color</span>
+              <input type="color" bind:value={config.cardBorderColor} on:input={handleUpdate} />
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Card Border Radius (px)</span>
+              <input
+                type="number"
+                bind:value={config.cardBorderRadius}
+                on:blur={handleUpdate}
+                min="0"
+                placeholder="12"
+              />
+            </label>
+          </div>
         {/if}
       </div>
     {:else if activeTab === 'style'}
@@ -1012,6 +1340,74 @@
               />
               <span>Full Width on {currentBreakpoint}</span>
             </label>
+          </div>
+        {:else if widget.type === 'features'}
+          <div class="form-group">
+            <label>
+              <span>Columns ({currentBreakpoint})</span>
+              {#if !config.featuresColumns}
+                {(() => {
+                  config.featuresColumns = { desktop: 3, tablet: 2, mobile: 1 };
+                  return '';
+                })()}
+              {/if}
+              <input
+                type="number"
+                bind:value={config.featuresColumns[currentBreakpoint]}
+                on:blur={handleUpdate}
+                min="1"
+              />
+            </label>
+            <p class="field-hint">
+              Number of feature cards per row on {currentBreakpoint} devices.
+            </p>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Gap ({currentBreakpoint}) - pixels</span>
+              {#if !config.featuresGap}
+                {(() => {
+                  config.featuresGap = { desktop: 32, tablet: 24, mobile: 16 };
+                  return '';
+                })()}
+              {/if}
+              <input
+                type="number"
+                bind:value={config.featuresGap[currentBreakpoint]}
+                on:blur={handleUpdate}
+                min="0"
+                placeholder="32"
+              />
+            </label>
+            <p class="field-hint">Space between feature cards on {currentBreakpoint} devices.</p>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Limit ({currentBreakpoint}) - Optional</span>
+              <input
+                type="number"
+                value={config.featuresLimit?.[currentBreakpoint] ?? ''}
+                on:input={(e) => {
+                  const val = e.currentTarget.value;
+                  if (!config.featuresLimit) {
+                    config.featuresLimit = { desktop: 0 };
+                  }
+                  if (val === '') {
+                    // @ts-expect-error - Allow setting to undefined for optional values
+                    config.featuresLimit[currentBreakpoint] = undefined;
+                  } else {
+                    config.featuresLimit[currentBreakpoint] = parseInt(val);
+                  }
+                }}
+                on:blur={handleUpdate}
+                min="1"
+                placeholder="Show all"
+              />
+            </label>
+            <p class="field-hint">
+              Maximum number of features to display on {currentBreakpoint} devices. Leave empty to show
+              all.
+            </p>
           </div>
         {:else}
           <p class="tab-info">This widget doesn't have responsive settings.</p>
@@ -1375,5 +1771,242 @@
   .btn-add:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Features widget item management */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .section-header > span {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .btn-add-item {
+    padding: 0.5rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-add-item:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .item-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: grab;
+    transition: all 0.2s ease;
+  }
+
+  .item-card:active {
+    cursor: grabbing;
+  }
+
+  .item-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+
+  .item-card.drag-over-before,
+  .item-card.drag-over-after {
+    position: relative;
+  }
+
+  .item-card.drag-over-before::before,
+  .item-card.drag-over-after::after {
+    content: '';
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    height: 3px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    animation: pulse-drop-indicator 1s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .item-card.drag-over-before::before {
+    top: -8px;
+  }
+
+  .item-card.drag-over-after::after {
+    bottom: -8px;
+  }
+
+  @keyframes pulse-drop-indicator {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      opacity: 0.6;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.8);
+    }
+  }
+
+  .item-card.collapsed {
+    padding-bottom: 1rem;
+  }
+
+  .item-card.collapsed .item-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .item-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .item-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .drag-handle {
+    padding: 0.25rem;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    cursor: grab;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drag-handle:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .item-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .btn-collapse {
+    padding: 0.25rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-collapse:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .item-card.collapsed .btn-collapse svg {
+    transform: rotate(-90deg);
+  }
+
+  .btn-remove-item {
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-remove-item:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: rgb(239, 68, 68);
+  }
+
+  .item-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .item-fields label {
+    display: block;
+  }
+
+  .item-fields label > span {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .item-fields input,
+  .item-fields textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+  }
+
+  .empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    background: var(--color-bg-secondary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 8px;
   }
 </style>

@@ -290,7 +290,9 @@
       undo: handleUndo,
       redo: handleRedo,
       save: handleSubmit,
-      cancel: onCancel
+      cancel: onCancel,
+      toggleWidgetLibrary: () => (showWidgetLibrary = !showWidgetLibrary),
+      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel)
     }}
   />
 

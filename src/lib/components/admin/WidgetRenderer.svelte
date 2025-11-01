@@ -26,6 +26,24 @@
     return value as T;
   }
 
+  // For featuresLimit, we want to return undefined if the breakpoint isn't explicitly set
+  function getResponsiveLimitValue(
+    value: { mobile?: number; tablet?: number; desktop?: number } | number | undefined
+  ): number | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'object' && value !== null) {
+      if (currentBreakpoint === 'mobile') {
+        return value.mobile;
+      }
+      if (currentBreakpoint === 'tablet') {
+        return value.tablet;
+      }
+      return value.desktop;
+    }
+    return undefined;
+  }
+
   function getStyleString(widget: PageWidget): string {
     const styles = widget.config.styles;
     if (!styles) return '';
@@ -61,7 +79,43 @@
     return styleStr;
   }
 
-  $: styleString = getStyleString(widget);
+  // Declare reactive variables
+  let styleString: string;
+  let heroHeight: string;
+  let buttonFullWidth: boolean;
+  let spacerHeight: number;
+  let dividerSpacing: number;
+  let _columnsLayout: number;
+  let columnsGap: number;
+  let columnsCount: number;
+  let productListColumns: number;
+  let featuresColumns: number;
+  let featuresGap: number;
+  let featuresLimit: number | undefined;
+
+  // Make all reactive computations depend on both widget.config AND currentBreakpoint
+  $: {
+    // Explicitly read currentBreakpoint to establish reactive dependency
+    // This ensures the block re-runs whenever currentBreakpoint changes
+    const _bp = currentBreakpoint;
+
+    styleString = getStyleString(widget);
+    heroHeight = getResponsiveValue(widget.config.heroHeight || { desktop: '500px' });
+    buttonFullWidth = getResponsiveValue(widget.config.fullWidth || { desktop: false });
+    spacerHeight = getResponsiveValue(widget.config.space || { desktop: 40 });
+    dividerSpacing = getResponsiveValue(widget.config.spacing || { desktop: 20 });
+    const _columnsLayout = getResponsiveValue(widget.config.columns || { desktop: 2 });
+    columnsGap = getResponsiveValue(widget.config.gap || { desktop: 20 });
+    columnsCount = getResponsiveValue(widget.config.columnCount || { desktop: 2 });
+    productListColumns = getResponsiveValue(widget.config.columns || { desktop: 3 });
+    featuresColumns = getResponsiveValue(
+      widget.config.featuresColumns || { desktop: 3, tablet: 2, mobile: 1 }
+    );
+    featuresGap = getResponsiveValue(
+      widget.config.featuresGap || { desktop: 32, tablet: 24, mobile: 16 }
+    );
+    featuresLimit = getResponsiveLimitValue(widget.config.featuresLimit);
+  }
 </script>
 
 <div class="widget-renderer" style={styleString}>
@@ -119,7 +173,7 @@
     <div
       class="hero-widget"
       style="
-        height: {getResponsiveValue(widget.config.heroHeight || { desktop: '500px' })};
+        height: {heroHeight};
         background-image: {widget.config.backgroundImage
         ? `url(${widget.config.backgroundImage})`
         : 'none'};
@@ -193,25 +247,20 @@
     <div class="button-widget">
       <button
         class="btn btn-{widget.config.variant || 'primary'} btn-{widget.config.size || 'medium'}"
-        style="width: {getResponsiveValue(widget.config.fullWidth || { desktop: false })
-          ? '100%'
-          : 'auto'}"
+        style="width: {buttonFullWidth ? '100%' : 'auto'}"
       >
         {widget.config.label || 'Button'}
       </button>
     </div>
   {:else if widget.type === 'spacer'}
-    <div
-      class="spacer-widget"
-      style="height: {getResponsiveValue(widget.config.space || { desktop: 40 })}px"
-    />
+    <div class="spacer-widget" style="height: {spacerHeight}px" />
   {:else if widget.type === 'divider'}
     <div
       class="divider-widget"
       style="
         border-top: {widget.config.thickness || 1}px {widget.config.dividerStyle || 'solid'} {widget
         .config.dividerColor || '#e0e0e0'};
-        margin: {getResponsiveValue(widget.config.spacing || { desktop: 20 })}px 0;
+        margin: {dividerSpacing}px 0;
       "
     />
   {:else if widget.type === 'columns'}
@@ -219,10 +268,8 @@
       class="columns-widget"
       style="
         display: grid;
-        grid-template-columns: repeat({getResponsiveValue(
-        widget.config.columnCount || { desktop: 2 }
-      )}, 1fr);
-        gap: {getResponsiveValue(widget.config.gap || { desktop: 20 })}px;
+        grid-template-columns: repeat({columnsCount}, 1fr);
+        gap: {columnsGap}px;
         align-items: {widget.config.verticalAlign || 'stretch'};
       "
     >
@@ -233,7 +280,7 @@
           </div>
         {/each}
       {:else}
-        {#each Array(getResponsiveValue(widget.config.columnCount || { desktop: 2 })) as _, i}
+        {#each Array(columnsCount) as _, i}
           <div class="column-placeholder">
             <span>Column {i + 1}</span>
           </div>
@@ -273,9 +320,7 @@
       class="product-list-widget"
       style="
         display: grid;
-        grid-template-columns: repeat({getResponsiveValue(
-        widget.config.columns || { desktop: 3 }
-      )}, 1fr);
+        grid-template-columns: repeat({productListColumns}, 1fr);
         gap: 1rem;
       "
     >
@@ -297,15 +342,35 @@
   {:else if widget.type === 'features'}
     <div class="features-preview">
       <h3>{widget.config.title || 'Features'}</h3>
-      <div class="features-grid">
-        {#each (widget.config.features || []).slice(0, 3) as feature}
-          <div class="feature-card">
-            <div class="feature-icon">{feature.icon}</div>
-            <h4>{feature.title}</h4>
-            <p>{feature.description}</p>
-          </div>
-        {/each}
-      </div>
+      {#if widget.config.subtitle}
+        <p class="features-subtitle">{widget.config.subtitle}</p>
+      {/if}
+      {#if widget.config.features && widget.config.features.length > 0}
+        <div
+          class="features-grid"
+          style="grid-template-columns: repeat({featuresColumns}, 1fr); gap: {featuresGap}px;"
+        >
+          {#each featuresLimit && featuresLimit > 0 ? widget.config.features.slice(0, featuresLimit) : widget.config.features as feature}
+            <div
+              class="feature-card"
+              style="background: {widget.config.cardBackground ||
+                'var(--color-bg-primary)'}; border-color: {widget.config.cardBorderColor ||
+                'var(--color-border-secondary)'}; border-radius: {widget.config.cardBorderRadius !==
+              undefined
+                ? widget.config.cardBorderRadius
+                : 12}px;"
+            >
+              <div class="feature-icon">{feature.icon}</div>
+              <h4>{feature.title}</h4>
+              <p>{feature.description}</p>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <p class="empty-message">
+          No features added yet. Use the properties panel to add features.
+        </p>
+      {/if}
     </div>
   {:else if widget.type === 'pricing'}
     <div class="pricing-preview">
@@ -651,20 +716,24 @@
 
   .features-preview h3 {
     text-align: center;
-    margin: 0 0 2rem 0;
+    margin: 0 0 0.5rem 0;
     font-size: 1.5rem;
+  }
+
+  .features-subtitle {
+    text-align: center;
+    margin: 0 0 2rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
   }
 
   .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    margin-top: 2rem;
   }
 
   .feature-card {
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
+    border: 1px solid;
     padding: 1.5rem;
     text-align: center;
   }
@@ -683,6 +752,17 @@
     margin: 0;
     font-size: 0.875rem;
     color: var(--color-text-secondary);
+  }
+
+  .empty-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    background: var(--color-bg-tertiary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 8px;
+    margin-top: 1rem;
   }
 
   /* Pricing Preview */

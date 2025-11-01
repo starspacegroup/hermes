@@ -186,6 +186,10 @@
 
   function selectWidget(widgetId: string) {
     selectedWidget = widgets.find((w) => w.id === widgetId) || null;
+    // Automatically open properties panel when a widget is selected
+    if (selectedWidget) {
+      showPropertiesPanel = true;
+    }
   }
 
   function handleUndo() {
@@ -517,6 +521,8 @@
     {pageId}
     {revisions}
     {currentRevisionId}
+    {showWidgetLibrary}
+    {showPropertiesPanel}
     onShowUndoHistory={showUndoHistory}
     onShowRedoHistory={showRedoHistory}
     events={{
@@ -527,7 +533,9 @@
       save: handleSubmit,
       cancel: handleCancel,
       loadRevision,
-      publishRevision
+      publishRevision,
+      toggleWidgetLibrary: () => (showWidgetLibrary = !showWidgetLibrary),
+      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel)
     }}
   />
 

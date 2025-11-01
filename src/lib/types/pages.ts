@@ -192,6 +192,12 @@ export interface WidgetConfig {
     title: string;
     description: string;
   }>;
+  cardBackground?: string;
+  cardBorderColor?: string;
+  cardBorderRadius?: number;
+  featuresColumns?: ResponsiveValue<number>;
+  featuresGap?: ResponsiveValue<number>;
+  featuresLimit?: ResponsiveValue<number>; // Max number of features to display per breakpoint
 
   // Pricing widget
   tagline?: string;
