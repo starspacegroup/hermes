@@ -444,7 +444,7 @@
     height: 600px;
     overflow: hidden;
     pointer-events: none;
-    z-index: 0;
+    z-index: -100;
     background: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
   }
 
@@ -503,12 +503,12 @@
     text-align: center;
     padding: 4rem 2rem;
     margin-bottom: 4rem;
-    background: linear-gradient(
+    /* background: linear-gradient(
       135deg,
       var(--color-bg-secondary) 0%,
       var(--color-bg-primary) 50%,
       var(--color-bg-tertiary) 100%
-    );
+    ); */
     opacity: 0;
     transform: translateY(20px);
     transition:
