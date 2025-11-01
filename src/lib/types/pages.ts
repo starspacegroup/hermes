@@ -21,6 +21,40 @@ export type WidgetType =
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
+export type ColorTheme = string; // Now supports custom theme IDs
+
+export type ThemeMode = 'light' | 'dark';
+
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  surface: string;
+  text: string;
+  textSecondary: string;
+  border: string;
+  success: string;
+  warning: string;
+  error: string;
+}
+
+// Theme-specific color value - supports different colors per theme
+export interface ThemeSpecificColor {
+  [themeId: string]: string; // Map theme ID to color value
+}
+
+export interface ColorThemeDefinition {
+  id: string;
+  name: string;
+  mode: ThemeMode;
+  colors: ThemeColors;
+  isDefault: boolean;
+  isSystem: boolean; // System themes cannot be deleted
+  created_at?: number;
+  updated_at?: number;
+}
+
 export interface Page {
   id: string;
   site_id: string;
@@ -28,6 +62,7 @@ export interface Page {
   slug: string;
   status: PageStatus;
   content?: string;
+  colorTheme?: ColorTheme; // Selected theme for this page
   created_at: number;
   updated_at: number;
 }
@@ -110,6 +145,7 @@ export interface WidgetConfig {
   id?: string;
   anchorName?: string; // Optional anchor name for linking to this widget (e.g., /#section-name)
   styles?: ResponsiveStyles;
+  themeOverrides?: Partial<ThemeColors>; // Widget-specific theme color overrides
 
   // Single product widget
   productId?: string;
@@ -130,7 +166,7 @@ export interface WidgetConfig {
   html?: string;
   alignment?: 'left' | 'center' | 'right' | 'justify';
   typography?: TypographyConfig;
-  textColor?: string;
+  textColor?: string | ThemeSpecificColor;
   fontSize?: number;
   lineHeight?: number;
 
@@ -151,14 +187,14 @@ export interface WidgetConfig {
   title?: string;
   subtitle?: string;
   backgroundImage?: string;
-  backgroundColor?: string;
+  backgroundColor?: string | ThemeSpecificColor;
   heroHeight?: ResponsiveValue<string>;
   overlay?: boolean;
   overlayOpacity?: number;
   ctaText?: string;
   ctaLink?: string;
-  ctaBackgroundColor?: string;
-  ctaTextColor?: string;
+  ctaBackgroundColor?: string | ThemeSpecificColor;
+  ctaTextColor?: string | ThemeSpecificColor;
   ctaFontSize?: string;
   ctaFontWeight?: string;
   contentAlign?: 'left' | 'center' | 'right';
@@ -183,7 +219,7 @@ export interface WidgetConfig {
 
   // Divider widget
   thickness?: number;
-  dividerColor?: string;
+  dividerColor?: string | ThemeSpecificColor;
   dividerStyle?: 'solid' | 'dashed' | 'dotted';
   spacing?: ResponsiveValue<number>;
 
@@ -193,8 +229,8 @@ export interface WidgetConfig {
     title: string;
     description: string;
   }>;
-  cardBackground?: string;
-  cardBorderColor?: string;
+  cardBackground?: string | ThemeSpecificColor;
+  cardBorderColor?: string | ThemeSpecificColor;
   cardBorderRadius?: number;
   featuresColumns?: ResponsiveValue<number>;
   featuresGap?: ResponsiveValue<number>;
@@ -211,14 +247,14 @@ export interface WidgetConfig {
   }>;
   ctaNote?: string;
 
-  // CTA widget
+  // CTA widget (and Hero widget's secondary CTA)
   primaryCtaText?: string;
   primaryCtaLink?: string;
   secondaryCtaText?: string;
   secondaryCtaLink?: string;
-  secondaryCtaBackgroundColor?: string;
-  secondaryCtaTextColor?: string;
-  secondaryCtaBorderColor?: string;
+  secondaryCtaBackgroundColor?: string | ThemeSpecificColor;
+  secondaryCtaTextColor?: string | ThemeSpecificColor;
+  secondaryCtaBorderColor?: string | ThemeSpecificColor;
   secondaryCtaFontSize?: string;
   secondaryCtaFontWeight?: string;
 }
@@ -250,6 +286,7 @@ export interface PageRevision {
   title: string;
   slug: string;
   status: PageStatus;
+  color_theme?: string;
   widgets_snapshot: string; // JSON string of PageWidget[]
   created_by?: string;
   created_at: number;
@@ -267,6 +304,7 @@ export interface CreateRevisionData {
   title: string;
   slug: string;
   status: PageStatus;
+  colorTheme?: string;
   widgets: PageWidget[];
   notes?: string;
 }

@@ -41,6 +41,7 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
     return {
       page,
       widgets,
+      colorTheme: page.colorTheme || null,
       isPreview: isPreview && page.status === 'draft',
       isAdmin: locals.isAdmin || false
     };

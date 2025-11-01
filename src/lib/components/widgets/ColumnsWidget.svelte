@@ -49,17 +49,17 @@
 
   .column-content {
     padding: 1rem;
-    background: var(--color-bg-secondary);
+    background: var(--theme-surface, var(--color-bg-secondary));
     border-radius: 4px;
   }
 
   .column-placeholder {
     padding: 2rem 1rem;
-    background: var(--color-bg-tertiary, #f5f5f5);
-    border: 2px dashed var(--color-border-secondary, #e0e0e0);
+    background: var(--theme-background, var(--color-bg-tertiary, #f5f5f5));
+    border: 2px dashed var(--theme-border, var(--color-border-secondary, #e0e0e0));
     border-radius: 4px;
     text-align: center;
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary, var(--color-text-secondary));
   }
 
   @media (max-width: 768px) {

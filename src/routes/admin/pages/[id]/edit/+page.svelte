@@ -10,6 +10,7 @@
   async function handleSaveDraft(updateData: {
     title: string;
     slug: string;
+    colorTheme: string | undefined;
     widgets: PageWidget[];
   }) {
     try {
@@ -26,6 +27,7 @@
           title: updateData.title,
           slug: updateData.slug,
           status: 'draft',
+          colorTheme: updateData.colorTheme,
           widgets: updateData.widgets,
           notes: 'Auto-saved draft'
         })
@@ -44,7 +46,12 @@
     }
   }
 
-  async function handlePublish(updateData: { title: string; slug: string; widgets: PageWidget[] }) {
+  async function handlePublish(updateData: {
+    title: string;
+    slug: string;
+    colorTheme: string | undefined;
+    widgets: PageWidget[];
+  }) {
     try {
       console.log('handlePublish called with:', {
         widgetCount: updateData.widgets.length,
@@ -59,6 +66,7 @@
           title: updateData.title,
           slug: updateData.slug,
           status: 'published',
+          colorTheme: updateData.colorTheme,
           widgets: updateData.widgets,
           notes: 'Published version'
         })
@@ -98,6 +106,7 @@
     title: string;
     slug: string;
     status: 'draft' | 'published';
+    colorTheme: string | undefined;
     widgets: PageWidget[];
   }) {
     try {
@@ -113,7 +122,8 @@
         body: JSON.stringify({
           title: updateData.title,
           slug: updateData.slug,
-          status: updateData.status
+          status: updateData.status,
+          colorTheme: updateData.colorTheme
         })
       });
 
@@ -224,6 +234,7 @@
   initialTitle={data.page.title}
   initialSlug={data.page.slug}
   initialStatus={data.page.status}
+  initialColorTheme={data.page.colorTheme}
   initialWidgets={data.widgets}
   onSave={handleSave}
   onSaveDraft={handleSaveDraft}

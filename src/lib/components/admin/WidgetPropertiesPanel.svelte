@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { PageWidget, WidgetConfig, Breakpoint } from '$lib/types/pages';
+  import type { PageWidget, WidgetConfig, Breakpoint, ColorTheme } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
   import MediaBrowser from './MediaBrowser.svelte';
   import MediaUpload from './MediaUpload.svelte';
+  import ThemeColorInput from './ThemeColorInput.svelte';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
+  export let colorTheme: ColorTheme = 'default';
   export let onUpdate: (config: WidgetConfig) => void;
   export let onClose: () => void;
 
@@ -340,10 +342,15 @@
             </label>
           </div>
           <div class="form-group">
-            <label>
-              <span>Text Color</span>
-              <input type="color" bind:value={config.textColor} on:change={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.textColor}
+              currentTheme={colorTheme}
+              label="Text Color"
+              onChange={(newValue) => {
+                config.textColor = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
             <label>
@@ -398,10 +405,15 @@
             </label>
           </div>
           <div class="form-group">
-            <label>
-              <span>Text Color</span>
-              <input type="color" bind:value={config.textColor} on:change={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.textColor}
+              currentTheme={colorTheme}
+              label="Text Color"
+              onChange={(newValue) => {
+                config.textColor = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
             <label>
@@ -592,10 +604,15 @@
             {/if}
           </div>
           <div class="form-group">
-            <label>
-              <span>Background Color</span>
-              <input type="color" bind:value={config.backgroundColor} on:input={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.backgroundColor}
+              currentTheme={colorTheme}
+              label="Background Color"
+              onChange={(newValue) => {
+                config.backgroundColor = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
             <label>
@@ -651,20 +668,26 @@
           </div>
           {#if config.ctaText}
             <div class="form-group">
-              <label>
-                <span>CTA Background Color</span>
-                <input
-                  type="color"
-                  bind:value={config.ctaBackgroundColor}
-                  on:input={handleUpdate}
-                />
-              </label>
+              <ThemeColorInput
+                value={config.ctaBackgroundColor}
+                currentTheme={colorTheme}
+                label="CTA Background Color"
+                onChange={(newValue) => {
+                  config.ctaBackgroundColor = newValue;
+                  handleUpdate();
+                }}
+              />
             </div>
             <div class="form-group">
-              <label>
-                <span>CTA Text Color</span>
-                <input type="color" bind:value={config.ctaTextColor} on:input={handleUpdate} />
-              </label>
+              <ThemeColorInput
+                value={config.ctaTextColor}
+                currentTheme={colorTheme}
+                label="CTA Text Color"
+                onChange={(newValue) => {
+                  config.ctaTextColor = newValue;
+                  handleUpdate();
+                }}
+              />
             </div>
             <div class="form-group">
               <label>
@@ -713,34 +736,37 @@
           </div>
           {#if config.secondaryCtaText}
             <div class="form-group">
-              <label>
-                <span>Secondary CTA Background Color</span>
-                <input
-                  type="color"
-                  bind:value={config.secondaryCtaBackgroundColor}
-                  on:input={handleUpdate}
-                />
-              </label>
+              <ThemeColorInput
+                value={config.secondaryCtaBackgroundColor}
+                currentTheme={colorTheme}
+                label="Secondary CTA Background Color"
+                onChange={(newValue) => {
+                  config.secondaryCtaBackgroundColor = newValue;
+                  handleUpdate();
+                }}
+              />
             </div>
             <div class="form-group">
-              <label>
-                <span>Secondary CTA Text Color</span>
-                <input
-                  type="color"
-                  bind:value={config.secondaryCtaTextColor}
-                  on:input={handleUpdate}
-                />
-              </label>
+              <ThemeColorInput
+                value={config.secondaryCtaTextColor}
+                currentTheme={colorTheme}
+                label="Secondary CTA Text Color"
+                onChange={(newValue) => {
+                  config.secondaryCtaTextColor = newValue;
+                  handleUpdate();
+                }}
+              />
             </div>
             <div class="form-group">
-              <label>
-                <span>Secondary CTA Border Color</span>
-                <input
-                  type="color"
-                  bind:value={config.secondaryCtaBorderColor}
-                  on:input={handleUpdate}
-                />
-              </label>
+              <ThemeColorInput
+                value={config.secondaryCtaBorderColor}
+                currentTheme={colorTheme}
+                label="Secondary CTA Border Color"
+                onChange={(newValue) => {
+                  config.secondaryCtaBorderColor = newValue;
+                  handleUpdate();
+                }}
+              />
             </div>
             <div class="form-group">
               <label>
@@ -844,10 +870,15 @@
             </label>
           </div>
           <div class="form-group">
-            <label>
-              <span>Color</span>
-              <input type="color" bind:value={config.dividerColor} on:change={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.dividerColor}
+              currentTheme={colorTheme}
+              label="Color"
+              onChange={(newValue) => {
+                config.dividerColor = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
             <label>
@@ -1215,16 +1246,26 @@
             </div>
           </div>
           <div class="form-group">
-            <label>
-              <span>Card Background Color</span>
-              <input type="color" bind:value={config.cardBackground} on:input={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.cardBackground}
+              currentTheme={colorTheme}
+              label="Card Background Color"
+              onChange={(newValue) => {
+                config.cardBackground = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
-            <label>
-              <span>Card Border Color</span>
-              <input type="color" bind:value={config.cardBorderColor} on:input={handleUpdate} />
-            </label>
+            <ThemeColorInput
+              value={config.cardBorderColor}
+              currentTheme={colorTheme}
+              label="Card Border Color"
+              onChange={(newValue) => {
+                config.cardBorderColor = newValue;
+                handleUpdate();
+              }}
+            />
           </div>
           <div class="form-group">
             <label>
@@ -1242,9 +1283,181 @@
       </div>
     {:else if activeTab === 'style'}
       <div class="style-tab">
-        <p class="tab-info">
-          Coming soon: Advanced styling controls including colors, fonts, borders, and shadows.
-        </p>
+        <div class="section">
+          <h4>Theme Color Overrides</h4>
+          <p class="help-text">
+            Override the page theme colors for this specific widget. Leave empty to use theme
+            defaults.
+          </p>
+
+          <div class="form-group">
+            <label>
+              <span>Primary Color</span>
+              <input
+                type="color"
+                value={config.themeOverrides?.primary || ''}
+                on:input={(e) => {
+                  const value = e.currentTarget.value;
+                  config.themeOverrides = { ...config.themeOverrides, primary: value };
+                  handleUpdate();
+                }}
+              />
+              {#if config.themeOverrides?.primary}
+                <button
+                  type="button"
+                  class="clear-btn"
+                  on:click={() => {
+                    if (config.themeOverrides) {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                      const { primary, ...rest } = config.themeOverrides;
+                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
+                      handleUpdate();
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              {/if}
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <span>Secondary Color</span>
+              <input
+                type="color"
+                value={config.themeOverrides?.secondary || ''}
+                on:input={(e) => {
+                  const value = e.currentTarget.value;
+                  config.themeOverrides = { ...config.themeOverrides, secondary: value };
+                  handleUpdate();
+                }}
+              />
+              {#if config.themeOverrides?.secondary}
+                <button
+                  type="button"
+                  class="clear-btn"
+                  on:click={() => {
+                    if (config.themeOverrides) {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                      const { secondary, ...rest } = config.themeOverrides;
+                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
+                      handleUpdate();
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              {/if}
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <span>Accent Color</span>
+              <input
+                type="color"
+                value={config.themeOverrides?.accent || ''}
+                on:input={(e) => {
+                  const value = e.currentTarget.value;
+                  config.themeOverrides = { ...config.themeOverrides, accent: value };
+                  handleUpdate();
+                }}
+              />
+              {#if config.themeOverrides?.accent}
+                <button
+                  type="button"
+                  class="clear-btn"
+                  on:click={() => {
+                    if (config.themeOverrides) {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                      const { accent, ...rest } = config.themeOverrides;
+                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
+                      handleUpdate();
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              {/if}
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <span>Background Color</span>
+              <input
+                type="color"
+                value={config.themeOverrides?.background || ''}
+                on:input={(e) => {
+                  const value = e.currentTarget.value;
+                  config.themeOverrides = { ...config.themeOverrides, background: value };
+                  handleUpdate();
+                }}
+              />
+              {#if config.themeOverrides?.background}
+                <button
+                  type="button"
+                  class="clear-btn"
+                  on:click={() => {
+                    if (config.themeOverrides) {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                      const { background, ...rest } = config.themeOverrides;
+                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
+                      handleUpdate();
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              {/if}
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <span>Text Color</span>
+              <input
+                type="color"
+                value={config.themeOverrides?.text || ''}
+                on:input={(e) => {
+                  const value = e.currentTarget.value;
+                  config.themeOverrides = { ...config.themeOverrides, text: value };
+                  handleUpdate();
+                }}
+              />
+              {#if config.themeOverrides?.text}
+                <button
+                  type="button"
+                  class="clear-btn"
+                  on:click={() => {
+                    if (config.themeOverrides) {
+                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                      const { text, ...rest } = config.themeOverrides;
+                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
+                      handleUpdate();
+                    }
+                  }}
+                >
+                  Clear
+                </button>
+              {/if}
+            </label>
+          </div>
+
+          {#if config.themeOverrides && Object.keys(config.themeOverrides).length > 0}
+            <button
+              type="button"
+              class="btn-secondary"
+              on:click={() => {
+                config.themeOverrides = undefined;
+                handleUpdate();
+              }}
+            >
+              Reset All Overrides
+            </button>
+          {/if}
+        </div>
       </div>
     {:else if activeTab === 'responsive'}
       <div class="responsive-tab">
@@ -2045,5 +2258,30 @@
     background: var(--color-bg-secondary);
     border: 2px dashed var(--color-border-secondary);
     border-radius: 8px;
+  }
+
+  .clear-btn {
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .help-text {
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+    margin-bottom: 1rem;
+    line-height: 1.5;
   }
 </style>

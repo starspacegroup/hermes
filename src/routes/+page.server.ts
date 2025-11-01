@@ -59,6 +59,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       products,
       page,
       widgets,
+      colorTheme: page?.colorTheme || null,
       isAdmin: locals.isAdmin || false
     };
   } catch (error) {

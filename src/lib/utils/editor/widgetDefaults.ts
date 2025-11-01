@@ -6,7 +6,11 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
       return { text: 'Enter your text here', alignment: 'left' };
 
     case 'heading':
-      return { heading: 'Heading Text', level: 2 };
+      return {
+        heading: 'Heading Text',
+        level: 2,
+        textColor: 'theme:text'
+      };
 
     case 'image':
       return { src: '', alt: '', imageWidth: '100%', imageHeight: 'auto' };
@@ -15,7 +19,7 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
       return {
         title: 'Hero Title',
         subtitle: 'Hero subtitle text',
-        backgroundColor: '#3b82f6',
+        backgroundColor: 'theme:primary',
         backgroundImage: '',
         heroHeight: { desktop: '500px', tablet: '400px', mobile: '300px' },
         contentAlign: 'center',
@@ -23,15 +27,15 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
         overlayOpacity: 50,
         ctaText: 'Get Started',
         ctaLink: '#',
-        ctaBackgroundColor: '#ffffff',
-        ctaTextColor: '#3b82f6',
+        ctaBackgroundColor: 'theme:surface',
+        ctaTextColor: 'theme:primary',
         ctaFontSize: '16px',
         ctaFontWeight: '600',
         secondaryCtaText: '',
         secondaryCtaLink: '#',
         secondaryCtaBackgroundColor: 'transparent',
-        secondaryCtaTextColor: '#ffffff',
-        secondaryCtaBorderColor: '#ffffff',
+        secondaryCtaTextColor: 'theme:text',
+        secondaryCtaBorderColor: 'theme:border',
         secondaryCtaFontSize: '16px',
         secondaryCtaFontWeight: '600'
       };
@@ -51,7 +55,7 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
     case 'divider':
       return {
         thickness: 1,
-        dividerColor: '#e0e0e0',
+        dividerColor: 'theme:border',
         dividerStyle: 'solid',
         spacing: { desktop: 20, tablet: 15, mobile: 10 }
       };
@@ -88,7 +92,9 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
           { icon: '🎯', title: 'Feature 1', description: 'Description of feature 1' },
           { icon: '✨', title: 'Feature 2', description: 'Description of feature 2' },
           { icon: '📦', title: 'Feature 3', description: 'Description of feature 3' }
-        ]
+        ],
+        cardBackground: 'theme:surface',
+        cardBorderColor: 'theme:border'
       };
 
     case 'pricing':
@@ -114,7 +120,7 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
         primaryCtaLink: '#',
         secondaryCtaText: 'Learn More',
         secondaryCtaLink: '#',
-        backgroundColor: ''
+        backgroundColor: 'theme:primary'
       };
 
     default:

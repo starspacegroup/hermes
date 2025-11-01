@@ -2,62 +2,62 @@
 
 /* CSS Custom Properties - Theme System */
 :root {
-  /* Light Theme – Bold, clean, red-forward */
-  --color-primary: #ef4444; /* vibrant red */
-  --color-primary-hover: #dc2626;
-  --color-primary-light: #f87171;
+  /* Light Theme – Default Light (matches admin default-light theme) */
+  --color-primary: #3b82f6; /* blue */
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #60a5fa;
 
-  --color-secondary: #64748b;
+  --color-secondary: #64748b; /* slate */
   --color-secondary-hover: #475569;
 
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
 
-  --color-success: #16a34a;
-  --color-success-hover: #15803d;
+  --color-success: #10b981;
+  --color-success-hover: #059669;
 
   --color-warning: #f59e0b;
   --color-warning-hover: #d97706;
 
-  /* Backgrounds – warm white with subtle red undertone */
-  --color-bg-primary: #fff9f9;
+  /* Backgrounds – clean white and light slate */
+  --color-bg-primary: #f8fafc;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #fef2f2;
-  --color-bg-accent: #fee2e2;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-accent: #e2e8f0;
 
-  /* Text – dark and clear */
-  --color-text-primary: #111827;
-  --color-text-secondary: #374151;
-  --color-text-tertiary: #6b7280;
-  --color-text-muted: #9ca3af;
+  /* Text – dark slate */
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #cbd5e1;
   --color-text-inverse: #ffffff;
 
   /* Borders */
-  --color-border-primary: #fca5a5;
-  --color-border-secondary: #fecaca;
+  --color-border-primary: #cbd5e1;
+  --color-border-secondary: #e2e8f0;
   --color-border-focus: var(--color-primary);
 
   /* Shadows */
-  --color-shadow-light: rgba(239, 68, 68, 0.1);
-  --color-shadow-medium: rgba(239, 68, 68, 0.2);
-  --color-shadow-dark: rgba(239, 68, 68, 0.35);
+  --color-shadow-light: rgba(59, 130, 246, 0.1);
+  --color-shadow-medium: rgba(59, 130, 246, 0.15);
+  --color-shadow-dark: rgba(59, 130, 246, 0.25);
 
   /* Data Type Colors */
   --color-type-text: #2563eb; /* blue for TEXT types */
   --color-type-integer: #059669; /* green for INTEGER types */
   --color-type-real: #d97706; /* amber for REAL/NUMERIC types */
   --color-type-blob: #7c3aed; /* purple for BLOB types */
-  --color-type-default: #374151; /* dark gray for unknown types */
+  --color-type-default: #64748b; /* slate for unknown types */
 
   /* Badge Colors */
-  --color-badge-pk: #dc2626; /* primary key */
-  --color-badge-required: #d97706; /* not null */
-  --color-badge-unique: #7c3aed; /* unique index */
-  --color-badge-view: #0369a1; /* view badge */
+  --color-badge-pk: #ef4444; /* primary key */
+  --color-badge-required: #f59e0b; /* not null */
+  --color-badge-unique: #8b5cf6; /* unique index */
+  --color-badge-view: #0891b2; /* view badge */
 
   /* Platform Engineer Colors */
-  --color-engineer-gradient-start: #667eea;
-  --color-engineer-gradient-end: #764ba2;
+  --color-engineer-gradient-start: #3b82f6;
+  --color-engineer-gradient-end: #8b5cf6;
   --color-engineer-text: #ffffff;
 
   /* Transitions */
@@ -81,64 +81,64 @@
   --font-mono: 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
 }
 
-/* Dark Theme – Neon pinks & purples */
+/* Dark Theme – Default Dark (matches admin default-dark theme) */
 [data-theme='dark'] {
-  --color-primary: #ec4899; /* hot pink */
-  --color-primary-hover: #db2777;
-  --color-primary-light: #f472b6;
+  --color-primary: #60a5fa; /* blue */
+  --color-primary-hover: #3b82f6;
+  --color-primary-light: #93c5fd;
 
-  --color-secondary: #8b5cf6; /* purple */
-  --color-secondary-hover: #7c3aed;
+  --color-secondary: #94a3b8; /* gray-blue */
+  --color-secondary-hover: #64748b;
 
-  --color-danger: #f43f5e;
-  --color-danger-hover: #be123c;
+  --color-danger: #f87171;
+  --color-danger-hover: #ef4444;
 
-  --color-success: #22d3ee;
-  --color-success-hover: #06b6d4;
+  --color-success: #34d399;
+  --color-success-hover: #10b981;
 
   --color-warning: #fbbf24;
   --color-warning-hover: #f59e0b;
 
-  /* Backgrounds – deep violet base with glowing contrasts */
-  --color-bg-primary: #0a0118;
-  --color-bg-secondary: #1a103d;
-  --color-bg-tertiary: #2d1b69;
-  --color-bg-accent: #3b0764;
+  /* Backgrounds – dark slate */
+  --color-bg-primary: #1e293b;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #334155;
+  --color-bg-accent: #475569;
 
-  /* Text – soft neons */
-  --color-text-primary: #fdf4ff;
-  --color-text-secondary: #f5d0fe;
-  --color-text-tertiary: #e879f9;
-  --color-text-muted: #a78bfa;
-  --color-text-inverse: #0a0118;
+  /* Text – light slate */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #0f172a;
 
   /* Borders */
-  --color-border-primary: #9333ea;
-  --color-border-secondary: #c084fc;
+  --color-border-primary: #475569;
+  --color-border-secondary: #334155;
   --color-border-focus: var(--color-primary);
 
-  /* Shadows – neon glow effect */
-  --color-shadow-light: rgba(236, 72, 153, 0.2);
-  --color-shadow-medium: rgba(139, 92, 246, 0.25);
-  --color-shadow-dark: rgba(91, 33, 182, 0.4);
+  /* Shadows – subtle blue glow */
+  --color-shadow-light: rgba(96, 165, 250, 0.1);
+  --color-shadow-medium: rgba(96, 165, 250, 0.2);
+  --color-shadow-dark: rgba(96, 165, 250, 0.3);
 
   /* Data Type Colors - Dark Theme */
   --color-type-text: #60a5fa; /* brighter blue for TEXT types */
   --color-type-integer: #34d399; /* brighter green for INTEGER types */
   --color-type-real: #fbbf24; /* brighter amber for REAL/NUMERIC types */
   --color-type-blob: #a78bfa; /* brighter purple for BLOB types */
-  --color-type-default: #d1d5db; /* lighter gray for unknown types */
+  --color-type-default: #cbd5e1; /* lighter gray for unknown types */
 
   /* Badge Colors - Dark Theme */
   --color-badge-pk: #f87171; /* primary key */
   --color-badge-required: #fbbf24; /* not null */
   --color-badge-unique: #a78bfa; /* unique index */
-  --color-badge-view: #22d3ee; /* view badge */
+  --color-badge-view: #34d399; /* view badge */
 
   /* Platform Engineer Colors - Dark Theme */
-  --color-engineer-gradient-start: #a78bfa;
-  --color-engineer-gradient-end: #ec4899;
-  --color-engineer-text: #0a0118;
+  --color-engineer-gradient-start: #60a5fa;
+  --color-engineer-gradient-end: #a78bfa;
+  --color-engineer-text: #0f172a;
 }
 
 * {

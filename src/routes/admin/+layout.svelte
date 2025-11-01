@@ -141,6 +141,22 @@
         </a>
 
         <a
+          href="/admin/themes"
+          class:active={currentPath.startsWith('/admin/themes')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          Themes
+        </a>
+
+        <a
           href="/admin/settings"
           class:active={currentPath.startsWith('/admin/settings')}
           on:click={closeSidebar}

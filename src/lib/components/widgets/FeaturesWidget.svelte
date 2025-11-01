@@ -1,13 +1,25 @@
 <script lang="ts">
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
+  export let colorTheme: ColorTheme = 'default-light';
 
   $: title = config.title || 'Features';
   $: subtitle = config.subtitle || '';
   $: allFeatures = config.features || [];
-  $: cardBackground = config.cardBackground || 'var(--color-bg-primary)';
-  $: cardBorderColor = config.cardBorderColor || 'var(--color-border-secondary)';
+  $: cardBackground = resolveThemeColor(
+    config.cardBackground,
+    colorTheme,
+    'var(--color-bg-primary)',
+    true
+  );
+  $: cardBorderColor = resolveThemeColor(
+    config.cardBorderColor,
+    colorTheme,
+    'var(--color-border-secondary)',
+    true
+  );
   $: cardBorderRadius = config.cardBorderRadius !== undefined ? config.cardBorderRadius : 12;
 
   // Responsive column and gap values

@@ -1,14 +1,17 @@
-<script>
+<script lang="ts">
   import '../app.css';
-  import { cartStore } from '../lib/stores/cart.ts';
-  import { themeStore } from '../lib/stores/theme.ts';
-  import { authStore, authState } from '../lib/stores/auth.ts';
+  import { cartStore } from '../lib/stores/cart';
+  import { themeStore } from '../lib/stores/theme';
+  import { authStore, authState } from '../lib/stores/auth';
   import ThemeToggle from '../lib/components/ThemeToggle.svelte';
   import ToastContainer from '../lib/components/ToastContainer.svelte';
   import BuildInfo from '../lib/components/BuildInfo.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import type { LayoutData } from './$types';
+
+  export let data: LayoutData;
 
   let showAccountMenu = false;
 
@@ -18,26 +21,76 @@
     $authState.isAuthenticated &&
     ($authState.user?.role === 'admin' || $authState.user?.role === 'platform_engineer');
 
+  // Generate CSS custom properties from theme colors
+  $: lightThemeStyles = data.themeColorsLight
+    ? `
+    --color-primary: ${data.themeColorsLight.primary};
+    --color-primary-hover: ${data.themeColorsLight.primaryHover};
+    --color-primary-light: ${data.themeColorsLight.primaryLight};
+    --color-secondary: ${data.themeColorsLight.secondary};
+    --color-secondary-hover: ${data.themeColorsLight.secondaryHover};
+    --color-bg-primary: ${data.themeColorsLight.bgPrimary};
+    --color-bg-secondary: ${data.themeColorsLight.bgSecondary};
+    --color-bg-tertiary: ${data.themeColorsLight.bgTertiary};
+    --color-text-primary: ${data.themeColorsLight.textPrimary};
+    --color-text-secondary: ${data.themeColorsLight.textSecondary};
+    --color-border-primary: ${data.themeColorsLight.borderPrimary};
+    --color-border-secondary: ${data.themeColorsLight.borderSecondary};
+    `
+    : '';
+
+  $: darkThemeStyles = data.themeColorsDark
+    ? `
+    --color-primary: ${data.themeColorsDark.primary};
+    --color-primary-hover: ${data.themeColorsDark.primaryHover};
+    --color-primary-light: ${data.themeColorsDark.primaryLight};
+    --color-secondary: ${data.themeColorsDark.secondary};
+    --color-secondary-hover: ${data.themeColorsDark.secondaryHover};
+    --color-bg-primary: ${data.themeColorsDark.bgPrimary};
+    --color-bg-secondary: ${data.themeColorsDark.bgSecondary};
+    --color-bg-tertiary: ${data.themeColorsDark.bgTertiary};
+    --color-text-primary: ${data.themeColorsDark.textPrimary};
+    --color-text-secondary: ${data.themeColorsDark.textSecondary};
+    --color-border-primary: ${data.themeColorsDark.borderPrimary};
+    --color-border-secondary: ${data.themeColorsDark.borderSecondary};
+    `
+    : '';
+
   onMount(() => {
     themeStore.initTheme();
   });
 
-  function handleLogout() {
+  onDestroy(() => {
+    themeStore.cleanup();
+  });
+
+  function handleLogout(): void {
     authStore.logout();
     showAccountMenu = false;
     goto('/');
   }
 
-  function toggleAccountMenu() {
+  function toggleAccountMenu(): void {
     showAccountMenu = !showAccountMenu;
   }
 
-  function closeAccountMenu() {
+  function closeAccountMenu(): void {
     showAccountMenu = false;
   }
 
   const currentYear = new Date().getFullYear();
 </script>
+
+<svelte:head>
+  {#if lightThemeStyles}
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+    {@html `<style>:root { ${lightThemeStyles} }</style>`}
+  {/if}
+  {#if darkThemeStyles}
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+    {@html `<style>[data-theme='dark'] { ${darkThemeStyles} }</style>`}
+  {/if}
+</svelte:head>
 
 <main class:admin-page={isAdminPage}>
   {#if !isAdminPage}

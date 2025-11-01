@@ -1,7 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { toastStore } from '$lib/stores/toast';
-  import type { PageWidget, WidgetType, WidgetConfig, Breakpoint } from '$lib/types/pages';
+  import type {
+    PageWidget,
+    WidgetType,
+    WidgetConfig,
+    Breakpoint,
+    ColorTheme
+  } from '$lib/types/pages';
   import EditorToolbar from './EditorToolbar.svelte';
   import EditorCanvas from './EditorCanvas.svelte';
   import EditorSidebar from './EditorSidebar.svelte';
@@ -19,21 +25,25 @@
   export let initialTitle = '';
   export let initialSlug = '';
   export let initialStatus: 'draft' | 'published' = 'draft';
+  export let initialColorTheme: ColorTheme | undefined = undefined;
   export let initialWidgets: PageWidget[] = [];
   export let onSave: (data: {
     title: string;
     slug: string;
     status: 'draft' | 'published';
+    colorTheme: ColorTheme | undefined;
     widgets: PageWidget[];
   }) => Promise<void>;
   export let onSaveDraft: (data: {
     title: string;
     slug: string;
+    colorTheme: ColorTheme | undefined;
     widgets: PageWidget[];
   }) => Promise<void>;
   export let onPublish: (data: {
     title: string;
     slug: string;
+    colorTheme: ColorTheme | undefined;
     widgets: PageWidget[];
   }) => Promise<void>;
   export let onCancel: () => void;
@@ -42,6 +52,7 @@
   let title = initialTitle;
   let slug = initialSlug;
   let status = initialStatus;
+  let colorTheme: ColorTheme | undefined = initialColorTheme;
   let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
 
   // UI state
@@ -386,7 +397,7 @@
 
     try {
       saving = true;
-      await onSaveDraft({ title, slug, widgets });
+      await onSaveDraft({ title, slug, colorTheme, widgets });
       lastSaved = new Date();
       if (autoSaveManager) {
         autoSaveManager.setLastSaved(lastSaved);
@@ -405,13 +416,18 @@
 
     try {
       publishing = true;
-      await onPublish({ title, slug, widgets });
+      await onPublish({ title, slug, colorTheme, widgets });
       status = 'published';
       toastStore.success('Page published successfully');
       await loadRevisions();
     } finally {
       publishing = false;
     }
+  }
+
+  function handleThemeChange(newTheme: ColorTheme | undefined) {
+    colorTheme = newTheme;
+    historyManager.saveState(widgets, `Changed theme to ${newTheme || 'site default'}`);
   }
 
   async function loadRevisions() {
@@ -479,7 +495,7 @@
 
     try {
       saving = true;
-      await onSave({ title, slug, status, widgets });
+      await onSave({ title, slug, status, colorTheme, widgets });
       lastSaved = new Date();
       if (autoSaveManager) {
         autoSaveManager.setLastSaved(lastSaved);
@@ -512,6 +528,7 @@
     bind:title
     bind:slug
     bind:status
+    {colorTheme}
     bind:currentBreakpoint
     {saving}
     {publishing}
@@ -535,7 +552,8 @@
       loadRevision,
       publishRevision,
       toggleWidgetLibrary: () => (showWidgetLibrary = !showWidgetLibrary),
-      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel)
+      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel),
+      changeTheme: handleThemeChange
     }}
   />
 
@@ -555,6 +573,7 @@
       {widgets}
       selectedWidgetId={selectedWidget?.id || null}
       {currentBreakpoint}
+      {colorTheme}
       events={{
         select: selectWidget,
         moveUp: moveWidgetUp,
@@ -579,6 +598,7 @@
         <WidgetPropertiesPanel
           widget={selectedWidget}
           {currentBreakpoint}
+          {colorTheme}
           onUpdate={(config) => {
             if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
           }}

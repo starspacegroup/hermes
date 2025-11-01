@@ -102,10 +102,10 @@ export async function createRevision(
     .prepare(
       `
       INSERT INTO page_revisions (
-        id, page_id, revision_number, title, slug, status, 
+        id, page_id, revision_number, title, slug, status, color_theme,
         widgets_snapshot, created_by, created_at, is_published, notes
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     )
     .bind(
@@ -115,6 +115,7 @@ export async function createRevision(
       data.title,
       data.slug,
       data.status,
+      data.colorTheme || null,
       widgetsSnapshot,
       data.created_by || null,
       now,
@@ -130,6 +131,7 @@ export async function createRevision(
     title: data.title,
     slug: data.slug,
     status: data.status,
+    color_theme: data.colorTheme || undefined,
     widgets: data.widgets,
     created_by: data.created_by,
     created_at: now,
@@ -168,11 +170,18 @@ export async function publishRevision(
       .prepare(
         `
         UPDATE pages 
-        SET title = ?, slug = ?, status = ?, updated_at = ?
+        SET title = ?, slug = ?, status = ?, color_theme = ?, updated_at = ?
         WHERE id = ?
       `
       )
-      .bind(revision.title, revision.slug, 'published', Math.floor(Date.now() / 1000), pageId)
+      .bind(
+        revision.title,
+        revision.slug,
+        'published',
+        revision.color_theme || null,
+        Math.floor(Date.now() / 1000),
+        pageId
+      )
   ];
 
   // Delete all current widgets for the page

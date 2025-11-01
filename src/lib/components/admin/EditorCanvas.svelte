@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { PageWidget, Breakpoint, WidgetConfig } from '$lib/types/pages';
+  import type { PageWidget, Breakpoint, WidgetConfig, ColorTheme } from '$lib/types/pages';
   import WidgetRenderer from './WidgetRenderer.svelte';
   import WidgetControls from './WidgetControls.svelte';
+  import { getThemeColors, generateThemeStyles } from '$lib/utils/editor/colorThemes';
 
   export let widgets: PageWidget[];
   export let selectedWidgetId: string | null;
   export let currentBreakpoint: Breakpoint;
+  export let colorTheme: ColorTheme = 'default';
 
   interface WidgetEvents {
     select: (widgetId: string) => void;
@@ -20,6 +22,9 @@
   }
 
   export let events: WidgetEvents;
+
+  $: themeColors = getThemeColors(colorTheme);
+  $: themeStyles = generateThemeStyles(themeColors);
 </script>
 
 <div class="canvas-area">
@@ -27,6 +32,7 @@
     class="canvas-container"
     class:mobile={currentBreakpoint === 'mobile'}
     class:tablet={currentBreakpoint === 'tablet'}
+    style={themeStyles}
   >
     {#if widgets.length === 0}
       <div class="empty-canvas">
@@ -69,6 +75,7 @@
               <WidgetRenderer
                 {widget}
                 {currentBreakpoint}
+                {colorTheme}
                 onUpdate={(config) => events.updateConfig(widget.id, config)}
               />
             </div>
@@ -93,7 +100,7 @@
   .canvas-container {
     width: 100%;
     max-width: 1200px;
-    background: var(--color-bg-primary);
+    background: var(--theme-background, var(--color-bg-primary));
     border-radius: 8px;
     box-shadow: 0 2px 8px var(--color-shadow-light);
     min-height: 600px;
@@ -115,7 +122,7 @@
     align-items: center;
     justify-content: center;
     min-height: 600px;
-    color: var(--color-text-secondary);
+    color: var(--theme-text-secondary, var(--color-text-secondary));
     text-align: center;
     padding: 2rem;
   }
@@ -123,12 +130,13 @@
   .empty-canvas svg {
     opacity: 0.3;
     margin-bottom: 1.5rem;
+    stroke: var(--theme-text, currentColor);
   }
 
   .empty-canvas h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.25rem;
-    color: var(--color-text-primary);
+    color: var(--theme-text, var(--color-text-primary));
   }
 
   .empty-canvas p {

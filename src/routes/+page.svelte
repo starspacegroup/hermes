@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import ProductCard from '../lib/components/ProductCard.svelte';
   import TextWidget from '../lib/components/widgets/TextWidget.svelte';
   import ImageWidget from '../lib/components/widgets/ImageWidget.svelte';
@@ -14,14 +14,26 @@
   import PricingWidget from '../lib/components/widgets/PricingWidget.svelte';
   import CTAWidget from '../lib/components/widgets/CTAWidget.svelte';
   import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import type { PageData } from './$types';
 
-  export let data;
+  export let data: PageData;
   const products = data.products;
   const page = data.page ?? null;
   const widgets = data.widgets ?? [];
   const isAdmin = data.isAdmin ?? false;
 
   let heroVisible = false;
+
+  // Get the current applied theme (light or dark) from the document
+  const getCurrentTheme = (): 'light' | 'dark' => {
+    if (!browser) return 'light';
+    const theme = document.documentElement.getAttribute('data-theme');
+    return theme === 'dark' ? 'dark' : 'light';
+  };
+
+  // If no colorTheme is specified, use the site's current theme
+  $: colorTheme = data.colorTheme ?? (browser ? `default-${getCurrentTheme()}` : 'default-light');
 
   onMount(() => {
     setTimeout(() => {
@@ -143,23 +155,23 @@
         {:else if widget.type === 'product_list'}
           <ProductListWidget config={widget.config} />
         {:else if widget.type === 'hero'}
-          <HeroWidget config={widget.config} />
+          <HeroWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'button'}
           <ButtonWidget config={widget.config} />
         {:else if widget.type === 'spacer'}
           <SpacerWidget config={widget.config} />
         {:else if widget.type === 'divider'}
-          <DividerWidget config={widget.config} />
+          <DividerWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'columns'}
           <ColumnsWidget config={widget.config} />
         {:else if widget.type === 'heading'}
-          <HeadingWidget config={widget.config} />
+          <HeadingWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'features'}
-          <FeaturesWidget config={widget.config} />
+          <FeaturesWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'pricing'}
           <PricingWidget config={widget.config} />
         {:else if widget.type === 'cta'}
-          <CTAWidget config={widget.config} />
+          <CTAWidget config={widget.config} {colorTheme} />
         {/if}
       </div>
     {/each}
@@ -394,18 +406,18 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--color-secondary, #3b82f6);
-    color: white;
+    background: var(--color-secondary);
+    color: var(--color-text-inverse);
     text-decoration: none;
     border-radius: 6px;
     font-weight: 500;
     font-size: 0.875rem;
-    transition: background-color var(--transition-normal, 0.2s ease);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: background-color var(--transition-normal);
+    box-shadow: 0 2px 8px var(--color-shadow-medium);
   }
 
   .edit-link:hover {
-    background: var(--color-secondary-hover, #2563eb);
+    background: var(--color-secondary-hover);
   }
 
   .edit-link svg {
@@ -415,6 +427,8 @@
   /* Widget Page */
   .widget-page {
     width: 100%;
+    min-height: 100vh;
+    background: var(--theme-background);
   }
 
   .widget-container {
@@ -430,7 +444,8 @@
     height: 600px;
     overflow: hidden;
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
+    background: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
   }
 
   .gradient-orb {
@@ -483,14 +498,23 @@
 
   /* Hero Section */
   .hero {
+    position: relative;
+    z-index: 1;
     text-align: center;
     padding: 4rem 2rem;
     margin-bottom: 4rem;
+    background: linear-gradient(
+      135deg,
+      var(--color-bg-secondary) 0%,
+      var(--color-bg-primary) 50%,
+      var(--color-bg-tertiary) 100%
+    );
     opacity: 0;
     transform: translateY(20px);
     transition:
       opacity 0.8s ease,
-      transform 0.8s ease;
+      transform 0.8s ease,
+      background-color var(--transition-normal);
   }
 
   .hero.visible {

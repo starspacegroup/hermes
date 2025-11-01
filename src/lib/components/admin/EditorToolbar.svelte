@@ -1,10 +1,12 @@
 <script lang="ts">
   import BreakpointSwitcher from './BreakpointSwitcher.svelte';
-  import type { Breakpoint } from '$lib/types/pages';
+  import ThemeSelector from './ThemeSelector.svelte';
+  import type { Breakpoint, ColorTheme } from '$lib/types/pages';
 
   export let title: string;
   export let slug: string;
   export let status: 'draft' | 'published';
+  export let colorTheme: ColorTheme | undefined = undefined;
   export let currentBreakpoint: Breakpoint;
   export let saving: boolean;
   export let publishing: boolean = false;
@@ -33,6 +35,7 @@
     publishRevision?: (revisionId: string) => void;
     toggleWidgetLibrary: () => void;
     togglePropertiesPanel: () => void;
+    changeTheme: (theme: ColorTheme | undefined) => void;
   }
 
   export let events: Events;
@@ -112,6 +115,7 @@
 
   <div class="toolbar-center">
     <BreakpointSwitcher bind:currentBreakpoint />
+    <ThemeSelector selectedTheme={colorTheme} onChange={events.changeTheme} />
   </div>
 
   <div class="toolbar-right">

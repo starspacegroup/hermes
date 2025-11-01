@@ -1,9 +1,17 @@
 <script lang="ts">
-  import type { PageWidget, Breakpoint, WidgetConfig } from '$lib/types/pages';
+  import type { PageWidget, Breakpoint, WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import {
+    applyThemeColors,
+    generateThemeStyles,
+    resolveThemeColor
+  } from '$lib/utils/editor/colorThemes';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
+  export let colorTheme: ColorTheme = 'default';
   export let onUpdate: ((config: WidgetConfig) => void) | undefined = undefined;
+
+  $: themeColors = applyThemeColors(colorTheme, widget.config.themeOverrides);
 
   function handleContentEdit(field: string, event: Event) {
     if (!onUpdate) return;
@@ -118,7 +126,7 @@
   }
 </script>
 
-<div class="widget-renderer" style={styleString}>
+<div class="widget-renderer" style="{styleString} {generateThemeStyles(themeColors)}">
   {#if widget.type === 'text'}
     <div
       class="text-widget"
@@ -135,7 +143,13 @@
       {/if}
     </div>
   {:else if widget.type === 'heading'}
-    {@const headingStyle = `color: ${widget.config.textColor || 'inherit'}; text-align: ${widget.config.alignment || 'left'};`}
+    {@const textColor = resolveThemeColor(
+      widget.config.textColor,
+      colorTheme,
+      themeColors.text,
+      true
+    )}
+    {@const headingStyle = `color: ${textColor}; text-align: ${widget.config.alignment || 'left'};`}
     {#if widget.config.level === 1}
       <h1 style={headingStyle}>{widget.config.heading || 'Heading'}</h1>
     {:else if widget.config.level === 2}
@@ -170,6 +184,45 @@
       {/if}
     </div>
   {:else if widget.type === 'hero'}
+    {@const bgColor = resolveThemeColor(
+      widget.config.backgroundColor,
+      colorTheme,
+      themeColors.primary,
+      true
+    )}
+    {@const ctaBgColor = resolveThemeColor(
+      widget.config.ctaBackgroundColor,
+      colorTheme,
+      '#ffffff',
+      true
+    )}
+    {@const ctaTxtColor = resolveThemeColor(
+      widget.config.ctaTextColor,
+      colorTheme,
+      themeColors.primary,
+      true
+    )}
+    {@const secondaryCtaBgColor = resolveThemeColor(
+      widget.config.secondaryCtaBackgroundColor,
+      colorTheme,
+      'transparent',
+      true
+    )}
+    {@const secondaryCtaTxtColor = resolveThemeColor(
+      widget.config.secondaryCtaTextColor,
+      colorTheme,
+      '#ffffff',
+      true
+    )}
+    {@const secondaryCtaBorderColor = resolveThemeColor(
+      widget.config.secondaryCtaBorderColor,
+      colorTheme,
+      '#ffffff',
+      true
+    )}
+    {@const heroTextColor =
+      resolveThemeColor(widget.config.textColor, colorTheme, '', true) ||
+      (widget.config.overlay || widget.config.backgroundImage ? '#ffffff' : `var(--theme-text)`)}
     <div
       class="hero-widget"
       style="
@@ -177,7 +230,7 @@
         background-image: {widget.config.backgroundImage
         ? `url(${widget.config.backgroundImage})`
         : 'none'};
-        background-color: {widget.config.backgroundColor || '#f0f0f0'};
+        background-color: {bgColor};
         background-size: cover;
         background-position: center;
         text-align: {widget.config.contentAlign || 'center'};
@@ -191,7 +244,7 @@
             : 0.5}"
         />
       {/if}
-      <div class="hero-content">
+      <div class="hero-content" style="color: {heroTextColor};">
         <h1
           contenteditable="true"
           on:input={(e) => handleContentEdit('title', e)}
@@ -213,8 +266,8 @@
                 href={widget.config.ctaLink || '#'}
                 class="hero-cta hero-cta-primary"
                 style="
-                  background-color: {widget.config.ctaBackgroundColor || '#ffffff'};
-                  color: {widget.config.ctaTextColor || '#3b82f6'};
+                  background-color: {ctaBgColor};
+                  color: {ctaTxtColor};
                   font-size: {widget.config.ctaFontSize || '16px'};
                   font-weight: {widget.config.ctaFontWeight || '600'};
                 "
@@ -228,9 +281,9 @@
                 href={widget.config.secondaryCtaLink || '#'}
                 class="hero-cta hero-cta-secondary"
                 style="
-                  background-color: {widget.config.secondaryCtaBackgroundColor || 'transparent'};
-                  color: {widget.config.secondaryCtaTextColor || '#ffffff'};
-                  border-color: {widget.config.secondaryCtaBorderColor || '#ffffff'};
+                  background-color: {secondaryCtaBgColor};
+                  color: {secondaryCtaTxtColor};
+                  border-color: {secondaryCtaBorderColor};
                   font-size: {widget.config.secondaryCtaFontSize || '16px'};
                   font-weight: {widget.config.secondaryCtaFontWeight || '600'};
                 "
@@ -255,11 +308,17 @@
   {:else if widget.type === 'spacer'}
     <div class="spacer-widget" style="height: {spacerHeight}px" />
   {:else if widget.type === 'divider'}
+    {@const divColor = resolveThemeColor(
+      widget.config.dividerColor,
+      colorTheme,
+      themeColors.border,
+      true
+    )}
     <div
       class="divider-widget"
       style="
-        border-top: {widget.config.thickness || 1}px {widget.config.dividerStyle || 'solid'} {widget
-        .config.dividerColor || '#e0e0e0'};
+        border-top: {widget.config.thickness || 1}px {widget.config.dividerStyle ||
+        'solid'} {divColor};
         margin: {dividerSpacing}px 0;
       "
     />
@@ -340,6 +399,18 @@
       {/each}
     </div>
   {:else if widget.type === 'features'}
+    {@const cardBg = resolveThemeColor(
+      widget.config.cardBackground,
+      colorTheme,
+      themeColors.surface,
+      true
+    )}
+    {@const cardBorder = resolveThemeColor(
+      widget.config.cardBorderColor,
+      colorTheme,
+      themeColors.border,
+      true
+    )}
     <div class="features-preview">
       <h3>{widget.config.title || 'Features'}</h3>
       {#if widget.config.subtitle}
@@ -353,10 +424,8 @@
           {#each featuresLimit && featuresLimit > 0 ? widget.config.features.slice(0, featuresLimit) : widget.config.features as feature}
             <div
               class="feature-card"
-              style="background: {widget.config.cardBackground ||
-                'var(--color-bg-primary)'}; border-color: {widget.config.cardBorderColor ||
-                'var(--color-border-secondary)'}; border-radius: {widget.config.cardBorderRadius !==
-              undefined
+              style="background: {cardBg}; border-color: {cardBorder}; border-radius: {widget.config
+                .cardBorderRadius !== undefined
                 ? widget.config.cardBorderRadius
                 : 12}px;"
             >
@@ -388,7 +457,17 @@
       </div>
     </div>
   {:else if widget.type === 'cta'}
-    <div class="cta-preview">
+    {@const ctaBgColor = resolveThemeColor(
+      widget.config.backgroundColor,
+      colorTheme,
+      `linear-gradient(135deg, ${themeColors.primary} 0%, ${themeColors.secondary} 100%)`,
+      true
+    )}
+    <div
+      class="cta-preview"
+      style="background: {ctaBgColor ||
+        `linear-gradient(135deg, ${themeColors.primary} 0%, ${themeColors.secondary} 100%)`};"
+    >
       <h3>{widget.config.title || 'Call to Action'}</h3>
       {#if widget.config.subtitle}
         <p>{widget.config.subtitle}</p>
@@ -473,7 +552,6 @@
   .hero-content {
     position: relative;
     z-index: 1;
-    color: white;
     padding: 2rem;
     max-width: 800px;
   }

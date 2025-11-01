@@ -5,12 +5,35 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script>
-      // Prevent FOUC by setting theme immediately
+      // Prevent FOUC (Flash of Unstyled Content) by setting theme immediately
+      // This runs before any framework code, ensuring the correct theme is applied
       (function () {
-        const stored = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const theme = stored || (prefersDark ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', theme);
+        try {
+          const THEME_KEY = 'theme';
+          const stored = localStorage.getItem(THEME_KEY);
+
+          // Validate stored value
+          const validThemes = ['light', 'dark', 'system'];
+          const isValid = stored && validThemes.includes(stored);
+          const theme = isValid ? stored : 'system';
+
+          // Determine actual theme to apply
+          let actualTheme = theme;
+          if (theme === 'system') {
+            try {
+              const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              actualTheme = prefersDark ? 'dark' : 'light';
+            } catch (e) {
+              // Fallback to light if matchMedia fails
+              actualTheme = 'light';
+            }
+          }
+
+          document.documentElement.setAttribute('data-theme', actualTheme);
+        } catch (e) {
+          // Fail silently and let CSS defaults handle theme
+          console.warn('Failed to initialize theme:', e);
+        }
       })();
     </script>
     %sveltekit.head%

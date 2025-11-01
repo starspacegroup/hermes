@@ -46,13 +46,15 @@ export const PUT: RequestHandler = async ({ params, request, platform, locals })
       slug?: string;
       status?: string;
       content?: string;
+      colorTheme?: string;
     };
 
     const updateData: pagesDb.UpdatePageData = {
       title: data.title,
       slug: data.slug,
       status: data.status as 'draft' | 'published' | undefined,
-      content: data.content
+      content: data.content,
+      colorTheme: data.colorTheme
     };
 
     const page = await pagesDb.updatePage(db, siteId, pageId, updateData);

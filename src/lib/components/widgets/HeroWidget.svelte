@@ -1,25 +1,45 @@
 <script lang="ts">
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
+  export let colorTheme: ColorTheme = 'default-light';
 
   $: title = config.title || 'Hero Title';
   $: subtitle = config.subtitle || '';
   $: ctaText = config.ctaText || '';
   $: ctaLink = config.ctaLink || '#';
-  $: ctaBackgroundColor = config.ctaBackgroundColor || '#ffffff';
-  $: ctaTextColor = config.ctaTextColor || '#3b82f6';
+  $: ctaBackgroundColor = resolveThemeColor(config.ctaBackgroundColor, colorTheme, '#ffffff', true);
+  $: ctaTextColor = resolveThemeColor(config.ctaTextColor, colorTheme, '#3b82f6', true);
   $: ctaFontSize = config.ctaFontSize || '16px';
   $: ctaFontWeight = config.ctaFontWeight || '600';
   $: secondaryCtaText = config.secondaryCtaText || '';
   $: secondaryCtaLink = config.secondaryCtaLink || '#';
-  $: secondaryCtaBackgroundColor = config.secondaryCtaBackgroundColor || 'transparent';
-  $: secondaryCtaTextColor = config.secondaryCtaTextColor || '#ffffff';
-  $: secondaryCtaBorderColor = config.secondaryCtaBorderColor || '#ffffff';
+  $: secondaryCtaBackgroundColor = resolveThemeColor(
+    config.secondaryCtaBackgroundColor,
+    colorTheme,
+    'transparent',
+    true
+  );
+  $: secondaryCtaTextColor = resolveThemeColor(
+    config.secondaryCtaTextColor,
+    colorTheme,
+    '#ffffff',
+    true
+  );
+  $: secondaryCtaBorderColor = resolveThemeColor(
+    config.secondaryCtaBorderColor,
+    colorTheme,
+    '#ffffff',
+    true
+  );
   $: secondaryCtaFontSize = config.secondaryCtaFontSize || '16px';
   $: secondaryCtaFontWeight = config.secondaryCtaFontWeight || '600';
   $: backgroundImage = config.backgroundImage || '';
-  $: backgroundColor = config.backgroundColor || '#f0f0f0';
+  $: backgroundColor = resolveThemeColor(config.backgroundColor, colorTheme, '#f0f0f0', true);
+  $: textColor =
+    resolveThemeColor(config.textColor, colorTheme, '', true) ||
+    (overlay || backgroundImage ? '#ffffff' : 'var(--theme-text)');
   $: heroHeight = config.heroHeight || '500px';
   $: contentAlign = config.contentAlign || 'center';
   $: overlay = config.overlay ?? false;
@@ -41,7 +61,7 @@
   {#if overlay}
     <div class="hero-overlay" style="opacity: {overlayOpacity / 100}" />
   {/if}
-  <div class="hero-content">
+  <div class="hero-content" style="color: {textColor};">
     <h1>{title}</h1>
     {#if subtitle}
       <p>{subtitle}</p>
@@ -101,7 +121,6 @@
   .hero-content {
     position: relative;
     z-index: 1;
-    color: white;
     padding: 2rem;
     max-width: 800px;
   }

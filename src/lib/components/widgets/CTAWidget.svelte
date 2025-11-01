@@ -1,7 +1,9 @@
 <script lang="ts">
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
+  export let colorTheme: ColorTheme = 'default-light';
 
   $: title = config.title || 'Ready to Get Started?';
   $: subtitle = config.subtitle || '';
@@ -9,7 +11,7 @@
   $: primaryCtaLink = config.primaryCtaLink || '#';
   $: secondaryCtaText = config.secondaryCtaText || '';
   $: secondaryCtaLink = config.secondaryCtaLink || '#';
-  $: backgroundColor = config.backgroundColor || '';
+  $: backgroundColor = resolveThemeColor(config.backgroundColor, colorTheme, '', true);
 </script>
 
 <div

@@ -12,11 +12,22 @@
   import FeaturesWidget from '$lib/components/widgets/FeaturesWidget.svelte';
   import PricingWidget from '$lib/components/widgets/PricingWidget.svelte';
   import CTAWidget from '$lib/components/widgets/CTAWidget.svelte';
+  import { browser } from '$app/environment';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
   const { page, widgets, isPreview, isAdmin } = data;
+
+  // Get the current applied theme (light or dark) from the document
+  const getCurrentTheme = (): 'light' | 'dark' => {
+    if (!browser) return 'light';
+    const theme = document.documentElement.getAttribute('data-theme');
+    return theme === 'dark' ? 'dark' : 'light';
+  };
+
+  // If no colorTheme is specified, use the site's current theme
+  $: colorTheme = data.colorTheme || (browser ? `default-${getCurrentTheme()}` : 'default-light');
 </script>
 
 <svelte:head>
@@ -69,23 +80,23 @@
         {:else if widget.type === 'product_list'}
           <ProductListWidget config={widget.config} />
         {:else if widget.type === 'hero'}
-          <HeroWidget config={widget.config} />
+          <HeroWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'button'}
           <ButtonWidget config={widget.config} />
         {:else if widget.type === 'spacer'}
           <SpacerWidget config={widget.config} />
         {:else if widget.type === 'divider'}
-          <DividerWidget config={widget.config} />
+          <DividerWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'columns'}
           <ColumnsWidget config={widget.config} />
         {:else if widget.type === 'heading'}
-          <HeadingWidget config={widget.config} />
+          <HeadingWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'features'}
-          <FeaturesWidget config={widget.config} />
+          <FeaturesWidget config={widget.config} {colorTheme} />
         {:else if widget.type === 'pricing'}
           <PricingWidget config={widget.config} />
         {:else if widget.type === 'cta'}
-          <CTAWidget config={widget.config} />
+          <CTAWidget config={widget.config} {colorTheme} />
         {/if}
       </div>
     {/each}
@@ -145,8 +156,10 @@
 
   .custom-page {
     width: 100%;
+    min-height: 100vh;
     margin: 0 auto;
     padding: 2rem;
+    background: var(--theme-background);
   }
 
   h1 {

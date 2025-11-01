@@ -9,11 +9,21 @@
   $: initialTitle = $page.url.searchParams.get('title') || '';
   $: initialSlug = $page.url.searchParams.get('slug') || '';
 
-  async function handleSaveDraft(data: { title: string; slug: string; widgets: PageWidget[] }) {
+  async function handleSaveDraft(data: {
+    title: string;
+    slug: string;
+    colorTheme: string | undefined;
+    widgets: PageWidget[];
+  }) {
     return handleSave({ ...data, status: 'draft' });
   }
 
-  async function handlePublish(data: { title: string; slug: string; widgets: PageWidget[] }) {
+  async function handlePublish(data: {
+    title: string;
+    slug: string;
+    colorTheme: string | undefined;
+    widgets: PageWidget[];
+  }) {
     return handleSave({ ...data, status: 'published' });
   }
 
@@ -21,6 +31,7 @@
     title: string;
     slug: string;
     status: 'draft' | 'published';
+    colorTheme: string | undefined;
     widgets: PageWidget[];
   }) {
     try {
@@ -31,7 +42,8 @@
         body: JSON.stringify({
           title: data.title,
           slug: data.slug,
-          status: data.status
+          status: data.status,
+          colorTheme: data.colorTheme
         })
       });
 

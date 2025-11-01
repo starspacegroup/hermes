@@ -1,12 +1,14 @@
 <script lang="ts">
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
+  export let colorTheme: ColorTheme = 'default-light';
 
   $: heading = config.heading || 'Heading';
   $: level = config.level || 2;
   $: alignment = config.alignment || 'left';
-  $: textColor = config.textColor || 'inherit';
+  $: textColor = resolveThemeColor(config.textColor, colorTheme, 'inherit', true);
 </script>
 
 <div

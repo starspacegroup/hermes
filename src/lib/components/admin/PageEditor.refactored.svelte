@@ -10,12 +10,14 @@
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
   import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
+  import type { ColorTheme } from '$lib/types/pages';
 
   export let pageId: string | null = null;
   export let initialTitle = '';
   export let initialSlug = '';
   export let initialStatus: 'draft' | 'published' = 'draft';
   export let initialWidgets: PageWidget[] = [];
+  export let initialColorTheme: ColorTheme | undefined = undefined;
   export let onSave: (data: {
     title: string;
     slug: string;
@@ -29,6 +31,7 @@
   let slug = initialSlug;
   let status = initialStatus;
   let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
+  let colorTheme: ColorTheme | undefined = initialColorTheme;
 
   // UI state
   let selectedWidget: PageWidget | null = null;
@@ -123,6 +126,11 @@
       widgets = newState;
       toastStore.info('Redo');
     }
+  }
+
+  function handleThemeChange(newTheme: ColorTheme | undefined) {
+    colorTheme = newTheme;
+    historyManager.saveState(widgets, `Changed theme to ${newTheme || 'site default'}`);
   }
 
   function addWidget(type: WidgetType) {
@@ -286,13 +294,15 @@
     canUndo={historyManager?.canUndo() || false}
     canRedo={historyManager?.canRedo() || false}
     {pageId}
+    {colorTheme}
     events={{
       undo: handleUndo,
       redo: handleRedo,
       save: handleSubmit,
       cancel: onCancel,
       toggleWidgetLibrary: () => (showWidgetLibrary = !showWidgetLibrary),
-      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel)
+      togglePropertiesPanel: () => (showPropertiesPanel = !showPropertiesPanel),
+      changeTheme: handleThemeChange
     }}
   />
 
@@ -328,6 +338,7 @@
       {widgets}
       selectedWidgetId={selectedWidget?.id || null}
       {currentBreakpoint}
+      {colorTheme}
       events={{
         select: selectWidget,
         moveUp: moveWidgetUp,
@@ -365,6 +376,7 @@
           <WidgetPropertiesPanel
             widget={selectedWidget}
             {currentBreakpoint}
+            colorTheme={colorTheme || 'default'}
             onUpdate={(config) => {
               if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
             }}

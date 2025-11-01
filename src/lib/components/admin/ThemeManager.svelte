@@ -1,0 +1,832 @@
+<script lang="ts">
+  import { toastStore } from '$lib/stores/toast';
+  import type { ColorThemeDefinition } from '$lib/types/pages';
+  import {
+    getAllThemes,
+    saveCustomTheme,
+    deleteCustomTheme,
+    setDefaultTheme,
+    generateThemeStyles,
+    SYSTEM_THEMES
+  } from '$lib/utils/editor/colorThemes';
+
+  let themes: ColorThemeDefinition[] = getAllThemes();
+  let editingTheme: ColorThemeDefinition | null = null;
+  let showEditor = false;
+  let filterMode: 'all' | 'light' | 'dark' = 'all';
+
+  $: filteredThemes = themes.filter((t) => (filterMode === 'all' ? true : t.mode === filterMode));
+
+  function createNewTheme(mode: 'light' | 'dark') {
+    const baseTheme = SYSTEM_THEMES.find((t) => t.mode === mode) || SYSTEM_THEMES[0];
+    editingTheme = {
+      id: `custom-${Date.now()}`,
+      name: `New ${mode === 'light' ? 'Light' : 'Dark'} Theme`,
+      mode,
+      isDefault: false,
+      isSystem: false,
+      colors: { ...baseTheme.colors }
+    };
+    showEditor = true;
+  }
+
+  function editTheme(theme: ColorThemeDefinition) {
+    if (theme.isSystem) {
+      toastStore.error('System themes cannot be edited');
+      return;
+    }
+    editingTheme = { ...theme };
+    showEditor = true;
+  }
+
+  function saveTheme() {
+    if (!editingTheme) return;
+
+    if (!editingTheme.name.trim()) {
+      toastStore.error('Theme name is required');
+      return;
+    }
+
+    saveCustomTheme(editingTheme);
+    themes = getAllThemes();
+    toastStore.success('Theme saved successfully');
+    closeEditor();
+  }
+
+  function deleteTheme(id: string) {
+    if (confirm('Are you sure you want to delete this theme?')) {
+      if (deleteCustomTheme(id)) {
+        themes = getAllThemes();
+        toastStore.success('Theme deleted successfully');
+      } else {
+        toastStore.error('Cannot delete system themes');
+      }
+    }
+  }
+
+  function makeDefault(id: string, mode: 'light' | 'dark') {
+    if (setDefaultTheme(id, mode)) {
+      themes = getAllThemes();
+      toastStore.success(`Set as default ${mode} theme`);
+    } else {
+      toastStore.error('Failed to set default theme');
+    }
+  }
+
+  function closeEditor() {
+    showEditor = false;
+    editingTheme = null;
+  }
+
+  function duplicateTheme(theme: ColorThemeDefinition) {
+    editingTheme = {
+      ...theme,
+      id: `custom-${Date.now()}`,
+      name: `${theme.name} (Copy)`,
+      isDefault: false,
+      isSystem: false
+    };
+    showEditor = true;
+  }
+</script>
+
+<div class="theme-manager">
+  <div class="header">
+    <div>
+      <h1>Color Theme Management</h1>
+      <p class="subtitle">Create and customize color themes for your pages</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn-secondary" on:click={() => createNewTheme('light')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="5" stroke-width="2" />
+          <path d="M12 1v6M12 17v6M23 12h-6M7 12H1" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        New Light Theme
+      </button>
+      <button type="button" class="btn-primary" on:click={() => createNewTheme('dark')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        New Dark Theme
+      </button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button
+      type="button"
+      class="filter-btn"
+      class:active={filterMode === 'all'}
+      on:click={() => (filterMode = 'all')}
+    >
+      All Themes ({themes.length})
+    </button>
+    <button
+      type="button"
+      class="filter-btn"
+      class:active={filterMode === 'light'}
+      on:click={() => (filterMode = 'light')}
+    >
+      Light ({themes.filter((t) => t.mode === 'light').length})
+    </button>
+    <button
+      type="button"
+      class="filter-btn"
+      class:active={filterMode === 'dark'}
+      on:click={() => (filterMode = 'dark')}
+    >
+      Dark ({themes.filter((t) => t.mode === 'dark').length})
+    </button>
+  </div>
+
+  <div class="themes-grid">
+    {#each filteredThemes as theme (theme.id)}
+      <div class="theme-card" class:default={theme.isDefault}>
+        {#if theme.isDefault}
+          <div class="default-badge">Default {theme.mode}</div>
+        {/if}
+        <div class="theme-preview" style={generateThemeStyles(theme.colors)}>
+          <div class="preview-header">
+            <h3>{theme.name}</h3>
+            <span class="mode-badge" class:dark={theme.mode === 'dark'}>{theme.mode}</span>
+          </div>
+          <div class="color-palette">
+            <div class="color-group">
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.primary}"
+                title="Primary"
+              ></div>
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.secondary}"
+                title="Secondary"
+              ></div>
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.accent}"
+                title="Accent"
+              ></div>
+            </div>
+            <div class="color-group">
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.background}"
+                title="Background"
+              ></div>
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.surface}"
+                title="Surface"
+              ></div>
+              <div
+                class="color-box"
+                style="background-color: {theme.colors.text}"
+                title="Text"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="theme-actions">
+          {#if !theme.isDefault}
+            <button
+              type="button"
+              class="action-btn"
+              on:click={() => makeDefault(theme.id, theme.mode)}
+              title="Set as default"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          {/if}
+          <button
+            type="button"
+            class="action-btn"
+            on:click={() => duplicateTheme(theme)}
+            title="Duplicate"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect
+                x="9"
+                y="9"
+                width="13"
+                height="13"
+                rx="2"
+                ry="2"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          {#if !theme.isSystem}
+            <button type="button" class="action-btn" on:click={() => editTheme(theme)} title="Edit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="action-btn danger"
+              on:click={() => deleteTheme(theme.id)}
+              title="Delete"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          {/if}
+        </div>
+      </div>
+    {/each}
+  </div>
+</div>
+
+{#if showEditor && editingTheme}
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div
+    class="modal-overlay"
+    on:click={closeEditor}
+    on:keydown={(e) => e.key === 'Escape' && closeEditor()}
+  >
+    <div class="modal" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="modal-header">
+        <h2>{editingTheme.isSystem ? 'View' : 'Edit'} Theme</h2>
+        <button type="button" class="close-btn" on:click={closeEditor}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>
+            <span>Theme Name</span>
+            <input
+              type="text"
+              bind:value={editingTheme.name}
+              placeholder="Enter theme name"
+              disabled={editingTheme.isSystem}
+            />
+          </label>
+        </div>
+
+        <div class="color-grid">
+          <div class="color-input">
+            <span class="color-label">Primary</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.primary}
+              aria-label="Primary color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.primary}
+              aria-label="Primary color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Secondary</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.secondary}
+              aria-label="Secondary color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.secondary}
+              aria-label="Secondary color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Accent</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.accent}
+              aria-label="Accent color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.accent}
+              aria-label="Accent color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Background</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.background}
+              aria-label="Background color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.background}
+              aria-label="Background color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Surface</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.surface}
+              aria-label="Surface color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.surface}
+              aria-label="Surface color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Text</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.text}
+              aria-label="Text color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.text}
+              aria-label="Text color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Text Secondary</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.textSecondary}
+              aria-label="Text secondary color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.textSecondary}
+              aria-label="Text secondary color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Border</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.border}
+              aria-label="Border color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.border}
+              aria-label="Border color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Success</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.success}
+              aria-label="Success color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.success}
+              aria-label="Success color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Warning</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.warning}
+              aria-label="Warning color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.warning}
+              aria-label="Warning color hex value"
+            />
+          </div>
+          <div class="color-input">
+            <span class="color-label">Error</span>
+            <input
+              type="color"
+              bind:value={editingTheme.colors.error}
+              aria-label="Error color picker"
+            />
+            <input
+              type="text"
+              bind:value={editingTheme.colors.error}
+              aria-label="Error color hex value"
+            />
+          </div>
+        </div>
+
+        <div class="preview-section">
+          <h3>Preview</h3>
+          <div class="preview-box" style={generateThemeStyles(editingTheme.colors)}>
+            <div
+              style="background: var(--theme-primary); color: var(--theme-background); padding: 1rem; border-radius: 4px; margin-bottom: 0.5rem;"
+            >
+              Primary Color
+            </div>
+            <div
+              style="background: var(--theme-surface); color: var(--theme-text); padding: 1rem; border: 1px solid var(--theme-border); border-radius: 4px;"
+            >
+              <strong style="color: var(--theme-text);">Surface with Text</strong>
+              <p style="color: var(--theme-text-secondary); margin: 0.5rem 0 0 0;">
+                Secondary text color
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" on:click={closeEditor}>Cancel</button>
+        {#if !editingTheme.isSystem}
+          <button type="button" class="btn-primary" on:click={saveTheme}>Save Theme</button>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .theme-manager {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: var(--color-text-primary);
+  }
+
+  .subtitle {
+    margin: 0.5rem 0 0 0;
+    color: var(--color-text-secondary);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .filter-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .themes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .theme-card {
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-border-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .theme-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px var(--color-shadow-medium);
+  }
+
+  .theme-card.default {
+    border-color: var(--color-primary);
+  }
+
+  .default-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    z-index: 1;
+  }
+
+  .theme-preview {
+    padding: 1.5rem;
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .preview-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--color-text-primary);
+  }
+
+  .mode-badge {
+    padding: 0.25rem 0.5rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  .mode-badge.dark {
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    border-color: var(--color-text-primary);
+  }
+
+  .color-palette {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .color-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .color-box {
+    height: 48px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .theme-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-secondary);
+  }
+
+  .action-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover {
+    background: var(--color-bg-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .action-btn.danger:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .btn-secondary {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    color: var(--color-text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: var(--color-bg-primary);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .close-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .close-btn:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+  }
+
+  .form-group label > span {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .form-group input[type='text'] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .color-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .color-input .color-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .color-input input[type='color'] {
+    width: 100%;
+    height: 48px;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .color-input input[type='text'] {
+    padding: 0.5rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.875rem;
+  }
+
+  .preview-section {
+    margin-top: 2rem;
+  }
+
+  .preview-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+  }
+
+  .preview-box {
+    padding: 1.5rem;
+    background: var(--theme-background);
+    border: 1px solid var(--theme-border);
+    border-radius: 8px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--color-border-secondary);
+  }
+</style>

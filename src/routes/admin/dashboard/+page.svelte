@@ -211,6 +211,16 @@
         </svg>
         Create Page
       </a>
+      <a href="/admin/settings/theme" class="action-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0a4 4 0 004-4v-4a2 2 0 012-2h4a2 2 0 012 2v4a4 4 0 01-4 4"
+            stroke-width="2"
+            stroke-linecap="round"
+          ></path>
+        </svg>
+        Theme Colors
+      </a>
       <a href="/admin/settings" class="action-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <circle cx="12" cy="12" r="3" stroke-width="2"></circle>

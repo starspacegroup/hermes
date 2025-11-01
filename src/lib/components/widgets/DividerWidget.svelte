@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
+  export let colorTheme: ColorTheme = 'default-light';
 
   $: thickness = config.thickness || 1;
   $: dividerStyle = config.dividerStyle || 'solid';
-  $: dividerColor = config.dividerColor || '#e0e0e0';
+  $: dividerColor = resolveThemeColor(config.dividerColor, colorTheme, '#e0e0e0', true);
   $: spacing = config.spacing || 20;
 </script>
 
