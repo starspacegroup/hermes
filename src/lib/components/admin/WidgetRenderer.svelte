@@ -152,14 +152,40 @@
         >
           {widget.config.subtitle || 'Click to add subtitle'}
         </p>
-        {#if widget.config.ctaText}
-          <a
-            href={widget.config.ctaLink || '#'}
-            class="hero-cta"
-            on:click|preventDefault={() => {}}
-          >
-            {widget.config.ctaText}
-          </a>
+        {#if widget.config.ctaText || widget.config.secondaryCtaText}
+          <div class="hero-cta-group">
+            {#if widget.config.ctaText}
+              <a
+                href={widget.config.ctaLink || '#'}
+                class="hero-cta hero-cta-primary"
+                style="
+                  background-color: {widget.config.ctaBackgroundColor || '#ffffff'};
+                  color: {widget.config.ctaTextColor || '#3b82f6'};
+                  font-size: {widget.config.ctaFontSize || '16px'};
+                  font-weight: {widget.config.ctaFontWeight || '600'};
+                "
+                on:click|preventDefault={() => {}}
+              >
+                {widget.config.ctaText}
+              </a>
+            {/if}
+            {#if widget.config.secondaryCtaText}
+              <a
+                href={widget.config.secondaryCtaLink || '#'}
+                class="hero-cta hero-cta-secondary"
+                style="
+                  background-color: {widget.config.secondaryCtaBackgroundColor || 'transparent'};
+                  color: {widget.config.secondaryCtaTextColor || '#ffffff'};
+                  border-color: {widget.config.secondaryCtaBorderColor || '#ffffff'};
+                  font-size: {widget.config.secondaryCtaFontSize || '16px'};
+                  font-weight: {widget.config.secondaryCtaFontWeight || '600'};
+                "
+                on:click|preventDefault={() => {}}
+              >
+                {widget.config.secondaryCtaText}
+              </a>
+            {/if}
+          </div>
         {/if}
       </div>
     </div>
@@ -267,6 +293,47 @@
           <p class="product-price">$0.00</p>
         </div>
       {/each}
+    </div>
+  {:else if widget.type === 'features'}
+    <div class="features-preview">
+      <h3>{widget.config.title || 'Features'}</h3>
+      <div class="features-grid">
+        {#each (widget.config.features || []).slice(0, 3) as feature}
+          <div class="feature-card">
+            <div class="feature-icon">{feature.icon}</div>
+            <h4>{feature.title}</h4>
+            <p>{feature.description}</p>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {:else if widget.type === 'pricing'}
+    <div class="pricing-preview">
+      <h3>{widget.config.title || 'Pricing'}</h3>
+      {#if widget.config.tagline}
+        <p class="tagline">{widget.config.tagline}</p>
+      {/if}
+      <div class="pricing-grid">
+        {#each (widget.config.tiers || []).slice(0, 2) as tier}
+          <div class="tier-card">
+            <span class="tier-range">{tier.range}</span>
+            <span class="tier-fee">{tier.fee}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {:else if widget.type === 'cta'}
+    <div class="cta-preview">
+      <h3>{widget.config.title || 'Call to Action'}</h3>
+      {#if widget.config.subtitle}
+        <p>{widget.config.subtitle}</p>
+      {/if}
+      <div class="cta-buttons">
+        <button class="btn-primary">{widget.config.primaryCtaText || 'Get Started'}</button>
+        {#if widget.config.secondaryCtaText}
+          <button class="btn-secondary">{widget.config.secondaryCtaText}</button>
+        {/if}
+      </div>
     </div>
   {:else}
     <div class="unknown-widget">
@@ -380,15 +447,36 @@
     opacity: 0.5;
   }
 
+  .hero-cta-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
   .hero-cta {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 0.75rem 1.5rem;
-    background: white;
-    color: var(--color-primary, #3b82f6);
     border-radius: 6px;
     text-decoration: none;
-    font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .hero-cta-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .hero-cta-secondary {
+    border: 2px solid;
+  }
+
+  .hero-cta-secondary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
   }
 
   /* Button Widget */
@@ -553,5 +641,136 @@
     border-radius: 8px;
     text-align: center;
     color: var(--color-text-secondary);
+  }
+
+  /* Features Preview */
+  .features-preview {
+    padding: 2rem;
+    background: var(--color-bg-secondary);
+  }
+
+  .features-preview h3 {
+    text-align: center;
+    margin: 0 0 2rem 0;
+    font-size: 1.5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .feature-card {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-card h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+  }
+
+  .feature-card p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* Pricing Preview */
+  .pricing-preview {
+    padding: 2rem;
+    background: var(--color-bg-secondary);
+    text-align: center;
+  }
+
+  .pricing-preview h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+  }
+
+  .pricing-preview .tagline {
+    color: var(--color-primary);
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .tier-card {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tier-range {
+    font-weight: 600;
+  }
+
+  .tier-fee {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  /* CTA Preview */
+  .cta-preview {
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    text-align: center;
+    color: white;
+  }
+
+  .cta-preview h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+  }
+
+  .cta-preview p {
+    margin: 0 0 1.5rem 0;
+    opacity: 0.9;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .cta-buttons button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: white;
+    color: var(--color-primary);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: white;
+    border: 2px solid white !important;
   }
 </style>

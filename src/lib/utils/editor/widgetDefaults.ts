@@ -21,8 +21,19 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
         contentAlign: 'center',
         overlay: false,
         overlayOpacity: 50,
-        ctaText: '',
-        ctaLink: '#'
+        ctaText: 'Get Started',
+        ctaLink: '#',
+        ctaBackgroundColor: '#ffffff',
+        ctaTextColor: '#3b82f6',
+        ctaFontSize: '16px',
+        ctaFontWeight: '600',
+        secondaryCtaText: '',
+        secondaryCtaLink: '#',
+        secondaryCtaBackgroundColor: 'transparent',
+        secondaryCtaTextColor: '#ffffff',
+        secondaryCtaBorderColor: '#ffffff',
+        secondaryCtaFontSize: '16px',
+        secondaryCtaFontWeight: '600'
       };
 
     case 'button':
@@ -69,6 +80,43 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
         columns: { desktop: 3, tablet: 2, mobile: 1 }
       };
 
+    case 'features':
+      return {
+        title: 'Features',
+        subtitle: 'Why choose us',
+        features: [
+          { icon: '🎯', title: 'Feature 1', description: 'Description of feature 1' },
+          { icon: '✨', title: 'Feature 2', description: 'Description of feature 2' },
+          { icon: '📦', title: 'Feature 3', description: 'Description of feature 3' }
+        ]
+      };
+
+    case 'pricing':
+      return {
+        title: 'Pricing',
+        tagline: 'Simple and transparent pricing',
+        subtitle: 'Choose the plan that works for you',
+        pricingFeatures: ['Feature 1', 'Feature 2', 'Feature 3'],
+        tiers: [
+          { range: '$0 - $100', fee: '5%', description: 'Starter' },
+          { range: '$100+', fee: '3%', description: 'Professional', highlight: true }
+        ],
+        ctaText: 'Get Started',
+        ctaLink: '#',
+        ctaNote: 'No credit card required'
+      };
+
+    case 'cta':
+      return {
+        title: 'Ready to Get Started?',
+        subtitle: 'Join us today and start building',
+        primaryCtaText: 'Get Started',
+        primaryCtaLink: '#',
+        secondaryCtaText: 'Learn More',
+        secondaryCtaLink: '#',
+        backgroundColor: ''
+      };
+
     default:
       return {};
   }
@@ -85,7 +133,10 @@ export function getWidgetLabel(type: WidgetType): string {
     divider: 'Divider',
     columns: 'Columns',
     single_product: 'Single Product',
-    product_list: 'Product List'
+    product_list: 'Product List',
+    features: 'Features Section',
+    pricing: 'Pricing Section',
+    cta: 'Call to Action'
   };
   return labels[type] || type;
 }

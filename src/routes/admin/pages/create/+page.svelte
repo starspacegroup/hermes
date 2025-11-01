@@ -1,8 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { toastStore } from '$lib/stores/toast';
   import PageEditor from '$lib/components/admin/PageEditor.svelte';
   import type { PageWidget } from '$lib/types/pages';
+
+  // Get URL params for pre-filling
+  $: initialTitle = $page.url.searchParams.get('title') || '';
+  $: initialSlug = $page.url.searchParams.get('slug') || '';
 
   async function handleSaveDraft(data: { title: string; slug: string; widgets: PageWidget[] }) {
     return handleSave({ ...data, status: 'draft' });
@@ -75,8 +80,8 @@
 
 <PageEditor
   pageId={null}
-  initialTitle=""
-  initialSlug=""
+  {initialTitle}
+  {initialSlug}
   initialStatus="draft"
   initialWidgets={[]}
   onSave={handleSave}

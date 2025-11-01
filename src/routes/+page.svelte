@@ -1,9 +1,25 @@
 <script>
   import ProductCard from '../lib/components/ProductCard.svelte';
+  import TextWidget from '../lib/components/widgets/TextWidget.svelte';
+  import ImageWidget from '../lib/components/widgets/ImageWidget.svelte';
+  import SingleProductWidget from '../lib/components/widgets/SingleProductWidget.svelte';
+  import ProductListWidget from '../lib/components/widgets/ProductListWidget.svelte';
+  import HeroWidget from '../lib/components/widgets/HeroWidget.svelte';
+  import ButtonWidget from '../lib/components/widgets/ButtonWidget.svelte';
+  import SpacerWidget from '../lib/components/widgets/SpacerWidget.svelte';
+  import DividerWidget from '../lib/components/widgets/DividerWidget.svelte';
+  import ColumnsWidget from '../lib/components/widgets/ColumnsWidget.svelte';
+  import HeadingWidget from '../lib/components/widgets/HeadingWidget.svelte';
+  import FeaturesWidget from '../lib/components/widgets/FeaturesWidget.svelte';
+  import PricingWidget from '../lib/components/widgets/PricingWidget.svelte';
+  import CTAWidget from '../lib/components/widgets/CTAWidget.svelte';
   import { onMount } from 'svelte';
 
   export let data;
-  const { products } = data;
+  const products = data.products;
+  const page = data.page ?? null;
+  const widgets = data.widgets ?? [];
+  const isAdmin = data.isAdmin ?? false;
 
   let heroVisible = false;
 
@@ -81,205 +97,102 @@
 </script>
 
 <svelte:head>
-  <title>Hermes - Start Your Online Store</title>
+  <title>{page ? page.title : 'Hermes - Start Your Online Store'}</title>
   <meta
     name="description"
     content="Create your own beautiful online store. Sell products, manage orders, and grow your business."
   />
 </svelte:head>
 
-<div class="hero-background">
-  <div class="gradient-orb orb-1"></div>
-  <div class="gradient-orb orb-2"></div>
-  <div class="gradient-orb orb-3"></div>
-</div>
-
-<section class="hero" class:visible={heroVisible}>
-  <div class="hero-badge">
-    <span class="badge-icon">✨</span>
-    <span>Start Selling Online Today</span>
+{#if isAdmin}
+  <div class="edit-banner">
+    {#if page}
+      <a href="/admin/pages/{page.id}/edit" class="edit-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+        <span>Edit Home Page</span>
+      </a>
+    {:else}
+      <a href="/admin/pages/create?title=Home&slug=/" class="edit-link create-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        <span>Create Home Page</span>
+      </a>
+    {/if}
   </div>
+{/if}
 
-  <h1 class="hero-title">
-    Create Your Own
-    <span class="gradient-text">Online Store</span>
-  </h1>
-
-  <p class="hero-subtitle">
-    Everything you need to start selling products online.
-    <br />
-    <strong>Simple, beautiful, and ready for your business.</strong>
-  </p>
-
-  <div class="hero-actions">
-    <a href="#products" class="btn btn-primary">
-      <span>See Example Store</span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path
-          d="M5 12h14M12 5l7 7-7 7"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </a>
-    <a href="/auth/login" class="btn btn-secondary">
-      <span>Start Your Store</span>
-    </a>
-  </div>
-
-  <div class="hero-stats">
-    <div class="stat">
-      <div class="stat-value">Simple</div>
-      <div class="stat-label">Setup</div>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <div class="stat-value">Beautiful</div>
-      <div class="stat-label">Design</div>
-    </div>
-    <div class="stat-divider"></div>
-    <div class="stat">
-      <div class="stat-value">Your</div>
-      <div class="stat-label">Brand</div>
-    </div>
-  </div>
-</section>
-
-<section class="features" id="features">
-  <div class="section-header">
-    <h2>Everything You Need to Succeed</h2>
-    <p>All the tools to run your online business, right out of the box</p>
-  </div>
-
-  <div class="features-grid">
-    {#each features as feature}
-      <div class="feature-card">
-        <div class="feature-icon">{feature.icon}</div>
-        <h3>{feature.title}</h3>
-        <p>{feature.description}</p>
+{#if page && widgets.length > 0}
+  <!-- Render page with widgets -->
+  <div class="widget-page">
+    {#each widgets as widget}
+      <div class="widget-container" data-widget-type={widget.type}>
+        {#if widget.type === 'text'}
+          <TextWidget config={widget.config} />
+        {:else if widget.type === 'image'}
+          <ImageWidget config={widget.config} />
+        {:else if widget.type === 'single_product'}
+          <SingleProductWidget config={widget.config} />
+        {:else if widget.type === 'product_list'}
+          <ProductListWidget config={widget.config} />
+        {:else if widget.type === 'hero'}
+          <HeroWidget config={widget.config} />
+        {:else if widget.type === 'button'}
+          <ButtonWidget config={widget.config} />
+        {:else if widget.type === 'spacer'}
+          <SpacerWidget config={widget.config} />
+        {:else if widget.type === 'divider'}
+          <DividerWidget config={widget.config} />
+        {:else if widget.type === 'columns'}
+          <ColumnsWidget config={widget.config} />
+        {:else if widget.type === 'heading'}
+          <HeadingWidget config={widget.config} />
+        {:else if widget.type === 'features'}
+          <FeaturesWidget config={widget.config} />
+        {:else if widget.type === 'pricing'}
+          <PricingWidget config={widget.config} />
+        {:else if widget.type === 'cta'}
+          <CTAWidget config={widget.config} />
+        {/if}
       </div>
     {/each}
   </div>
-</section>
-
-<section class="pricing" id="pricing">
-  <div class="section-header">
-    <h2>🚀 Hermes Pricing</h2>
-    <p class="pricing-tagline">Zero monthly fees. We win when you win.</p>
-    <p class="pricing-subtitle">Every store gets full access — we only earn a small % per sale.</p>
+{:else}
+  <!-- Default home page content -->
+  <div class="hero-background">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
   </div>
 
-  <div class="pricing-container">
-    <div class="pricing-model">
-      <div class="model-header">
-        <span class="model-icon">💰</span>
-        <h3>Pay-as-You-Grow</h3>
-        <p>All features included, always.</p>
-      </div>
-
-      <ul class="features-list">
-        {#each pricingFeatures as feature}
-          <li>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path
-                d="M5 13l4 4L19 7"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <span>{feature}</span>
-          </li>
-        {/each}
-      </ul>
+  <section class="hero" class:visible={heroVisible}>
+    <div class="hero-badge">
+      <span class="badge-icon">✨</span>
+      <span>Start Selling Online Today</span>
     </div>
 
-    <div class="revenue-share">
-      <div class="revenue-header">
-        <span class="revenue-icon">💎</span>
-        <h3>Revenue Share (includes payment processor fees)</h3>
-      </div>
+    <h1 class="hero-title">
+      Create Your Own
+      <span class="gradient-text">Online Store</span>
+    </h1>
 
-      <div class="revenue-table">
-        <div class="table-header">
-          <span>Monthly Sales</span>
-          <span>Total Transaction Fee</span>
-        </div>
-        {#each revenueShareTiers as tier}
-          <div class="table-row" class:highlight={tier.highlight}>
-            <div class="tier-range">
-              <span class="range-value">{tier.range}</span>
-              <span class="range-description">{tier.description}</span>
-            </div>
-            <div class="tier-fee">{tier.fee}</div>
-          </div>
-        {/each}
-        <div class="table-footer">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 5v14M5 12l7 7 7-7"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="pricing-footer">
-    <a href="/auth/login" class="btn btn-primary btn-large">
-      <span>Start Your Store</span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path
-          d="M5 12h14M12 5l7 7-7 7"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </a>
-    <p class="pricing-note">
-      No credit card required • Cancel anytime • Enterprise pricing available
+    <p class="hero-subtitle">
+      Everything you need to start selling products online.
+      <br />
+      <strong>Simple, beautiful, and ready for your business.</strong>
     </p>
-  </div>
-</section>
 
-<section class="products" id="products">
-  <div class="section-header">
-    <h2>Example Store</h2>
-    <p>Here's what your store could look like - this is a real, working example</p>
-  </div>
-
-  {#if products.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">📦</div>
-      <h3>No Products Yet</h3>
-      <p>Your products will appear here once you add them to your store.</p>
-      <a href="/admin/products" class="btn btn-primary">Add Your First Product</a>
-    </div>
-  {:else}
-    <div class="product-grid">
-      {#each products as product}
-        <ProductCard {product} />
-      {/each}
-    </div>
-  {/if}
-</section>
-
-<section class="cta-section">
-  <div class="cta-content">
-    <h2>Ready to Start Your Business?</h2>
-    <p>
-      Join entrepreneurs around the world who are building their dreams with their own online
-      stores.
-    </p>
-    <div class="cta-actions">
-      <a href="/auth/login" class="btn btn-primary btn-lg">
-        <span>Create Your Store</span>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <div class="hero-actions">
+      <a href="#products" class="btn btn-primary">
+        <span>See Example Store</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path
             d="M5 12h14M12 5l7 7-7 7"
             stroke-width="2"
@@ -288,18 +201,226 @@
           />
         </svg>
       </a>
-      <a
-        href="https://github.com/starspacegroup/hermes"
-        target="_blank"
-        class="btn btn-secondary btn-lg"
-      >
-        Learn More
+      <a href="/auth/login" class="btn btn-secondary">
+        <span>Start Your Store</span>
       </a>
     </div>
-  </div>
-</section>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-value">Simple</div>
+        <div class="stat-label">Setup</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value">Beautiful</div>
+        <div class="stat-label">Design</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value">Your</div>
+        <div class="stat-label">Brand</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-header">
+      <h2>Everything You Need to Succeed</h2>
+      <p>All the tools to run your online business, right out of the box</p>
+    </div>
+
+    <div class="features-grid">
+      {#each features as feature}
+        <div class="feature-card">
+          <div class="feature-icon">{feature.icon}</div>
+          <h3>{feature.title}</h3>
+          <p>{feature.description}</p>
+        </div>
+      {/each}
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <div class="section-header">
+      <h2>🚀 Hermes Pricing</h2>
+      <p class="pricing-tagline">Zero monthly fees. We win when you win.</p>
+      <p class="pricing-subtitle">
+        Every store gets full access — we only earn a small % per sale.
+      </p>
+    </div>
+
+    <div class="pricing-container">
+      <div class="pricing-model">
+        <div class="model-header">
+          <span class="model-icon">💰</span>
+          <h3>Pay-as-You-Grow</h3>
+          <p>All features included, always.</p>
+        </div>
+
+        <ul class="features-list">
+          {#each pricingFeatures as feature}
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M5 13l4 4L19 7"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>{feature}</span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+
+      <div class="revenue-share">
+        <div class="revenue-header">
+          <span class="revenue-icon">💎</span>
+          <h3>Revenue Share (includes payment processor fees)</h3>
+        </div>
+
+        <div class="revenue-table">
+          <div class="table-header">
+            <span>Monthly Sales</span>
+            <span>Total Transaction Fee</span>
+          </div>
+          {#each revenueShareTiers as tier}
+            <div class="table-row" class:highlight={tier.highlight}>
+              <div class="tier-range">
+                <span class="range-value">{tier.range}</span>
+                <span class="range-description">{tier.description}</span>
+              </div>
+              <div class="tier-fee">{tier.fee}</div>
+            </div>
+          {/each}
+          <div class="table-footer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                d="M12 5v14M5 12l7 7 7-7"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pricing-footer">
+      <a href="/auth/login" class="btn btn-primary btn-large">
+        <span>Start Your Store</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M5 12h14M12 5l7 7-7 7"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </a>
+      <p class="pricing-note">
+        No credit card required • Cancel anytime • Enterprise pricing available
+      </p>
+    </div>
+  </section>
+
+  <section class="products" id="products">
+    <div class="section-header">
+      <h2>Example Store</h2>
+      <p>Here's what your store could look like - this is a real, working example</p>
+    </div>
+
+    {#if products.length === 0}
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>No Products Yet</h3>
+        <p>Your products will appear here once you add them to your store.</p>
+        <a href="/admin/products" class="btn btn-primary">Add Your First Product</a>
+      </div>
+    {:else}
+      <div class="product-grid">
+        {#each products as product}
+          <ProductCard {product} />
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <section class="cta-section">
+    <div class="cta-content">
+      <h2>Ready to Start Your Business?</h2>
+      <p>
+        Join entrepreneurs around the world who are building their dreams with their own online
+        stores.
+      </p>
+      <div class="cta-actions">
+        <a href="/auth/login" class="btn btn-primary btn-lg">
+          <span>Create Your Store</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M5 12h14M12 5l7 7-7 7"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://github.com/starspacegroup/hermes"
+          target="_blank"
+          class="btn btn-secondary btn-lg"
+        >
+          Learn More
+        </a>
+      </div>
+    </div>
+  </section>
+{/if}
 
 <style>
+  /* Edit Banner */
+  .edit-banner {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+  }
+
+  .edit-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-secondary, #3b82f6);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: background-color var(--transition-normal, 0.2s ease);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .edit-link:hover {
+    background: var(--color-secondary-hover, #2563eb);
+  }
+
+  .edit-link svg {
+    flex-shrink: 0;
+  }
+
+  /* Widget Page */
+  .widget-page {
+    width: 100%;
+  }
+
+  .widget-container {
+    width: 100%;
+  }
+
   /* Hero Background Effects */
   .hero-background {
     position: fixed;

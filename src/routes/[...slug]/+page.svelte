@@ -9,6 +9,9 @@
   import DividerWidget from '$lib/components/widgets/DividerWidget.svelte';
   import ColumnsWidget from '$lib/components/widgets/ColumnsWidget.svelte';
   import HeadingWidget from '$lib/components/widgets/HeadingWidget.svelte';
+  import FeaturesWidget from '$lib/components/widgets/FeaturesWidget.svelte';
+  import PricingWidget from '$lib/components/widgets/PricingWidget.svelte';
+  import CTAWidget from '$lib/components/widgets/CTAWidget.svelte';
   import type { PageData } from './$types';
 
   export let data: PageData;
@@ -77,6 +80,12 @@
           <ColumnsWidget config={widget.config} />
         {:else if widget.type === 'heading'}
           <HeadingWidget config={widget.config} />
+        {:else if widget.type === 'features'}
+          <FeaturesWidget config={widget.config} />
+        {:else if widget.type === 'pricing'}
+          <PricingWidget config={widget.config} />
+        {:else if widget.type === 'cta'}
+          <CTAWidget config={widget.config} />
         {/if}
       </div>
     {/each}

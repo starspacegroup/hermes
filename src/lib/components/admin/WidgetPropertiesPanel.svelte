@@ -482,7 +482,7 @@
                 type="text"
                 bind:value={config.ctaText}
                 on:input={handleUpdate}
-                placeholder="Learn More"
+                placeholder="Get Started"
               />
             </label>
           </div>
@@ -497,6 +497,122 @@
               />
             </label>
           </div>
+          {#if config.ctaText}
+            <div class="form-group">
+              <label>
+                <span>CTA Background Color</span>
+                <input
+                  type="color"
+                  bind:value={config.ctaBackgroundColor}
+                  on:input={handleUpdate}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>CTA Text Color</span>
+                <input type="color" bind:value={config.ctaTextColor} on:input={handleUpdate} />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>CTA Font Size</span>
+                <input
+                  type="text"
+                  bind:value={config.ctaFontSize}
+                  on:input={handleUpdate}
+                  placeholder="16px"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>CTA Font Weight</span>
+                <select bind:value={config.ctaFontWeight} on:change={handleUpdate}>
+                  <option value="400">Normal (400)</option>
+                  <option value="500">Medium (500)</option>
+                  <option value="600">Semi-bold (600)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </div>
+          {/if}
+          <div class="form-group">
+            <label>
+              <span>Secondary CTA Text (Optional)</span>
+              <input
+                type="text"
+                bind:value={config.secondaryCtaText}
+                on:input={handleUpdate}
+                placeholder="Learn More"
+              />
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <span>Secondary CTA Link</span>
+              <input
+                type="url"
+                bind:value={config.secondaryCtaLink}
+                on:input={handleUpdate}
+                placeholder="https://..."
+              />
+            </label>
+          </div>
+          {#if config.secondaryCtaText}
+            <div class="form-group">
+              <label>
+                <span>Secondary CTA Background Color</span>
+                <input
+                  type="color"
+                  bind:value={config.secondaryCtaBackgroundColor}
+                  on:input={handleUpdate}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Secondary CTA Text Color</span>
+                <input
+                  type="color"
+                  bind:value={config.secondaryCtaTextColor}
+                  on:input={handleUpdate}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Secondary CTA Border Color</span>
+                <input
+                  type="color"
+                  bind:value={config.secondaryCtaBorderColor}
+                  on:input={handleUpdate}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Secondary CTA Font Size</span>
+                <input
+                  type="text"
+                  bind:value={config.secondaryCtaFontSize}
+                  on:input={handleUpdate}
+                  placeholder="16px"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Secondary CTA Font Weight</span>
+                <select bind:value={config.secondaryCtaFontWeight} on:change={handleUpdate}>
+                  <option value="400">Normal (400)</option>
+                  <option value="500">Medium (500)</option>
+                  <option value="600">Semi-bold (600)</option>
+                  <option value="700">Bold (700)</option>
+                </select>
+              </label>
+            </div>
+          {/if}
         {:else if widget.type === 'button'}
           <div class="form-group">
             <label>

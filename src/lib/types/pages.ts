@@ -14,7 +14,10 @@ export type WidgetType =
   | 'spacer'
   | 'columns'
   | 'heading'
-  | 'divider';
+  | 'divider'
+  | 'features'
+  | 'pricing'
+  | 'cta';
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -153,6 +156,10 @@ export interface WidgetConfig {
   overlayOpacity?: number;
   ctaText?: string;
   ctaLink?: string;
+  ctaBackgroundColor?: string;
+  ctaTextColor?: string;
+  ctaFontSize?: string;
+  ctaFontWeight?: string;
   contentAlign?: 'left' | 'center' | 'right';
 
   // Button widget
@@ -178,6 +185,35 @@ export interface WidgetConfig {
   dividerColor?: string;
   dividerStyle?: 'solid' | 'dashed' | 'dotted';
   spacing?: ResponsiveValue<number>;
+
+  // Features widget
+  features?: Array<{
+    icon: string;
+    title: string;
+    description: string;
+  }>;
+
+  // Pricing widget
+  tagline?: string;
+  pricingFeatures?: string[]; // Simple string list for pricing widget
+  tiers?: Array<{
+    range: string;
+    fee: string;
+    description: string;
+    highlight?: boolean;
+  }>;
+  ctaNote?: string;
+
+  // CTA widget
+  primaryCtaText?: string;
+  primaryCtaLink?: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
+  secondaryCtaBackgroundColor?: string;
+  secondaryCtaTextColor?: string;
+  secondaryCtaBorderColor?: string;
+  secondaryCtaFontSize?: string;
+  secondaryCtaFontWeight?: string;
 }
 
 export interface PageWithWidgets extends Page {

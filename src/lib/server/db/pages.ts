@@ -30,7 +30,10 @@ export interface DBPageWidget {
     | 'spacer'
     | 'columns'
     | 'heading'
-    | 'divider';
+    | 'divider'
+    | 'features'
+    | 'pricing'
+    | 'cta';
   config: string; // JSON string
   position: number;
   created_at: number;

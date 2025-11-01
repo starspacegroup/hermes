@@ -23,6 +23,27 @@
       icon: 'M3 3h18v8H3zM8 11h8v2H8z'
     },
     {
+      type: 'features',
+      label: 'Features Section',
+      description: 'Grid of features with icons',
+      category: 'Layout',
+      icon: 'M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z'
+    },
+    {
+      type: 'pricing',
+      label: 'Pricing Section',
+      description: 'Pricing table with tiers',
+      category: 'Layout',
+      icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'
+    },
+    {
+      type: 'cta',
+      label: 'Call to Action',
+      description: 'CTA section with buttons',
+      category: 'Layout',
+      icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z'
+    },
+    {
       type: 'columns',
       label: 'Columns',
       description: 'Multi-column layout grid',
