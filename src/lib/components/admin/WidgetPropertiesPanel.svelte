@@ -1885,18 +1885,22 @@
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--color-border-secondary);
+    gap: 0.75rem;
   }
 
   .item-header-left {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .item-header-right {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   .drag-handle {
@@ -1928,7 +1932,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 200px;
+    flex: 1;
+    min-width: 0;
   }
 
   .btn-collapse {
