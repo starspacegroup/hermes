@@ -41,3 +41,31 @@ export type {
 
 // Re-export media types
 export type { MediaType, ProductMedia, MediaLibraryItem, MediaUploadResult } from './media';
+
+// Re-export role and permission types
+export type {
+  Permission,
+  Role,
+  RolePermission,
+  RoleWithPermissions,
+  CreateRoleData,
+  UpdateRoleData,
+  PermissionCategory
+} from './roles';
+
+// Re-export activity log types
+export type {
+  ActivityLog,
+  ActivityLogMetadata,
+  CreateActivityLogData,
+  ActivityLogFilter,
+  EntityType
+} from './activity-logs';
+
+// Re-export notification types
+export type {
+  Notification,
+  NotificationMetadata,
+  CreateNotificationData,
+  NotificationType
+} from './notifications';
