@@ -1,7 +1,20 @@
 # Hermes eCommerce Platform
 
-A modern eCommerce platform built with SvelteKit and TypeScript, ready for
-deployment on Cloudflare Pages.
+Hermes is a modern multi-tenant eCommerce platform built with SvelteKit and
+TypeScript, deployed on Cloudflare Pages with D1 database and R2 storage. It
+features a WYSIWYG page builder, responsive design, and comprehensive theme
+system. It supports role-based authentication and is designed for scalability
+and maintainability. It includes a robust testing suite and follows strict code
+quality standards. It is intended to serve as a foundation for building
+customizable online stores with ease. It has a modular architecture to
+facilitate future enhancements. It will prioritize security best practices and
+data integrity. It has a way for site owners to manage products, orders, and
+customers through an admin dashboard which will include analytics and reporting
+features. It will also support integrations with third-party services such as
+payment gateways and shipping providers. It will be optimized for performance
+and SEO. It has detailed documentation to assist developers in understanding and
+extending the platform. It has features for AI assistance in content creation
+and customer support. It will comply with relevant data protection regulations.
 
 ## 🚀 Features
 
@@ -57,7 +70,8 @@ npm run dev
 - `npm run db:setup:preview` - Migrate and seed preview database
 - `npm run db:migrate` - Run migrations on production database
 
-See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for detailed database management guide.
+See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for detailed
+database management guide.
 
 ## 🏗️ Project Structure
 
@@ -82,7 +96,8 @@ docs/                # Documentation
 
 ## 🗄️ Database
 
-The platform uses Cloudflare D1 for data persistence with full multi-tenant support. Database migrations and seeding are automated:
+The platform uses Cloudflare D1 for data persistence with full multi-tenant
+support. Database migrations and seeding are automated:
 
 - **Development**: Auto-migrates and seeds when running `npm run dev`
 - **Preview**: Auto-migrates and seeds when running `npm run preview`
@@ -116,7 +131,8 @@ npm run db:migrate          # Run migrations only (no seed)
 npm run deploy              # Deploy and auto-migrate
 ```
 
-See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for complete database management guide.
+See [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md) for complete
+database management guide.
 
 ## 🌐 Deployment
 
