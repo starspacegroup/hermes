@@ -122,6 +122,14 @@ export function canPerformAction(
 }
 
 /**
+ * Check if a user is a system user (Site Owner or Platform Engineer)
+ * These users should not be editable through the admin interface
+ */
+export function isSystemUser(userId: string): boolean {
+  return userId === 'admin-1' || userId === 'engineer-1';
+}
+
+/**
  * Get all permissions for a user (combines role-based and custom permissions)
  */
 export async function getUserAllPermissions(db: D1Database, user: DBUser): Promise<string[]> {

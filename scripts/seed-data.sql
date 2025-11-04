@@ -85,27 +85,33 @@ VALUES
 -- Regular User Account
 -- Email: user@hermes.local
 -- Password: TfppPEsXnfZluUi52ne538O (23-character random alphanumeric)
-INSERT INTO users (id, site_id, email, name, password_hash, role)
+INSERT INTO users (id, site_id, email, name, password_hash, role, permissions, status, grace_period_days)
 VALUES (
   'user-1',
   'default-site',
   'user@hermes.local',
   'Demo User',
   '$2a$10$5k3wJwZqC5mJ7zVLmNpH5.VB6P6GvV5vqmQRJLKqZjKmzY5zJ5zJ5',
-  'user'
+  'user',
+  '[]',
+  'active',
+  0
 );
 
 -- Site Owner/Admin Account
 -- Email: owner@hermes.local
 -- Password: 4a6lJebYdNkr2zjq5j59rTt (23-character random alphanumeric)
-INSERT INTO users (id, site_id, email, name, password_hash, role)
+INSERT INTO users (id, site_id, email, name, password_hash, role, permissions, status, grace_period_days)
 VALUES (
   'admin-1',
   'default-site',
   'owner@hermes.local',
   'Site Owner',
   '$2a$10$7k5wJwZqC5mJ7zVLmNpH5.XD8P8GvV5vqmQRJLKqZjKmzY7zJ7zJ7',
-  'admin'
+  'admin',
+  '[]',
+  'active',
+  0
 );
 
 -- Platform Engineer Account
@@ -113,12 +119,15 @@ VALUES (
 -- Password: Set via PLATFORM_ENGINEER_PASSWORD environment variable
 -- For local dev: Add to .dev.vars file
 -- For production: Set via: wrangler secret put PLATFORM_ENGINEER_PASSWORD
-INSERT INTO users (id, site_id, email, name, password_hash, role)
+INSERT INTO users (id, site_id, email, name, password_hash, role, permissions, status, grace_period_days)
 VALUES (
   'engineer-1',
   'default-site',
   'engineer@hermes.local',
   'Platform Engineer',
   '$2a$10$9k7wJwZqC5mJ7zVLmNpH5.ZF0P0GvV5vqmQRJLKqZjKmzY9zJ9zJ9',
-  'platform_engineer'
+  'platform_engineer',
+  '[]',
+  'active',
+  0
 );

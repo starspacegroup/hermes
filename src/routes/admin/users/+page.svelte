@@ -207,54 +207,60 @@
                     <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
                   </svg>
                 </button>
-                {#if data.currentUser.canWrite}
-                  <button
-                    class="btn-icon"
-                    on:click={() => goto(`/admin/users/${user.id}/edit`)}
-                    title="Edit user"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
+                {#if user.isSystemUser}
+                  <span class="system-user-badge" title="System user - Cannot be edited">
+                    🔒 System User
+                  </span>
+                {:else}
+                  {#if data.currentUser.canWrite}
+                    <button
+                      class="btn-icon"
+                      on:click={() => goto(`/admin/users/${user.id}/edit`)}
+                      title="Edit user"
                     >
-                      <path
-                        d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      ></path>
-                      <path
-                        d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      ></path>
-                    </svg>
-                  </button>
-                {/if}
-                {#if data.currentUser.canDelete && user.id !== data.currentUser.id}
-                  <button
-                    class="btn-icon btn-danger"
-                    on:click={() => deleteUser(user.id, user.name)}
-                    title="Delete user"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></path>
+                        <path
+                          d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+                  {/if}
+                  {#if data.currentUser.canDelete && user.id !== data.currentUser.id}
+                    <button
+                      class="btn-icon btn-danger"
+                      on:click={() => deleteUser(user.id, user.name)}
+                      title="Delete user"
                     >
-                      <path
-                        d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      ></path>
-                    </svg>
-                  </button>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+                  {/if}
                 {/if}
               </div>
             </td>
@@ -535,6 +541,20 @@
     background: #fee2e2;
     border-color: #dc2626;
     color: #dc2626;
+  }
+
+  .system-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
   }
 
   .no-results {

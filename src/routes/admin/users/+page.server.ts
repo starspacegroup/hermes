@@ -1,6 +1,11 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getAllUsers } from '$lib/server/db';
-import { canPerformAction, isUserAccountActive } from '$lib/server/permissions';
+import {
+  canPerformAction,
+  isUserAccountActive,
+  isSystemUser,
+  getUserAllPermissions
+} from '$lib/server/permissions';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ platform, cookies, locals }) => {
@@ -24,14 +29,20 @@ export const load: PageServerLoad = async ({ platform, cookies, locals }) => {
   const users = await getAllUsers(db, siteId);
 
   // Sanitize users (remove password hashes) and add computed fields
-  const sanitizedUsers = users.map((user) => {
-    const { password_hash: _password_hash, ...userWithoutPassword } = user;
-    return {
-      ...userWithoutPassword,
-      isActive: isUserAccountActive(user),
-      permissions: JSON.parse(user.permissions)
-    };
-  });
+  const sanitizedUsers = await Promise.all(
+    users.map(async (user) => {
+      const { password_hash: _password_hash, ...userWithoutPassword } = user;
+      const isSystem = isSystemUser(user.id);
+      return {
+        ...userWithoutPassword,
+        isActive: isUserAccountActive(user),
+        permissions: isSystem
+          ? await getUserAllPermissions(db, user)
+          : JSON.parse(user.permissions),
+        isSystemUser: isSystem
+      };
+    })
+  );
 
   return {
     users: sanitizedUsers,
