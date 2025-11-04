@@ -165,7 +165,8 @@
     .build-info {
       bottom: 0.5rem;
       right: 0.5rem;
-      max-width: 200px;
+      /* Ensure it doesn't overflow viewport on narrow screens */
+      max-width: min(200px, calc(100vw - 1rem));
       padding: 0.5rem;
       font-size: 0.65rem;
     }
@@ -176,6 +177,11 @@
 
     .detail-row {
       gap: 0.5rem;
+    }
+
+    .value {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
     }
   }
 </style>
