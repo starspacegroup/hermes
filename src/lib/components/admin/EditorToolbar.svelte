@@ -378,14 +378,16 @@
 </div>
 
 <style>
+  /* Mobile-first toolbar */
   .toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     background: var(--color-bg-primary);
     border-bottom: 1px solid var(--color-border-secondary);
-    gap: 1.5rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .toolbar-left,
@@ -393,29 +395,47 @@
   .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-left {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .toolbar-center {
+    flex: 1 1 auto;
+    order: 2;
+  }
+
+  .toolbar-right {
+    flex: 0 0 auto;
+    order: 3;
   }
 
   .title-input {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    min-width: 200px;
+    width: 100%;
+    min-width: 0;
   }
 
   .slug-input {
     font-family: monospace;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
     background: var(--color-bg-secondary);
     color: var(--color-text-secondary);
-    min-width: 180px;
+    width: 100%;
+    min-width: 0;
   }
 
   .icon-btn {
@@ -644,9 +664,61 @@
     color: rgb(34, 197, 94);
   }
 
-  @media (max-width: 1024px) {
+  /* Tablet and up */
+  @media (min-width: 768px) {
     .toolbar {
-      flex-wrap: wrap;
+      padding: 0.875rem 1.25rem;
+      gap: 1rem;
+    }
+
+    .toolbar-left {
+      flex: 0 0 auto;
+      order: 0;
+    }
+
+    .toolbar-center {
+      order: 0;
+    }
+
+    .toolbar-right {
+      order: 0;
+    }
+
+    .title-input {
+      font-size: 1.0625rem;
+      width: auto;
+      min-width: 180px;
+    }
+
+    .slug-input {
+      font-size: 0.875rem;
+      width: auto;
+      min-width: 160px;
+    }
+  }
+
+  /* Desktop */
+  @media (min-width: 1024px) {
+    .toolbar {
+      padding: 1rem 1.5rem;
+      gap: 1.5rem;
+      flex-wrap: nowrap;
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+      gap: 0.75rem;
+      flex-wrap: nowrap;
+    }
+
+    .title-input {
+      font-size: 1.125rem;
+      min-width: 200px;
+    }
+
+    .slug-input {
+      min-width: 180px;
     }
   }
 </style>
