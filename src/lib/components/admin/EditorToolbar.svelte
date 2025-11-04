@@ -140,9 +140,15 @@
     handleRedoMouseUp();
     events.redo();
   }
+
+  function handleResize() {
+    if (showRevisionDropdown) {
+      positionDropdown();
+    }
+  }
 </script>
 
-<svelte:window on:click={handleRevisionClickOutside} />
+<svelte:window on:click={handleRevisionClickOutside} on:resize={handleResize} />
 
 <div class="toolbar">
   <div class="toolbar-left">
@@ -152,10 +158,12 @@
 
   <div class="toolbar-center">
     <BreakpointSwitcher bind:currentBreakpoint />
-    <ThemeSelector 
-      selectedTheme={colorTheme} 
+    <ThemeSelector
+      selectedTheme={colorTheme}
       onChange={events.changeTheme}
-      onOpen={() => { showRevisionDropdown = false; }}
+      onOpen={() => {
+        showRevisionDropdown = false;
+      }}
       {registerThemeDropdownCloser}
     />
   </div>

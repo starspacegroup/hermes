@@ -68,6 +68,12 @@
     }
   }
 
+  function handleResize() {
+    if (showDropdown) {
+      positionDropdown();
+    }
+  }
+
   $: effectiveTheme = selectedTheme || `default-${getCurrentTheme()}`;
   $: selectedThemeLabel = selectedTheme
     ? themes.find((t) => t.value === selectedTheme)?.label || 'Default Light'
@@ -78,7 +84,7 @@
     : getCurrentTheme();
 </script>
 
-<svelte:window on:click={handleClickOutside} />
+<svelte:window on:click={handleClickOutside} on:resize={handleResize} />
 
 <div class="theme-selector">
   <button
