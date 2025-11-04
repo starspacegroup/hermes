@@ -10,6 +10,8 @@
   export let currentBreakpoint: Breakpoint;
   export let saving: boolean;
   export let publishing: boolean = false;
+  export let canSaveDraft: boolean = false;
+  export let canPublish: boolean = false;
   export let lastSaved: Date | null;
   export let canUndo: boolean;
   export let canRedo: boolean;
@@ -353,7 +355,8 @@
           type="button"
           class="btn-secondary"
           on:click={events.saveDraft}
-          disabled={saving || publishing}
+          disabled={saving || publishing || !canSaveDraft}
+          title={!canSaveDraft ? 'No changes to save' : ''}
         >
           {saving ? 'Saving...' : 'Save Draft'}
         </button>
@@ -363,7 +366,8 @@
           type="button"
           class="btn-primary"
           on:click={events.publish}
-          disabled={saving || publishing}
+          disabled={saving || publishing || !canPublish}
+          title={!canPublish ? 'Already viewing published version' : ''}
         >
           {publishing ? 'Publishing...' : 'Publish'}
         </button>

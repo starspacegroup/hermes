@@ -75,6 +75,7 @@
     is_published: boolean;
   }> = [];
   let currentRevisionId: string | null = null;
+  let currentRevisionIsPublished: boolean = initialStatus === 'published';
 
   // Undo/redo state
   let canUndo = false;
@@ -127,8 +128,19 @@
       title !== initialTitle ||
       slug !== initialSlug ||
       status !== initialStatus ||
+      JSON.stringify(colorTheme) !== JSON.stringify(initialColorTheme) ||
       JSON.stringify(widgets) !== JSON.stringify(initialWidgets);
   }
+
+  // Determine if Save Draft button should be enabled
+  // Can save draft only if there are unsaved changes
+  $: canSaveDraft = hasUnsavedChanges;
+
+  // Determine if Publish button should be enabled
+  // Can publish if:
+  // 1. There are unsaved changes (new content to publish), OR
+  // 2. Currently viewing a draft (can promote draft to published without changes)
+  $: canPublish = hasUnsavedChanges || !currentRevisionIsPublished;
 
   // Update widgets when initialWidgets change (after save/reload)
   $: {
@@ -398,6 +410,16 @@
     try {
       saving = true;
       await onSaveDraft({ title, slug, colorTheme, widgets });
+
+      // Update initial values to reflect the saved state
+      initialTitle = title;
+      initialSlug = slug;
+      initialColorTheme = colorTheme;
+      initialWidgets = JSON.parse(JSON.stringify(widgets));
+
+      // After saving a draft, we're viewing a draft (not published)
+      currentRevisionIsPublished = false;
+
       lastSaved = new Date();
       if (autoSaveManager) {
         autoSaveManager.setLastSaved(lastSaved);
@@ -418,6 +440,17 @@
       publishing = true;
       await onPublish({ title, slug, colorTheme, widgets });
       status = 'published';
+
+      // Update initial values to reflect the published state
+      initialTitle = title;
+      initialSlug = slug;
+      initialStatus = 'published';
+      initialColorTheme = colorTheme;
+      initialWidgets = JSON.parse(JSON.stringify(widgets));
+
+      // After publishing, we're viewing a published version
+      currentRevisionIsPublished = true;
+
       toastStore.success('Page published successfully');
       await loadRevisions();
     } finally {
@@ -450,10 +483,23 @@
       const response = await fetch(`/api/pages/${pageId}/revisions/${revisionId}`);
       if (response.ok) {
         const revision: ParsedPageRevision = await response.json();
+
+        // Update page state with revision data
         title = revision.title;
         slug = revision.slug;
         widgets = revision.widgets;
         currentRevisionId = revisionId;
+
+        // Find the revision in the list to get its published status
+        const revisionInfo = revisions.find((r) => r.id === revisionId);
+        currentRevisionIsPublished = revisionInfo?.is_published || false;
+
+        // Update initial values to match loaded revision
+        initialTitle = title;
+        initialSlug = slug;
+        initialColorTheme = colorTheme;
+        initialWidgets = JSON.parse(JSON.stringify(widgets));
+
         historyManager.reset(widgets);
         toastStore.info(`Loaded revision #${revision.revision_number}`);
       }
@@ -532,6 +578,8 @@
     bind:currentBreakpoint
     {saving}
     {publishing}
+    {canSaveDraft}
+    {canPublish}
     lastSaved={autoSaveManager?.getLastSaved() || lastSaved}
     {canUndo}
     {canRedo}
