@@ -1,15 +1,15 @@
 <script lang="ts">
+  import type { RevisionNode } from '$lib/types/pages';
+  import RevisionHistoryGraph from './RevisionHistoryGraph.svelte';
+
   export let isOpen = false;
-  export let revisions: Array<{
-    id: string;
-    revision_number: number;
-    created_at: number;
-    is_published: boolean;
-  }> = [];
+  export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelect: (revisionId: string) => void;
   export let onPublish: (revisionId: string) => void;
   export let onClose: () => void;
+
+  let viewMode: 'list' | 'graph' = 'graph'; // Default to graph view
 
   function handleRevisionSelect(revisionId: string) {
     onSelect(revisionId);
@@ -19,7 +19,8 @@
   function handleRevisionPublish(event: Event, revisionId: string) {
     event.stopPropagation();
     onPublish(revisionId);
-    onClose();
+    // Don't close the modal - let the user see the updated revision list
+    // with the newly published revision highlighted
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -46,11 +47,44 @@
     >
       <div class="modal-header">
         <h2 id="revision-modal-title">Revision History</h2>
-        <button type="button" class="close-btn" on:click={onClose} aria-label="Close dialog">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </button>
+        <div class="header-controls">
+          <div class="view-toggle">
+            <button
+              type="button"
+              class="toggle-btn"
+              class:active={viewMode === 'graph'}
+              on:click={() => (viewMode = 'graph')}
+              title="Graph view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="5" cy="5" r="3" stroke-width="2" />
+                <circle cx="19" cy="19" r="3" stroke-width="2" />
+                <circle cx="19" cy="5" r="3" stroke-width="2" />
+                <path d="M7 7l8 8M7 5h10" stroke-width="2" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="toggle-btn"
+              class:active={viewMode === 'list'}
+              on:click={() => (viewMode = 'list')}
+              title="List view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <button type="button" class="close-btn" on:click={onClose} aria-label="Close dialog">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="modal-body">
@@ -73,6 +107,12 @@
             </svg>
             <p>No revision history available</p>
           </div>
+        {:else if viewMode === 'graph'}
+          <RevisionHistoryGraph
+            {revisions}
+            {currentRevisionId}
+            onSelectRevision={handleRevisionSelect}
+          />
         {:else}
           <div class="revision-list">
             {#each revisions as revision}
@@ -87,12 +127,15 @@
                   on:click={() => handleRevisionSelect(revision.id)}
                 >
                   <div class="revision-info">
-                    <span class="revision-number">#{revision.revision_number}</span>
+                    <span class="revision-hash">{revision.revision_hash.substring(0, 7)}</span>
                     <span class="revision-date">
                       {new Date(revision.created_at * 1000).toLocaleString()}
                     </span>
                     {#if revision.is_published}
                       <span class="badge published-badge">Published</span>
+                    {/if}
+                    {#if revision.notes}
+                      <span class="revision-notes">{revision.notes}</span>
                     {/if}
                   </div>
                 </button>
@@ -159,9 +202,9 @@
     box-shadow:
       0 20px 25px -5px rgba(0, 0, 0, 0.1),
       0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    max-width: 500px;
+    max-width: 800px;
     width: 90%;
-    max-height: 80vh;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
@@ -182,15 +225,52 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem 1.5rem 1rem;
+    padding: 1rem 1rem 0.75rem;
     border-bottom: 1px solid var(--color-border-secondary);
   }
 
   .modal-header h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     color: var(--color-text-primary);
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--color-bg-secondary);
+    border-radius: 6px;
+    padding: 0.25rem;
+  }
+
+  .toggle-btn {
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .toggle-btn:hover {
+    color: var(--color-text-primary);
+  }
+
+  .toggle-btn.active {
+    background: var(--color-bg-primary);
+    color: var(--color-primary, #3b82f6);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .close-btn {
@@ -211,7 +291,7 @@
   .modal-body {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .empty-state {
@@ -261,6 +341,11 @@
     border-left: 3px solid var(--color-primary);
   }
 
+  .revision-item.published {
+    border-color: rgb(239, 68, 68);
+    box-shadow: 0 0 0 1px rgb(239, 68, 68);
+  }
+
   .revision-load {
     flex: 1;
     background: none;
@@ -277,15 +362,23 @@
     gap: 0.25rem;
   }
 
-  .revision-number {
+  .revision-hash {
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--color-text-primary);
+    font-family: 'Monaco', 'Courier New', monospace;
+    color: var(--color-primary, #3b82f6);
   }
 
   .revision-date {
     font-size: 0.75rem;
     color: var(--color-text-secondary);
+  }
+
+  .revision-notes {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin-top: 0.25rem;
   }
 
   .badge {
@@ -322,19 +415,42 @@
   @media (max-width: 640px) {
     .modal-content {
       width: 95%;
-      max-height: 85vh;
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 8px;
     }
 
     .modal-header {
-      padding: 1rem;
+      padding: 0.75rem;
+    }
+
+    .modal-header h2 {
+      font-size: 1rem;
     }
 
     .modal-body {
-      padding: 0.75rem;
+      padding: 0.5rem;
+    }
+
+    .view-toggle {
+      padding: 0.125rem;
+    }
+
+    .toggle-btn {
+      padding: 0.375rem;
     }
 
     .revision-item {
       padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .revision-hash {
+      font-size: 0.75rem;
+    }
+
+    .revision-date {
+      font-size: 0.6875rem;
     }
   }
 </style>

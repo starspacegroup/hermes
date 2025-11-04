@@ -6,16 +6,24 @@ import type { CreateRevisionData } from '$lib/types/pages';
 
 /**
  * GET /api/pages/[id]/revisions
- * Get all revisions for a page
+ * Get revision tree structure for a page (includes branching graph)
  */
-export const GET: RequestHandler = async ({ params, platform, locals }) => {
+export const GET: RequestHandler = async ({ params, platform, locals, url }) => {
   const db = getDB(platform);
   const siteId = locals.siteId;
   const pageId = params.id;
 
   try {
-    const revisions = await revisionsDb.getPageRevisions(db, siteId, pageId);
-    return json(revisions);
+    // Check if client wants the tree structure or just a flat list
+    const includeTree = url.searchParams.get('tree') === 'true';
+
+    if (includeTree) {
+      const tree = await revisionsDb.buildRevisionTree(db, siteId, pageId);
+      return json(tree);
+    } else {
+      const revisions = await revisionsDb.getPageRevisions(db, siteId, pageId);
+      return json(revisions);
+    }
   } catch (err) {
     console.error('Error fetching revisions:', err);
     throw error(500, 'Failed to fetch revisions');

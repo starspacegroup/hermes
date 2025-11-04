@@ -33,7 +33,8 @@ describe('Revisions Database Functions', () => {
   const mockRevisionData: PageRevision = {
     id: revisionId,
     page_id: pageId,
-    revision_number: 1,
+    revision_hash: 'abc12345',
+    parent_revision_id: undefined,
     title: 'Test Page',
     slug: 'test-page',
     status: 'draft',
@@ -162,9 +163,9 @@ describe('Revisions Database Functions', () => {
         first: vi.fn().mockResolvedValue({ id: pageId })
       };
 
-      const mockMaxStatement = {
+      const mockHashesStatement = {
         bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ max_num: 0 })
+        all: vi.fn().mockResolvedValue({ results: [] })
       };
 
       const mockInsertStatement = {
@@ -174,26 +175,27 @@ describe('Revisions Database Functions', () => {
 
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
-        .mockReturnValueOnce(mockMaxStatement)
+        .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement);
 
       const result = await createRevision(mockDb, siteId, pageId, createData);
 
       expect(result.page_id).toBe(pageId);
       expect(result.title).toBe(createData.title);
-      expect(result.revision_number).toBe(1);
+      expect(result.revision_hash).toBeDefined();
+      expect(result.revision_hash.length).toBe(8);
       expect(result.widgets).toEqual(createData.widgets);
     });
 
-    it('should increment revision number', async () => {
+    it('should generate unique revision hash', async () => {
       const mockPageStatement = {
         bind: vi.fn().mockReturnThis(),
         first: vi.fn().mockResolvedValue({ id: pageId })
       };
 
-      const mockMaxStatement = {
+      const mockHashesStatement = {
         bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ max_num: 5 })
+        all: vi.fn().mockResolvedValue({ results: [{ revision_hash: 'abc12345' }] })
       };
 
       const mockInsertStatement = {
@@ -203,12 +205,13 @@ describe('Revisions Database Functions', () => {
 
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
-        .mockReturnValueOnce(mockMaxStatement)
+        .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement);
 
       const result = await createRevision(mockDb, siteId, pageId, createData);
 
-      expect(result.revision_number).toBe(6);
+      expect(result.revision_hash).toBeDefined();
+      expect(result.revision_hash).not.toBe('abc12345'); // Should be different from existing
     });
 
     it('should throw error when page not found', async () => {
@@ -230,9 +233,9 @@ describe('Revisions Database Functions', () => {
         first: vi.fn().mockResolvedValue({ id: pageId })
       };
 
-      const mockMaxStatement = {
+      const mockHashesStatement = {
         bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ max_num: 0 })
+        all: vi.fn().mockResolvedValue({ results: [] })
       };
 
       const mockInsertStatement = {
@@ -242,7 +245,7 @@ describe('Revisions Database Functions', () => {
 
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
-        .mockReturnValueOnce(mockMaxStatement)
+        .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement);
 
       const publishedData = { ...createData, status: 'published' as const };
@@ -257,9 +260,9 @@ describe('Revisions Database Functions', () => {
         first: vi.fn().mockResolvedValue({ id: pageId })
       };
 
-      const mockMaxStatement = {
+      const mockHashesStatement = {
         bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ max_num: 0 })
+        all: vi.fn().mockResolvedValue({ results: [] })
       };
 
       const mockInsertStatement = {
@@ -269,7 +272,7 @@ describe('Revisions Database Functions', () => {
 
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
-        .mockReturnValueOnce(mockMaxStatement)
+        .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement);
 
       const minimalData = {
@@ -294,7 +297,33 @@ describe('Revisions Database Functions', () => {
         first: vi.fn().mockResolvedValue(mockRevisionData)
       };
 
-      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockGetRevisionStatement);
+      const mockHashesStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockPageStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ id: pageId })
+      };
+
+      const mockInsertStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      const mockBatchStatement = {
+        bind: vi.fn().mockReturnThis()
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockGetRevisionStatement) // getRevisionById
+        .mockReturnValueOnce(mockGetRevisionStatement) // getPublishedRevision
+        .mockReturnValueOnce(mockPageStatement) // createRevision - check page exists
+        .mockReturnValueOnce(mockHashesStatement) // createRevision - get existing hashes
+        .mockReturnValueOnce(mockInsertStatement) // createRevision - insert
+        .mockReturnValue(mockBatchStatement); // All subsequent prepare calls for batch
+
       (mockDb.batch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       await publishRevision(mockDb, siteId, pageId, revisionId);
@@ -323,7 +352,33 @@ describe('Revisions Database Functions', () => {
         first: vi.fn().mockResolvedValue(mockRevisionData)
       };
 
-      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockGetRevisionStatement);
+      const mockHashesStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockPageStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ id: pageId })
+      };
+
+      const mockInsertStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      const mockBatchStatement = {
+        bind: vi.fn().mockReturnThis()
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockGetRevisionStatement) // getRevisionById
+        .mockReturnValueOnce(mockGetRevisionStatement) // getPublishedRevision
+        .mockReturnValueOnce(mockPageStatement) // createRevision - check page exists
+        .mockReturnValueOnce(mockHashesStatement) // createRevision - get existing hashes
+        .mockReturnValueOnce(mockInsertStatement) // createRevision - insert
+        .mockReturnValue(mockBatchStatement); // All subsequent prepare calls for batch
+
       (mockDb.batch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       await publishRevision(mockDb, siteId, pageId, revisionId);

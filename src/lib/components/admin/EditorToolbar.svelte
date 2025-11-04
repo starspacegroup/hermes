@@ -2,7 +2,7 @@
   import BreakpointSwitcher from './BreakpointSwitcher.svelte';
   import ThemeSelector from './ThemeSelector.svelte';
   import RevisionModal from './RevisionModal.svelte';
-  import type { Breakpoint, ColorTheme } from '$lib/types/pages';
+  import type { Breakpoint, ColorTheme, RevisionNode } from '$lib/types/pages';
 
   export let title: string;
   export let slug: string;
@@ -17,12 +17,7 @@
   export let canUndo: boolean;
   export let canRedo: boolean;
   export let pageId: string | null = null;
-  export let revisions: Array<{
-    id: string;
-    revision_number: number;
-    created_at: number;
-    is_published: boolean;
-  }> = [];
+  export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
   export let showWidgetLibrary = true;
   export let showPropertiesPanel = true;

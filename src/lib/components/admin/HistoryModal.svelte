@@ -105,8 +105,8 @@
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
+    max-width: 450px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
   }
@@ -115,13 +115,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem;
+    padding: 1rem 1rem 0.75rem;
     border-bottom: 1px solid var(--color-border-secondary);
   }
 
   .modal-header h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     color: var(--color-text-primary);
   }
@@ -144,75 +144,119 @@
   .modal-body {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .empty-state {
     text-align: center;
-    padding: 3rem 1rem;
+    padding: 2rem 1rem;
     color: var(--color-text-secondary);
   }
 
   .history-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
   }
 
   .history-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 0.75rem;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-fast, 150ms);
     text-align: left;
     width: 100%;
   }
 
   .history-item:hover {
-    background: var(--color-bg-primary);
+    background: var(--color-bg-tertiary);
     border-color: var(--color-primary);
-    transform: translateX(4px);
+    transform: translateX(2px);
   }
 
   .history-item.current {
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--color-bg-accent);
     border-color: var(--color-primary);
+    border-left-width: 3px;
   }
 
   .history-info {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
     flex: 1;
   }
 
   .history-number {
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-primary);
   }
 
   .history-description {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-secondary);
   }
 
   .history-time {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--color-text-tertiary);
   }
 
   .current-badge {
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.625rem;
     background: var(--color-primary);
-    color: white;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    color: var(--color-text-inverse, white);
+    border-radius: 10px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .modal {
+      width: 95%;
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 8px;
+    }
+
+    .modal-header {
+      padding: 0.75rem;
+    }
+
+    .modal-header h3 {
+      font-size: 1rem;
+    }
+
+    .modal-body {
+      padding: 0.5rem;
+    }
+
+    .history-item {
+      padding: 0.625rem;
+    }
+
+    .history-number {
+      font-size: 0.75rem;
+    }
+
+    .history-description {
+      font-size: 0.75rem;
+    }
+
+    .history-time {
+      font-size: 0.625rem;
+    }
+
+    .current-badge {
+      font-size: 0.625rem;
+      padding: 0.1875rem 0.5rem;
+    }
   }
 </style>

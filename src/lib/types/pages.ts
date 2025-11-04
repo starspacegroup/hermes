@@ -278,11 +278,12 @@ export interface WidgetFormData {
   position: number;
 }
 
-// Page revision for history tracking
+// Page revision for history tracking (Git-like system)
 export interface PageRevision {
   id: string;
   page_id: string;
-  revision_number: number;
+  revision_hash: string; // Short hash like Git (8 characters)
+  parent_revision_id?: string; // ID of parent revision (for branching)
   title: string;
   slug: string;
   status: PageStatus;
@@ -292,6 +293,13 @@ export interface PageRevision {
   created_at: number;
   is_published: boolean;
   notes?: string;
+}
+
+// Revision node for building history tree
+export interface RevisionNode extends ParsedPageRevision {
+  children: RevisionNode[]; // Child revisions that branch from this one
+  depth: number; // Depth in the tree for visualization
+  branch: number; // Branch number for graph layout
 }
 
 // Parsed revision with widgets as objects

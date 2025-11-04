@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Revision History Graph - Visual Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: 2rem;
+        background: #f8fafc;
+      }
+
+      h1 {
+        margin-bottom: 1rem;
+        color: #1e293b;
+      }
+
+      .section {
+        margin-bottom: 3rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .section h2 {
+        margin-bottom: 1rem;
+        color: #334155;
+        font-size: 1.25rem;
+      }
+
+      .test-result {
+        padding: 1rem;
+        background: #f1f5f9;
+        border-radius: 4px;
+        margin-top: 1rem;
+        font-family: monospace;
+        font-size: 0.875rem;
+      }
+
+      .success {
+        color: #10b981;
+      }
+
+      .error {
+        color: #ef4444;
+      }
+
+      .info {
+        color: #3b82f6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Revision History Graph - Visual Test Suite</h1>
+
+    <div class="section">
+      <h2>Test 1: Linear Chain (Single Branch)</h2>
+      <p>Expected: All nodes in lane 0, vertical alignment</p>
+      <div id="test1" class="test-result"></div>
+    </div>
+
+    <div class="section">
+      <h2>Test 2: Simple Branch (2 Lanes)</h2>
+      <p>Expected: Root in lane 0, main continues in lane 0, branch in lane 1</p>
+      <div id="test2" class="test-result"></div>
+    </div>
+
+    <div class="section">
+      <h2>Test 3: Multiple Branches (3+ Lanes)</h2>
+      <p>Expected: Root in lane 0, each new branch gets a new lane</p>
+      <div id="test3" class="test-result"></div>
+    </div>
+
+    <div class="section">
+      <h2>Test 4: Deep Tree (Many Levels)</h2>
+      <p>Expected: Proper vertical spacing, deep nesting</p>
+      <div id="test4" class="test-result"></div>
+    </div>
+
+    <div class="section">
+      <h2>Test 5: Complex Tree (Branches + Deep)</h2>
+      <p>Expected: Multiple lanes with varying depths</p>
+      <div id="test5" class="test-result"></div>
+    </div>
+
+    <script type="module">
+      // Import the layout algorithm
+      import {
+        calculateConnections,
+        calculateTreeLayout
+      } from './src/lib/utils/revisionGraphLayout.js';
+
+      function createRevision(id, parentId, branch, depth, title) {
+        return {
+          id: `rev-${id}`,
+          page_id: 'page-1',
+          revision_hash: `hash-${id}`.padEnd(40, '0'),
+          parent_revision_id: parentId ? `rev-${parentId}` : undefined,
+          title: title || `Revision ${id}`,
+          slug: 'test-page',
+          status: id === 1 ? 'published' : 'draft',
+          created_at: Date.now() / 1000 - (100 - id) * 60,
+          is_published: id === 1,
+          color_theme: '',
+          widgets: [],
+          children: [],
+          depth: depth,
+          branch: branch
+        };
+      }
+
+      function runTest(testId, revisions, expectations) {
+        const output = document.getElementById(testId);
+        const nodes = calculateTreeLayout(revisions);
+
+        const getBranchColor = (branch) => {
+          const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+          return colors[branch % colors.length];
+        };
+
+        const connections = calculateConnections(nodes, getBranchColor);
+
+        let html = `<div class="success">✓ Layout calculated successfully</div>`;
+        html += `<div class="info">Nodes: ${nodes.length} | Connections: ${connections.length}</div>`;
+
+        // Display node positions
+        html += `<div style="margin-top: 0.5rem;"><strong>Node Positions:</strong></div>`;
+        nodes.forEach((node) => {
+          html += `<div>rev-${
+            node.revision.id.split('-')[1]
+          }: lane=${node.lane}, level=${node.level}, x=${node.x}, y=${node.y}</div>`;
+        });
+
+        // Display connections
+        if (connections.length > 0) {
+          html += `<div style="margin-top: 0.5rem;"><strong>Connections:</strong></div>`;
+          connections.forEach((conn, i) => {
+            const type = conn.fromLane === conn.toLane ? 'straight' : 'curved';
+            html += `<div>${i + 1}: lane ${conn.fromLane} → ${conn.toLane} (${type})</div>`;
+          });
+        }
+
+        // Check expectations
+        if (expectations) {
+          html += `<div style="margin-top: 0.5rem;"><strong>Expectations:</strong></div>`;
+          let allPassed = true;
+
+          expectations.forEach((exp) => {
+            const result = exp.check(nodes);
+            if (result) {
+              html += `<div class="success">✓ ${exp.description}</div>`;
+            } else {
+              html += `<div class="error">✗ ${exp.description}</div>`;
+              allPassed = false;
+            }
+          });
+
+          if (allPassed) {
+            html = `<div class="success">✅ All tests passed!</div>` + html;
+          } else {
+            html = `<div class="error">❌ Some tests failed</div>` + html;
+          }
+        }
+
+        output.innerHTML = html;
+      }
+
+      // Test 1: Linear chain
+      const test1Revisions = [
+        createRevision(1, null, 0, 0, 'Initial'),
+        createRevision(2, 1, 0, 1, 'Update 1'),
+        createRevision(3, 2, 0, 2, 'Update 2'),
+        createRevision(4, 3, 0, 3, 'Update 3')
+      ];
+
+      runTest('test1', test1Revisions, [
+        {
+          description: 'All nodes in lane 0',
+          check: (nodes) => nodes.every((n) => n.lane === 0)
+        },
+        {
+          description: 'Correct number of levels',
+          check: (nodes) => nodes.length === 4 && nodes[3].level === 3
+        }
+      ]);
+
+      // Test 2: Simple branch
+      const test2Revisions = [
+        createRevision(1, null, 0, 0, 'Root'),
+        createRevision(2, 1, 0, 1, 'Main'),
+        createRevision(3, 1, 1, 1, 'Branch A')
+      ];
+
+      runTest('test2', test2Revisions, [
+        {
+          description: 'Root in lane 0',
+          check: (nodes) => nodes.find((n) => n.revision.id === 'rev-1')?.lane === 0
+        },
+        {
+          description: 'Main continues in lane 0',
+          check: (nodes) => nodes.find((n) => n.revision.id === 'rev-2')?.lane === 0
+        },
+        {
+          description: 'Branch A in lane 1',
+          check: (nodes) => nodes.find((n) => n.revision.id === 'rev-3')?.lane === 1
+        }
+      ]);
+
+      // Test 3: Multiple branches
+      const test3Revisions = [
+        createRevision(1, null, 0, 0, 'Root'),
+        createRevision(2, 1, 0, 1, 'Main'),
+        createRevision(3, 1, 1, 1, 'Branch A'),
+        createRevision(4, 1, 2, 1, 'Branch B'),
+        createRevision(5, 2, 0, 2, 'Main continued')
+      ];
+
+      runTest('test3', test3Revisions, [
+        {
+          description: 'Has at least 3 lanes',
+          check: (nodes) => Math.max(...nodes.map((n) => n.lane)) >= 2
+        },
+        {
+          description: 'All branches have different lanes',
+          check: (nodes) => {
+            const lane3 = nodes.find((n) => n.revision.id === 'rev-3')?.lane;
+            const lane4 = nodes.find((n) => n.revision.id === 'rev-4')?.lane;
+            return lane3 !== lane4;
+          }
+        }
+      ]);
+
+      // Test 4: Deep tree
+      const test4Revisions = [];
+      for (let i = 0; i < 10; i++) {
+        test4Revisions.push(createRevision(i + 1, i > 0 ? i : null, 0, i, `Level ${i}`));
+      }
+
+      runTest('test4', test4Revisions, [
+        {
+          description: 'Has 10 levels',
+          check: (nodes) => nodes.length === 10
+        },
+        {
+          description: 'Max depth is 9',
+          check: (nodes) => Math.max(...nodes.map((n) => n.level)) === 9
+        }
+      ]);
+
+      // Test 5: Complex tree
+      const test5Revisions = [
+        createRevision(1, null, 0, 0, 'Root'),
+        createRevision(2, 1, 0, 1, 'Main 1'),
+        createRevision(3, 1, 1, 1, 'Branch A'),
+        createRevision(4, 2, 0, 2, 'Main 2'),
+        createRevision(5, 3, 1, 2, 'Branch A.1'),
+        createRevision(6, 1, 2, 1, 'Branch B'),
+        createRevision(7, 6, 2, 2, 'Branch B.1'),
+        createRevision(8, 4, 0, 3, 'Main 3')
+      ];
+
+      runTest('test5', test5Revisions, [
+        {
+          description: 'Has multiple lanes',
+          check: (nodes) => Math.max(...nodes.map((n) => n.lane)) >= 2
+        },
+        {
+          description: 'Has multiple depths',
+          check: (nodes) => Math.max(...nodes.map((n) => n.level)) >= 2
+        },
+        {
+          description: 'Correct node count',
+          check: (nodes) => nodes.length === 8
+        }
+      ]);
+
+      console.log('✅ Visual tests completed');
+    </script>
+  </body>
+</html>

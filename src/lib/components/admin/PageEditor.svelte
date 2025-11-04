@@ -19,7 +19,7 @@
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
   import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
-  import type { ParsedPageRevision } from '$lib/types/pages';
+  import type { ParsedPageRevision, RevisionNode } from '$lib/types/pages';
 
   export let pageId: string | null = null;
   export let initialTitle = '';
@@ -68,12 +68,7 @@
   let hasUnsavedChanges = false;
 
   // Revision state
-  let revisions: Array<{
-    id: string;
-    revision_number: number;
-    created_at: number;
-    is_published: boolean;
-  }> = [];
+  let revisions: RevisionNode[] = [];
   let currentRevisionId: string | null = null;
   let currentRevisionIsPublished: boolean = initialStatus === 'published';
 
@@ -467,7 +462,8 @@
     if (!pageId) return;
 
     try {
-      const response = await fetch(`/api/pages/${pageId}/revisions`);
+      // Load revision tree structure for graph visualization
+      const response = await fetch(`/api/pages/${pageId}/revisions?tree=true`);
       if (response.ok) {
         revisions = await response.json();
       }
@@ -501,7 +497,7 @@
         initialWidgets = JSON.parse(JSON.stringify(widgets));
 
         historyManager.reset(widgets);
-        toastStore.info(`Loaded revision #${revision.revision_number}`);
+        toastStore.info(`Loaded revision ${revision.revision_hash}`);
       }
     } catch (error) {
       console.error('Error loading revision:', error);
@@ -519,9 +515,19 @@
       });
 
       if (response.ok) {
+        const result = (await response.json()) as {
+          success: boolean;
+          revision?: ParsedPageRevision;
+        };
         status = 'published';
+
         toastStore.success('Revision published successfully');
         await loadRevisions();
+
+        // Load the newly created revision (which is now at the head)
+        if (result.revision) {
+          await loadRevision(result.revision.id);
+        }
       } else {
         throw new Error('Failed to publish revision');
       }
