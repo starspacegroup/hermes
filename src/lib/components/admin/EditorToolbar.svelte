@@ -1,6 +1,7 @@
 <script lang="ts">
   import BreakpointSwitcher from './BreakpointSwitcher.svelte';
   import ThemeSelector from './ThemeSelector.svelte';
+  import RevisionModal from './RevisionModal.svelte';
   import type { Breakpoint, ColorTheme } from '$lib/types/pages';
 
   export let title: string;
@@ -44,28 +45,35 @@
   export let onShowUndoHistory: (() => void) | undefined = undefined;
   export let onShowRedoHistory: (() => void) | undefined = undefined;
 
-  let showRevisionDropdown = false;
+  let showRevisionModal = false;
   let undoPressTimer: number | undefined;
   let redoPressTimer: number | undefined;
   const LONG_PRESS_DURATION = 500; // milliseconds
 
-  function toggleRevisionDropdown() {
-    showRevisionDropdown = !showRevisionDropdown;
+  function toggleRevisionModal() {
+    showRevisionModal = !showRevisionModal;
+    if (showRevisionModal) {
+      // Close theme dropdown when opening revision modal
+      closeThemeDropdown();
+    }
+  }
+
+  // Function to close theme dropdown - will be called from ThemeSelector
+  let closeThemeDropdown = () => {};
+  function registerThemeDropdownCloser(closer: () => void) {
+    closeThemeDropdown = closer;
   }
 
   function handleRevisionSelect(revisionId: string) {
     if (events.loadRevision) {
       events.loadRevision(revisionId);
     }
-    showRevisionDropdown = false;
   }
 
-  function handleRevisionPublish(event: Event, revisionId: string) {
-    event.stopPropagation();
+  function handleRevisionPublish(revisionId: string) {
     if (events.publishRevision) {
       events.publishRevision(revisionId);
     }
-    showRevisionDropdown = false;
   }
 
   function handleUndoMouseDown() {
@@ -117,7 +125,14 @@
 
   <div class="toolbar-center">
     <BreakpointSwitcher bind:currentBreakpoint />
-    <ThemeSelector selectedTheme={colorTheme} onChange={events.changeTheme} />
+    <ThemeSelector
+      selectedTheme={colorTheme}
+      onChange={events.changeTheme}
+      onOpen={() => {
+        showRevisionModal = false;
+      }}
+      {registerThemeDropdownCloser}
+    />
   </div>
 
   <div class="toolbar-right">
@@ -236,80 +251,19 @@
     </button>
     <div class="divider"></div>
 
-    <!-- Revision History Dropdown -->
+    <!-- Revision History Button -->
     {#if pageId && revisions.length > 0}
-      <div class="revision-selector">
-        <button type="button" class="revision-btn" on:click={toggleRevisionDropdown}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          History ({revisions.length})
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M6 9l6 6 6-6"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-
-        {#if showRevisionDropdown}
-          <div class="revision-dropdown">
-            {#each revisions as revision}
-              <div
-                class="revision-item"
-                class:current={revision.id === currentRevisionId}
-                class:published={revision.is_published}
-              >
-                <button
-                  type="button"
-                  class="revision-load"
-                  on:click={() => handleRevisionSelect(revision.id)}
-                >
-                  <div class="revision-info">
-                    <span class="revision-number">#{revision.revision_number}</span>
-                    <span class="revision-date">
-                      {new Date(revision.created_at * 1000).toLocaleString()}
-                    </span>
-                    {#if revision.is_published}
-                      <span class="badge published-badge">Published</span>
-                    {/if}
-                  </div>
-                </button>
-                {#if !revision.is_published}
-                  <button
-                    type="button"
-                    class="revision-publish-btn"
-                    on:click={(e) => handleRevisionPublish(e, revision.id)}
-                    title="Publish this revision"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        d="M5 13l4 4L19 7"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </button>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      <button type="button" class="revision-btn" on:click={toggleRevisionModal}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        History ({revisions.length})
+      </button>
       <div class="divider"></div>
     {/if}
 
@@ -346,6 +300,10 @@
         Saved {lastSaved.toLocaleTimeString()}
       </span>
     {/if}
+  </div>
+
+  <!-- Action buttons in separate container for mobile layout -->
+  <div class="toolbar-actions">
     <button type="button" class="btn-secondary" on:click={events.cancel}>Close Editor</button>
 
     {#if pageId}
@@ -381,15 +339,30 @@
   </div>
 </div>
 
+<!-- Revision Modal -->
+<RevisionModal
+  isOpen={showRevisionModal}
+  {revisions}
+  {currentRevisionId}
+  onSelect={handleRevisionSelect}
+  onPublish={handleRevisionPublish}
+  onClose={() => (showRevisionModal = false)}
+/>
+
 <style>
+  /* Mobile-first toolbar */
   .toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     background: var(--color-bg-primary);
     border-bottom: 1px solid var(--color-border-secondary);
-    gap: 1.5rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .toolbar-left,
@@ -397,29 +370,64 @@
   .toolbar-right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Mobile layout order: inputs on top, controls below */
+  .toolbar-left {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .toolbar-center {
+    flex: 1 1 auto;
+    order: 2;
+    min-width: 0;
+  }
+
+  .toolbar-right {
+    flex: 0 0 auto;
+    order: 3;
+    min-width: 0;
+  }
+
+  /* Action buttons on mobile: full width on new row */
+  .toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 100%;
+    order: 4;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .title-input {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    min-width: 200px;
+    width: 100%;
+    min-width: 0;
   }
 
   .slug-input {
     font-family: monospace;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
     background: var(--color-bg-secondary);
     color: var(--color-text-secondary);
-    min-width: 180px;
+    width: 100%;
+    min-width: 0;
   }
 
   .icon-btn {
@@ -430,6 +438,8 @@
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
+    min-width: 0;
   }
 
   .icon-btn:hover:not(:disabled) {
@@ -467,6 +477,9 @@
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .save-status.saving {
@@ -499,6 +512,9 @@
     cursor: pointer;
     transition: all 0.2s;
     border: none;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .btn-secondary {
@@ -517,11 +533,7 @@
     cursor: not-allowed;
   }
 
-  /* Revision selector styles */
-  .revision-selector {
-    position: relative;
-  }
-
+  /* Revision button styles */
   .revision-btn {
     display: flex;
     align-items: center;
@@ -534,103 +546,12 @@
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
   }
 
   .revision-btn:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-  }
-
-  .revision-dropdown {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    min-width: 300px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-  }
-
-  .revision-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--color-border-secondary);
-    transition: background 0.2s;
-  }
-
-  .revision-item:last-child {
-    border-bottom: none;
-  }
-
-  .revision-item:hover {
-    background: var(--color-bg-secondary);
-  }
-
-  .revision-item.current {
-    background: rgba(59, 130, 246, 0.1);
-    border-left: 3px solid var(--color-primary);
-  }
-
-  .revision-load {
-    flex: 1;
-    background: none;
-    border: none;
-    text-align: left;
-    cursor: pointer;
-    padding: 0;
-    color: var(--color-text-primary);
-  }
-
-  .revision-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .revision-number {
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-
-  .revision-date {
-    font-size: 0.75rem;
-    color: var(--color-text-secondary);
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    margin-top: 0.25rem;
-  }
-
-  .published-badge {
-    background: rgba(34, 197, 94, 0.2);
-    color: rgb(34, 197, 94);
-  }
-
-  .revision-publish-btn {
-    padding: 0.5rem;
-    background: transparent;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 4px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .revision-publish-btn:hover {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: rgb(34, 197, 94);
-    color: rgb(34, 197, 94);
   }
 
   /* Status indicator */
@@ -641,6 +562,9 @@
     font-weight: 500;
     background: rgba(156, 163, 175, 0.2);
     color: rgb(107, 114, 128);
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .status-indicator.published {
@@ -648,9 +572,79 @@
     color: rgb(34, 197, 94);
   }
 
-  @media (max-width: 1024px) {
+  /* Tablet and up */
+  @media (min-width: 768px) {
     .toolbar {
-      flex-wrap: wrap;
+      padding: 0.875rem 1.25rem;
+      gap: 1rem;
+    }
+
+    /* Tablet+ layout: reset to natural order (left, center, right) */
+    .toolbar-left {
+      flex: 0 0 auto;
+      order: 0;
+    }
+
+    .toolbar-center {
+      order: 0;
+    }
+
+    .toolbar-right {
+      order: 0;
+    }
+
+    .toolbar-actions {
+      flex: 0 0 auto;
+      order: 0;
+    }
+
+    .title-input {
+      font-size: 1.0625rem;
+      width: auto;
+      min-width: 180px;
+    }
+
+    .slug-input {
+      font-size: 0.875rem;
+      width: auto;
+      min-width: 160px;
+    }
+  }
+
+  /* Desktop */
+  @media (min-width: 1024px) {
+    .toolbar {
+      padding: 1rem 1.5rem;
+      gap: 1.5rem;
+      /* Keep flex-wrap to allow wrapping on narrower desktop screens */
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+      gap: 0.75rem;
+    }
+
+    .title-input {
+      font-size: 1.125rem;
+      min-width: 200px;
+    }
+
+    .slug-input {
+      min-width: 180px;
+    }
+  }
+
+  /* Extra large desktop: prevent wrapping when there's plenty of space */
+  @media (min-width: 2025px) {
+    .toolbar {
+      flex-wrap: nowrap;
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+      flex-wrap: nowrap;
     }
   }
 </style>

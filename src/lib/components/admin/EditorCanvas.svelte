@@ -87,23 +87,24 @@
 </div>
 
 <style>
+  /* Mobile-first canvas */
   .canvas-area {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 2rem;
+    padding: 0.75rem;
     overflow-y: auto;
     background: var(--color-bg-secondary);
   }
 
   .canvas-container {
     width: 100%;
-    max-width: 1200px;
+    max-width: 100%;
     background: var(--theme-background, var(--color-bg-primary));
     border-radius: 8px;
     box-shadow: 0 2px 8px var(--color-shadow-light);
-    min-height: 600px;
+    min-height: 400px;
     height: auto;
     transition: max-width 0.3s ease;
   }
@@ -121,40 +122,42 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 600px;
+    min-height: 400px;
     color: var(--theme-text-secondary, var(--color-text-secondary));
     text-align: center;
-    padding: 2rem;
+    padding: 1.5rem;
   }
 
   .empty-canvas svg {
     opacity: 0.3;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     stroke: var(--theme-text, currentColor);
+    width: 48px;
+    height: 48px;
   }
 
   .empty-canvas h3 {
     margin: 0 0 0.5rem 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     color: var(--theme-text, var(--color-text-primary));
   }
 
   .empty-canvas p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
   }
 
   .widgets-canvas {
-    padding: 1rem;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .canvas-widget {
     position: relative;
     border: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: 6px;
     transition: all 0.2s;
     cursor: pointer;
   }
@@ -165,7 +168,7 @@
 
   .canvas-widget.selected {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
   }
 
   .widget-controls-wrapper {
@@ -178,13 +181,86 @@
   }
 
   .widget-render {
-    padding: 1rem;
-    min-height: 60px;
+    padding: 0.75rem;
+    min-height: 50px;
   }
 
-  @media (max-width: 1024px) {
+  /* Tablet */
+  @media (min-width: 768px) {
     .canvas-area {
+      padding: 1.5rem;
+    }
+
+    .canvas-container {
+      max-width: 1200px;
+      min-height: 500px;
+    }
+
+    .empty-canvas {
+      min-height: 500px;
+      padding: 2rem;
+    }
+
+    .empty-canvas svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 1.25rem;
+    }
+
+    .empty-canvas h3 {
+      font-size: 1.25rem;
+    }
+
+    .empty-canvas p {
+      font-size: 0.875rem;
+    }
+
+    .widgets-canvas {
       padding: 1rem;
+      gap: 0.875rem;
+    }
+
+    .canvas-widget {
+      border-radius: 8px;
+    }
+
+    .canvas-widget.selected {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .widget-render {
+      padding: 0.875rem;
+      min-height: 55px;
+    }
+  }
+
+  /* Desktop */
+  @media (min-width: 1024px) {
+    .canvas-area {
+      padding: 2rem;
+    }
+
+    .canvas-container {
+      min-height: 600px;
+    }
+
+    .empty-canvas {
+      min-height: 600px;
+    }
+
+    .empty-canvas svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1.5rem;
+    }
+
+    .widgets-canvas {
+      gap: 1rem;
+    }
+
+    .widget-render {
+      padding: 1rem;
+      min-height: 60px;
     }
   }
 </style>
