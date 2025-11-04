@@ -392,6 +392,10 @@
     border-bottom: 1px solid var(--color-border-secondary);
     gap: 0.75rem;
     flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   .toolbar-left,
@@ -401,6 +405,8 @@
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* Mobile layout order: inputs on top, controls below */
@@ -412,11 +418,13 @@
   .toolbar-center {
     flex: 1 1 auto;
     order: 2;
+    min-width: 0;
   }
 
   .toolbar-right {
     flex: 0 0 auto;
     order: 3;
+    min-width: 0;
   }
 
   /* Action buttons on mobile: full width on new row */
@@ -427,6 +435,8 @@
     flex: 1 1 100%;
     order: 4;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .title-input {
@@ -461,6 +471,8 @@
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
+    min-width: 0;
   }
 
   .icon-btn:hover:not(:disabled) {
@@ -498,6 +510,9 @@
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .save-status.saving {
@@ -530,6 +545,9 @@
     cursor: pointer;
     transition: all 0.2s;
     border: none;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .btn-secondary {
@@ -672,6 +690,9 @@
     font-weight: 500;
     background: rgba(156, 163, 175, 0.2);
     color: rgb(107, 114, 128);
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .status-indicator.published {
