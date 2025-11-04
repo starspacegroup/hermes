@@ -43,12 +43,32 @@
   export let onShowRedoHistory: (() => void) | undefined = undefined;
 
   let showRevisionDropdown = false;
+  let revisionDropdownElement: HTMLDivElement | null = null;
+  let dropdownAlignRight = true;
   let undoPressTimer: number | undefined;
   let redoPressTimer: number | undefined;
   const LONG_PRESS_DURATION = 500; // milliseconds
 
   function toggleRevisionDropdown() {
     showRevisionDropdown = !showRevisionDropdown;
+    if (showRevisionDropdown) {
+      // Use setTimeout to allow the dropdown to render before positioning
+      setTimeout(positionDropdown, 0);
+    }
+  }
+
+  function positionDropdown() {
+    if (!revisionDropdownElement) return;
+
+    const rect = revisionDropdownElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+
+    // If dropdown extends beyond right edge of viewport, align it to the left
+    if (rect.right > viewportWidth - 10) {
+      dropdownAlignRight = false;
+    } else {
+      dropdownAlignRight = true;
+    }
   }
 
   function handleRevisionSelect(revisionId: string) {
@@ -258,7 +278,11 @@
         </button>
 
         {#if showRevisionDropdown}
-          <div class="revision-dropdown">
+          <div
+            class="revision-dropdown"
+            class:align-left={!dropdownAlignRight}
+            bind:this={revisionDropdownElement}
+          >
             {#each revisions as revision}
               <div
                 class="revision-item"
@@ -601,6 +625,11 @@
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
+  }
+
+  .revision-dropdown.align-left {
+    right: auto;
+    left: 0;
   }
 
   .revision-item {
