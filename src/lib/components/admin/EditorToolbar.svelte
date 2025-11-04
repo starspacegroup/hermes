@@ -723,14 +723,13 @@
     .toolbar {
       padding: 1rem 1.5rem;
       gap: 1.5rem;
-      flex-wrap: nowrap;
+      /* Keep flex-wrap to allow wrapping on narrower desktop screens */
     }
 
     .toolbar-left,
     .toolbar-center,
     .toolbar-right {
       gap: 0.75rem;
-      flex-wrap: nowrap;
     }
 
     .title-input {
@@ -740,6 +739,19 @@
 
     .slug-input {
       min-width: 180px;
+    }
+  }
+
+  /* Extra large desktop: prevent wrapping when there's plenty of space */
+  @media (min-width: 1440px) {
+    .toolbar {
+      flex-wrap: nowrap;
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+      flex-wrap: nowrap;
     }
   }
 </style>
