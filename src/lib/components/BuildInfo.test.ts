@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readable } from 'svelte/store';
+import userEvent from '@testing-library/user-event';
 import BuildInfo from './BuildInfo.svelte';
 import { version } from '../../../package.json';
 
@@ -41,17 +42,24 @@ describe('BuildInfo', () => {
     expect(container.querySelector('.build-info')).toBeNull();
   });
 
-  it('should render for platform engineers in production', () => {
+  it('should render for platform engineers in production', async () => {
     // Mock production hostname
     Object.defineProperty(window, 'location', {
       value: { hostname: 'hermes.pages.dev' },
       writable: true
     });
 
+    const user = userEvent.setup();
     const { container } = render(BuildInfo, { props: { userRole: 'platform_engineer' } });
     const buildInfo = container.querySelector('.build-info');
 
     expect(buildInfo).toBeTruthy();
+    expect(buildInfo?.classList.contains('collapsed')).toBe(true);
+
+    // Click to expand
+    const expandButton = screen.getByLabelText('Expand build info');
+    await user.click(expandButton);
+
     expect(screen.getByText('PRODUCTION')).toBeTruthy();
   });
 
@@ -84,10 +92,17 @@ describe('BuildInfo', () => {
       writable: true
     });
 
+    const user = userEvent.setup();
     const { container } = render(BuildInfo);
     const buildInfo = container.querySelector('.build-info');
 
     expect(buildInfo).toBeTruthy();
+    expect(buildInfo?.classList.contains('collapsed')).toBe(true);
+
+    // Click to expand
+    const expandButton = screen.getByLabelText('Expand build info');
+    await user.click(expandButton);
+
     expect(screen.getByText('PREVIEW')).toBeTruthy();
   });
 
@@ -97,7 +112,12 @@ describe('BuildInfo', () => {
       writable: true
     });
 
+    const user = userEvent.setup();
     render(BuildInfo);
+
+    // Click to expand
+    const expandButton = screen.getByLabelText('Expand build info');
+    await user.click(expandButton);
 
     expect(screen.getByText('Version:')).toBeTruthy();
     expect(screen.getByText(version)).toBeTruthy();
@@ -109,7 +129,12 @@ describe('BuildInfo', () => {
       writable: true
     });
 
+    const user = userEvent.setup();
     render(BuildInfo);
+
+    // Click to expand
+    const expandButton = screen.getByLabelText('Expand build info');
+    await user.click(expandButton);
 
     expect(screen.getByText('Mode:')).toBeTruthy();
     expect(screen.getByText('Build')).toBeTruthy();
@@ -122,7 +147,12 @@ describe('BuildInfo', () => {
       writable: true
     });
 
+    const user = userEvent.setup();
     render(BuildInfo);
+
+    // Click to expand
+    const expandButton = screen.getByLabelText('Expand build info');
+    await user.click(expandButton);
 
     expect(screen.getByText('Host:')).toBeTruthy();
     expect(screen.getByText(testHostname)).toBeTruthy();
