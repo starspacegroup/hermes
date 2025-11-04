@@ -4,8 +4,20 @@
 
   export let selectedTheme: ColorTheme | undefined = undefined;
   export let onChange: (theme: ColorTheme | undefined) => void;
+  export let onOpen: (() => void) | undefined = undefined;
+  export let registerThemeDropdownCloser: ((closer: () => void) => void) | undefined = undefined;
 
   let showDropdown = false;
+
+  // Register the close function with parent on mount
+  import { onMount } from 'svelte';
+  onMount(() => {
+    if (registerThemeDropdownCloser) {
+      registerThemeDropdownCloser(() => {
+        showDropdown = false;
+      });
+    }
+  });
   let dropdownElement: HTMLDivElement | null = null;
   let dropdownAlignRight = true;
   const themes = getAvailableThemes();
@@ -20,6 +32,10 @@
   function toggleDropdown() {
     showDropdown = !showDropdown;
     if (showDropdown) {
+      // Notify parent that this dropdown is opening
+      if (onOpen) {
+        onOpen();
+      }
       // Use setTimeout to allow the dropdown to render before positioning
       setTimeout(positionDropdown, 0);
     }

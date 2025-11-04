@@ -52,9 +52,17 @@
   function toggleRevisionDropdown() {
     showRevisionDropdown = !showRevisionDropdown;
     if (showRevisionDropdown) {
+      // Close theme dropdown when opening revision dropdown
+      closeThemeDropdown();
       // Use setTimeout to allow the dropdown to render before positioning
       setTimeout(positionDropdown, 0);
     }
+  }
+
+  // Function to close theme dropdown - will be called from ThemeSelector
+  let closeThemeDropdown = () => {};
+  function registerThemeDropdownCloser(closer: () => void) {
+    closeThemeDropdown = closer;
   }
 
   function positionDropdown() {
@@ -144,7 +152,12 @@
 
   <div class="toolbar-center">
     <BreakpointSwitcher bind:currentBreakpoint />
-    <ThemeSelector selectedTheme={colorTheme} onChange={events.changeTheme} />
+    <ThemeSelector 
+      selectedTheme={colorTheme} 
+      onChange={events.changeTheme}
+      onOpen={() => { showRevisionDropdown = false; }}
+      {registerThemeDropdownCloser}
+    />
   </div>
 
   <div class="toolbar-right">
