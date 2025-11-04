@@ -21,6 +21,14 @@ describe('Users Repository', () => {
     name: 'Test User',
     password_hash: 'hashed_password',
     role: 'customer',
+    permissions: '[]',
+    status: 'active',
+    expiration_date: null,
+    grace_period_days: 0,
+    last_login_at: null,
+    last_login_ip: null,
+    created_by: null,
+    updated_by: null,
     created_at: 1234567890,
     updated_at: 1234567890
   };

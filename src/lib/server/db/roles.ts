@@ -51,7 +51,7 @@ export interface UpdateRoleData {
  */
 export async function getAllPermissions(db: D1Database): Promise<Permission[]> {
   const result = await db.prepare('SELECT * FROM permissions ORDER BY category, name').all();
-  return (result.results as Permission[]) || [];
+  return (result.results as unknown as Permission[]) || [];
 }
 
 /**
@@ -76,9 +76,7 @@ export async function getPermissionById(
   db: D1Database,
   permissionId: string
 ): Promise<Permission | null> {
-  return await executeOne<Permission>(db, 'SELECT * FROM permissions WHERE id = ?', [
-    permissionId
-  ]);
+  return await executeOne<Permission>(db, 'SELECT * FROM permissions WHERE id = ?', [permissionId]);
 }
 
 /**
@@ -156,7 +154,7 @@ export async function getRolePermissions(db: D1Database, roleId: string): Promis
     .bind(roleId)
     .all();
 
-  return (result.results as Permission[]) || [];
+  return (result.results as unknown as Permission[]) || [];
 }
 
 /**

@@ -62,7 +62,9 @@
   }
 
   async function deleteUser(userId: string, userName: string) {
-    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+    if (
+      !confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)
+    ) {
       return;
     }
 
@@ -75,7 +77,7 @@
         // Invalidate and reload data without full page refresh
         await invalidateAll();
       } else {
-        const result = await response.json();
+        const result = (await response.json()) as { error?: string };
         alert(`Failed to delete user: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
@@ -178,7 +180,10 @@
             </td>
             <td>
               {#if user.expiration_date}
-                <span class:expiring-soon={user.expiration_date < Date.now() / 1000 + EXPIRATION_WARNING_THRESHOLD}>
+                <span
+                  class:expiring-soon={user.expiration_date <
+                    Date.now() / 1000 + EXPIRATION_WARNING_THRESHOLD}
+                >
                   {formatDate(user.expiration_date)}
                 </span>
               {:else}
@@ -208,7 +213,13 @@
                     on:click={() => goto(`/admin/users/${user.id}/edit`)}
                     title="Edit user"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
                       <path
                         d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
                         stroke-width="2"
@@ -229,7 +240,13 @@
                     on:click={() => deleteUser(user.id, user.name)}
                     title="Delete user"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
                       <path
                         d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
                         stroke-width="2"

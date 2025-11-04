@@ -5,8 +5,7 @@ import {
   getActivityLogsByUser,
   getActivityLogsByEntity,
   deleteOldActivityLogs,
-  type ActivityLog,
-  type CreateActivityLogData
+  type ActivityLog
 } from './activity-logs';
 
 describe('Activity Logs Repository', () => {

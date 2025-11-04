@@ -5,7 +5,13 @@
 
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, getAllUsers, getUsersByRole, createUser, type CreateUserData } from '$lib/server/db';
+import {
+  getDB,
+  getAllUsers,
+  getUsersByRole,
+  createUser,
+  type CreateUserData
+} from '$lib/server/db';
 import { canPerformAction, isUserAccountActive } from '$lib/server/permissions';
 
 /**
@@ -36,13 +42,17 @@ export const GET: RequestHandler = async ({ url, platform, cookies, locals }) =>
 
     // Validate role parameter
     const validRoles = ['admin', 'user', 'customer', 'platform_engineer'];
-    
+
     let users;
     if (role) {
       if (!validRoles.includes(role)) {
         return json({ success: false, error: 'Invalid role parameter' }, { status: 400 });
       }
-      users = await getUsersByRole(db, siteId, role as 'admin' | 'user' | 'customer' | 'platform_engineer');
+      users = await getUsersByRole(
+        db,
+        siteId,
+        role as 'admin' | 'user' | 'customer' | 'platform_engineer'
+      );
     } else {
       users = await getAllUsers(db, siteId);
     }
@@ -54,7 +64,7 @@ export const GET: RequestHandler = async ({ url, platform, cookies, locals }) =>
 
     // Remove password hashes from response
     const sanitizedUsers = users.map((user) => {
-      const { password_hash, ...userWithoutPassword } = user;
+      const { password_hash: _password_hash, ...userWithoutPassword } = user;
       return {
         ...userWithoutPassword,
         isActive: isUserAccountActive(user)
@@ -123,7 +133,7 @@ export const POST: RequestHandler = async ({ request, platform, cookies, locals 
     });
 
     // Remove password hash from response
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password_hash: _password_hash, ...userWithoutPassword } = user;
 
     return json({
       success: true,

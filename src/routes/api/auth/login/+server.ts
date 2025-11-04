@@ -13,7 +13,11 @@ const demoCredentials = [
       id: 'user-1',
       email: 'user@hermes.local',
       name: 'Demo User',
-      role: 'user' as const
+      role: 'user' as const,
+      permissions: '[]',
+      status: 'active' as const,
+      expiration_date: null,
+      grace_period_days: 0
     }
   },
   {
@@ -23,7 +27,11 @@ const demoCredentials = [
       id: 'admin-1',
       email: 'owner@hermes.local',
       name: 'Site Owner',
-      role: 'admin' as const
+      role: 'admin' as const,
+      permissions: '[]',
+      status: 'active' as const,
+      expiration_date: null,
+      grace_period_days: 0
     }
   }
 ];
@@ -35,7 +43,11 @@ const mockLogin = (email: string, password: string, platformPassword?: string) =
       id: 'engineer-1',
       email: 'engineer@hermes.local',
       name: 'Platform Engineer',
-      role: 'platform_engineer' as const
+      role: 'platform_engineer' as const,
+      permissions: '[]',
+      status: 'active' as const,
+      expiration_date: null,
+      grace_period_days: 0
     };
   }
 

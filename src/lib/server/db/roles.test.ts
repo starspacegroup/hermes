@@ -3,16 +3,13 @@ import {
   getAllPermissions,
   getPermissionsByCategory,
   getRoleById,
-  getRoleWithPermissions,
   getAllRoles,
   createRole,
-  updateRole,
   deleteRole,
   addPermissionToRole,
   removePermissionFromRole,
   type Permission,
-  type Role,
-  type RoleWithPermissions
+  type Role
 } from './roles';
 
 describe('Roles Repository', () => {
@@ -36,9 +33,7 @@ describe('Roles Repository', () => {
 
       const result = await getAllPermissions(mockDB);
 
-      expect(mockPrepare).toHaveBeenCalledWith(
-        'SELECT * FROM permissions ORDER BY category, name'
-      );
+      expect(mockPrepare).toHaveBeenCalledWith('SELECT * FROM permissions ORDER BY category, name');
       expect(result).toEqual(mockPermissions);
     });
   });

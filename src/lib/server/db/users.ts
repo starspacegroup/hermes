@@ -267,10 +267,7 @@ export async function getUsersByStatus(
 /**
  * Get users with expiration dates (for checking expired accounts)
  */
-export async function getUsersWithExpiration(
-  db: D1Database,
-  siteId: string
-): Promise<DBUser[]> {
+export async function getUsersWithExpiration(db: D1Database, siteId: string): Promise<DBUser[]> {
   const result = await execute<DBUser>(
     db,
     `SELECT * FROM users 

@@ -88,11 +88,7 @@ export async function createActivityLog(
     )
     .run();
 
-  const log = await executeOne<ActivityLog>(
-    db,
-    'SELECT * FROM activity_logs WHERE id = ?',
-    [id]
-  );
+  const log = await executeOne<ActivityLog>(db, 'SELECT * FROM activity_logs WHERE id = ?', [id]);
   if (!log) {
     throw new Error('Failed to create activity log');
   }

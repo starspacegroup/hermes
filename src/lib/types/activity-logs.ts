@@ -50,14 +50,7 @@ export interface ActivityLogFilter {
   offset?: number;
 }
 
-export type EntityType =
-  | 'order'
-  | 'product'
-  | 'user'
-  | 'page'
-  | 'setting'
-  | 'role'
-  | 'permission';
+export type EntityType = 'order' | 'product' | 'user' | 'page' | 'setting' | 'role' | 'permission';
 
 export const ENTITY_TYPES: EntityType[] = [
   'order',

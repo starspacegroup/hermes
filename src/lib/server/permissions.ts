@@ -3,7 +3,6 @@
  */
 
 import type { DBUser } from './db/users.js';
-import { getRolePermissions } from './db/roles.js';
 
 /**
  * Default permissions for admin role
@@ -125,10 +124,7 @@ export function canPerformAction(
 /**
  * Get all permissions for a user (combines role-based and custom permissions)
  */
-export async function getUserAllPermissions(
-  db: D1Database,
-  user: DBUser
-): Promise<string[]> {
+export async function getUserAllPermissions(db: D1Database, user: DBUser): Promise<string[]> {
   const permissions = new Set<string>();
 
   // Add custom permissions

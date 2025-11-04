@@ -5,13 +5,7 @@
 
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import {
-  getDB,
-  getUserById,
-  updateUser,
-  deleteUser,
-  type UpdateUserData
-} from '$lib/server/db';
+import { getDB, getUserById, updateUser, deleteUser, type UpdateUserData } from '$lib/server/db';
 import { canPerformAction, isUserAccountActive } from '$lib/server/permissions';
 import { createActivityLog } from '$lib/server/db/activity-logs';
 
@@ -44,7 +38,7 @@ export const GET: RequestHandler = async ({ params, platform, cookies, locals })
     }
 
     // Remove password hash from response
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password_hash: _password_hash, ...userWithoutPassword } = user;
 
     return json({
       success: true,
@@ -92,7 +86,7 @@ export const PUT: RequestHandler = async ({ params, request, platform, cookies, 
     };
 
     // Convert expiration_date to timestamp if it's a date string
-    let updateData: UpdateUserData = { ...data };
+    const updateData: UpdateUserData = { ...data };
     if (data.expiration_date !== undefined) {
       if (typeof data.expiration_date === 'string') {
         const timestamp = Math.floor(new Date(data.expiration_date).getTime() / 1000);
@@ -140,7 +134,7 @@ export const PUT: RequestHandler = async ({ params, request, platform, cookies, 
     });
 
     // Remove password hash from response
-    const { password_hash, ...userWithoutPassword } = updatedUser;
+    const { password_hash: _password_hash, ...userWithoutPassword } = updatedUser;
 
     return json({
       success: true,

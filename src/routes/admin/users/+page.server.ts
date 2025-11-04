@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ platform, cookies, locals }) => {
 
   // Sanitize users (remove password hashes) and add computed fields
   const sanitizedUsers = users.map((user) => {
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password_hash: _password_hash, ...userWithoutPassword } = user;
     return {
       ...userWithoutPassword,
       isActive: isUserAccountActive(user),

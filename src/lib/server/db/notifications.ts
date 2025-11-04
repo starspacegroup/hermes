@@ -221,7 +221,9 @@ export async function deleteExpiredNotifications(
 ): Promise<number> {
   const now = currentTimestamp || getCurrentTimestamp();
   const result = await db
-    .prepare('DELETE FROM notifications WHERE site_id = ? AND expires_at IS NOT NULL AND expires_at < ?')
+    .prepare(
+      'DELETE FROM notifications WHERE site_id = ? AND expires_at IS NOT NULL AND expires_at < ?'
+    )
     .bind(siteId, now)
     .run();
   return result.meta?.changes || 0;

@@ -185,8 +185,12 @@
               stroke-linejoin="round"
             ></path>
             <circle cx="9" cy="7" r="4" stroke-width="2"></circle>
-            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round"></path>
+            <path
+              d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
           </svg>
           Users
         </a>
