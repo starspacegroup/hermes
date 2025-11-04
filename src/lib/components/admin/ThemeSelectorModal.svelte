@@ -22,11 +22,20 @@
     onClose();
   }
 
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }
+
   $: effectiveTheme = selectedTheme || `default-${getCurrentTheme()}`;
   $: selectedMode = selectedTheme
     ? themes.find((t) => t.value === selectedTheme)?.mode || 'light'
     : getCurrentTheme();
+  $: siteThemeOption = { value: undefined, label: 'Use Site Theme', mode: selectedMode };
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -34,10 +43,16 @@
   <div class="modal-overlay" on:click={onClose}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-    <div class="modal-content" role="dialog" aria-modal="true" on:click|stopPropagation>
+    <div
+      class="modal-content"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="theme-modal-title"
+      on:click|stopPropagation
+    >
       <div class="modal-header">
         <div>
-          <h2>Color Themes</h2>
+          <h2 id="theme-modal-title">Color Themes</h2>
           <p class="modal-subtitle">Choose a theme for your page</p>
         </div>
         <button type="button" class="close-btn" on:click={onClose} aria-label="Close dialog">
@@ -50,40 +65,46 @@
       <div class="modal-body">
         <div class="theme-list">
           <!-- Use Site Theme option -->
-          {#each [{ value: undefined, label: 'Use Site Theme', mode: selectedMode }] as siteThemeOption}
-            {@const siteColors = getThemeColors(effectiveTheme)}
-            <button
-              type="button"
-              class="theme-option"
-              class:selected={selectedTheme === undefined}
-              on:click={() => selectTheme(undefined)}
-            >
-              <div class="theme-colors">
-                <div class="color-swatch" style="background-color: {siteColors.primary}"></div>
-                <div class="color-swatch" style="background-color: {siteColors.secondary}"></div>
-                <div class="color-swatch" style="background-color: {siteColors.accent}"></div>
-                <div
-                  class="color-swatch small"
-                  style="background-color: {siteColors.background}"
-                ></div>
-                <div
-                  class="color-swatch small"
-                  style="background-color: {siteColors.surface}"
-                ></div>
-              </div>
-              <div class="theme-info">
-                <span class="theme-name">{siteThemeOption.label}</span>
-                <span class="theme-mode-badge" class:dark={siteThemeOption.mode === 'dark'}
-                  >{siteThemeOption.mode}</span
-                >
-              </div>
-              {#if selectedTheme === undefined}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M5 12l5 5L20 7" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              {/if}
-            </button>
-          {/each}
+          <button
+            type="button"
+            class="theme-option"
+            class:selected={selectedTheme === undefined}
+            on:click={() => selectTheme(undefined)}
+          >
+            <div class="theme-colors">
+              <div
+                class="color-swatch"
+                style="background-color: {getThemeColors(effectiveTheme).primary}"
+              ></div>
+              <div
+                class="color-swatch"
+                style="background-color: {getThemeColors(effectiveTheme).secondary}"
+              ></div>
+              <div
+                class="color-swatch"
+                style="background-color: {getThemeColors(effectiveTheme).accent}"
+              ></div>
+              <div
+                class="color-swatch small"
+                style="background-color: {getThemeColors(effectiveTheme).background}"
+              ></div>
+              <div
+                class="color-swatch small"
+                style="background-color: {getThemeColors(effectiveTheme).surface}"
+              ></div>
+            </div>
+            <div class="theme-info">
+              <span class="theme-name">{siteThemeOption.label}</span>
+              <span class="theme-mode-badge" class:dark={siteThemeOption.mode === 'dark'}
+                >{siteThemeOption.mode}</span
+              >
+            </div>
+            {#if selectedTheme === undefined}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M5 12l5 5L20 7" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            {/if}
+          </button>
 
           {#each themes as theme}
             {@const colors = getThemeColors(theme.value)}

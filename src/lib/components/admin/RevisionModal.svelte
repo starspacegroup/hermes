@@ -21,7 +21,15 @@
     onPublish(revisionId);
     onClose();
   }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      onClose();
+    }
+  }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -29,9 +37,15 @@
   <div class="modal-overlay" on:click={onClose}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-    <div class="modal-content" role="dialog" aria-modal="true" on:click|stopPropagation>
+    <div
+      class="modal-content"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="revision-modal-title"
+      on:click|stopPropagation
+    >
       <div class="modal-header">
-        <h2>Revision History</h2>
+        <h2 id="revision-modal-title">Revision History</h2>
         <button type="button" class="close-btn" on:click={onClose} aria-label="Close dialog">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
