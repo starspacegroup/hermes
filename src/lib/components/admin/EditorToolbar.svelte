@@ -764,7 +764,7 @@
   }
 
   /* Extra large desktop: prevent wrapping when there's plenty of space */
-  @media (min-width: 1440px) {
+  @media (min-width: 2025px) {
     .toolbar {
       flex-wrap: nowrap;
     }
