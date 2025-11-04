@@ -100,7 +100,7 @@
     overflow: hidden;
     position: absolute;
     height: 100%;
-    z-index: 100;
+    z-index: 100; /* Above canvas but below modals */
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   }
 

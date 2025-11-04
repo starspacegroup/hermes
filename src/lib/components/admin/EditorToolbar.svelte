@@ -399,6 +399,7 @@
     flex-wrap: wrap;
   }
 
+  /* Mobile layout order: inputs on top, controls below */
   .toolbar-left {
     flex: 1 1 100%;
     order: 1;
@@ -671,6 +672,7 @@
       gap: 1rem;
     }
 
+    /* Tablet+ layout: reset to natural order (left, center, right) */
     .toolbar-left {
       flex: 0 0 auto;
       order: 0;
