@@ -344,6 +344,10 @@
         Saved {lastSaved.toLocaleTimeString()}
       </span>
     {/if}
+  </div>
+
+  <!-- Action buttons in separate container for mobile layout -->
+  <div class="toolbar-actions">
     <button type="button" class="btn-secondary" on:click={events.cancel}>Close Editor</button>
 
     {#if pageId}
@@ -413,6 +417,16 @@
   .toolbar-right {
     flex: 0 0 auto;
     order: 3;
+  }
+
+  /* Action buttons on mobile: full width on new row */
+  .toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 100%;
+    order: 4;
+    justify-content: flex-end;
   }
 
   .title-input {
@@ -683,6 +697,11 @@
     }
 
     .toolbar-right {
+      order: 0;
+    }
+
+    .toolbar-actions {
+      flex: 0 0 auto;
       order: 0;
     }
 
