@@ -41,7 +41,6 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    overflow: hidden;
     background: var(--color-bg-secondary);
     z-index: 1000;
   }

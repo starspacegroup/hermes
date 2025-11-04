@@ -4,8 +4,22 @@
 
   export let selectedTheme: ColorTheme | undefined = undefined;
   export let onChange: (theme: ColorTheme | undefined) => void;
+  export let onOpen: (() => void) | undefined = undefined;
+  export let registerThemeDropdownCloser: ((closer: () => void) => void) | undefined = undefined;
 
   let showDropdown = false;
+
+  // Register the close function with parent on mount
+  import { onMount } from 'svelte';
+  onMount(() => {
+    if (registerThemeDropdownCloser) {
+      registerThemeDropdownCloser(() => {
+        showDropdown = false;
+      });
+    }
+  });
+  let dropdownElement: HTMLDivElement | null = null;
+  let dropdownAlignRight = true;
   const themes = getAvailableThemes();
 
   // Helper to get current applied theme
@@ -14,6 +28,32 @@
     const theme = document.documentElement.getAttribute('data-theme');
     return theme === 'dark' ? 'dark' : 'light';
   };
+
+  function toggleDropdown() {
+    showDropdown = !showDropdown;
+    if (showDropdown) {
+      // Notify parent that this dropdown is opening
+      if (onOpen) {
+        onOpen();
+      }
+      // Use setTimeout to allow the dropdown to render before positioning
+      setTimeout(positionDropdown, 0);
+    }
+  }
+
+  function positionDropdown() {
+    if (!dropdownElement) return;
+
+    const rect = dropdownElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+
+    // If dropdown extends beyond right edge of viewport, align it to the left
+    if (rect.right > viewportWidth - 10) {
+      dropdownAlignRight = false;
+    } else {
+      dropdownAlignRight = true;
+    }
+  }
 
   function selectTheme(theme: ColorTheme | undefined) {
     selectedTheme = theme;
@@ -28,6 +68,12 @@
     }
   }
 
+  function handleResize() {
+    if (showDropdown) {
+      positionDropdown();
+    }
+  }
+
   $: effectiveTheme = selectedTheme || `default-${getCurrentTheme()}`;
   $: selectedThemeLabel = selectedTheme
     ? themes.find((t) => t.value === selectedTheme)?.label || 'Default Light'
@@ -38,13 +84,13 @@
     : getCurrentTheme();
 </script>
 
-<svelte:window on:click={handleClickOutside} />
+<svelte:window on:click={handleClickOutside} on:resize={handleResize} />
 
 <div class="theme-selector">
   <button
     type="button"
     class="theme-button"
-    on:click|stopPropagation={() => (showDropdown = !showDropdown)}
+    on:click|stopPropagation={toggleDropdown}
     title="Select color theme"
   >
     <div class="theme-preview">
@@ -67,7 +113,7 @@
   </button>
 
   {#if showDropdown}
-    <div class="dropdown">
+    <div class="dropdown" class:align-left={!dropdownAlignRight} bind:this={dropdownElement}>
       <div class="dropdown-header">
         <h4>Color Themes</h4>
         <p class="dropdown-subtitle">Choose a theme for your page</p>
@@ -202,6 +248,11 @@
     max-height: 400px;
     overflow: auto;
     z-index: 1000;
+  }
+
+  .dropdown.align-left {
+    right: auto;
+    left: 0;
   }
 
   .dropdown-header {

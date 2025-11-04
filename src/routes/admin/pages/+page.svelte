@@ -94,15 +94,15 @@
         <tbody>
           {#each data.pages as page}
             <tr>
-              <td class="page-title">{page.title}</td>
-              <td class="page-slug">{page.slug}</td>
-              <td>
+              <td class="page-title" data-label="Title">{page.title}</td>
+              <td class="page-slug" data-label="Slug">{page.slug}</td>
+              <td data-label="Status">
                 <span class="status-badge" class:published={page.status === 'published'}>
                   {page.status}
                 </span>
               </td>
-              <td class="date">{formatDate(page.updated_at)}</td>
-              <td>
+              <td class="date" data-label="Last Modified">{formatDate(page.updated_at)}</td>
+              <td data-label="Actions">
                 <div class="actions">
                   {#if page.status === 'published'}
                     <a
@@ -196,22 +196,21 @@
 </div>
 
 <style>
+  /* Mobile-first styles */
   .pages-container {
     max-width: 1400px;
   }
 
   .page-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 1rem;
+    margin-bottom: 1.5rem;
   }
 
   h1 {
     color: var(--color-text-primary);
-    font-size: 2rem;
+    font-size: 1.5rem;
     margin: 0 0 0.5rem 0;
     transition: color var(--transition-normal);
   }
@@ -219,20 +218,24 @@
   .page-header p {
     color: var(--color-text-secondary);
     margin: 0;
+    font-size: 0.875rem;
     transition: color var(--transition-normal);
   }
 
   .create-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    padding: 0.875rem 1.5rem;
+    padding: 0.75rem 1.25rem;
     background: var(--color-primary);
     color: var(--color-text-inverse);
     border: none;
     border-radius: 8px;
     font-weight: 500;
+    font-size: 0.9375rem;
     cursor: pointer;
+    width: 100%;
     transition:
       background-color var(--transition-normal),
       transform var(--transition-normal);
@@ -245,8 +248,8 @@
 
   .content-card {
     background: var(--color-bg-primary);
-    border-radius: 12px;
-    padding: 1.5rem;
+    border-radius: 8px;
+    padding: 1rem;
     box-shadow: 0 2px 8px var(--color-shadow-light);
     overflow-x: auto;
     transition:
@@ -256,62 +259,87 @@
 
   .empty-state {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 3rem 1rem;
   }
 
   .empty-state svg {
     color: var(--color-text-tertiary);
     margin-bottom: 1rem;
     opacity: 0.5;
+    width: 48px;
+    height: 48px;
   }
 
   .empty-state h2 {
     color: var(--color-text-primary);
     margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
     transition: color var(--transition-normal);
   }
 
   .empty-state p {
     color: var(--color-text-secondary);
-    margin: 0 0 2rem 0;
+    margin: 0 0 1.5rem 0;
+    font-size: 0.875rem;
     transition: color var(--transition-normal);
   }
 
   .pages-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.875rem;
+    display: block;
   }
 
   thead {
-    border-bottom: 2px solid var(--color-border-secondary);
-    transition: border-color var(--transition-normal);
+    display: none;
   }
 
-  th {
-    text-align: left;
-    padding: 0.875rem;
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    transition: color var(--transition-normal);
+  tbody {
+    display: block;
+  }
+
+  tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
   }
 
   td {
-    padding: 1rem 0.875rem;
+    display: block;
+    padding: 0.5rem 0;
     color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-border-secondary);
-    transition:
-      color var(--transition-normal),
-      border-color var(--transition-normal);
+    border-bottom: none;
+    transition: color var(--transition-normal);
+  }
+
+  td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
   }
 
   .page-title {
     font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-title:before {
+    display: none;
   }
 
   .page-slug {
     font-family: monospace;
     color: var(--color-text-secondary);
+    font-size: 0.8125rem;
     transition: color var(--transition-normal);
   }
 
@@ -319,7 +347,7 @@
     display: inline-block;
     padding: 0.375rem 0.875rem;
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     background: var(--color-secondary);
     color: white;
@@ -332,26 +360,36 @@
 
   .date {
     color: var(--color-text-secondary);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     transition: color var(--transition-normal);
   }
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .actions:before {
+    display: none;
   }
 
   .view-btn,
   .preview-btn {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
     border: none;
     border-radius: 6px;
     font-weight: 500;
+    font-size: 0.8125rem;
     cursor: pointer;
     text-decoration: none;
+    flex: 1;
+    min-width: 0;
     transition: background-color var(--transition-normal);
   }
 
@@ -378,14 +416,18 @@
   .edit-btn {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
     background: var(--color-secondary);
     color: var(--color-text-inverse);
     border: none;
     border-radius: 6px;
     font-weight: 500;
+    font-size: 0.8125rem;
     cursor: pointer;
+    flex: 1;
+    min-width: 0;
     transition: background-color var(--transition-normal);
   }
 
@@ -396,12 +438,14 @@
   .delete-btn {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.375rem;
     padding: 0.5rem;
     background: transparent;
     color: var(--color-danger);
     border: 1px solid var(--color-danger);
     border-radius: 6px;
+    font-size: 0.8125rem;
     cursor: pointer;
     transition:
       background-color var(--transition-normal),
@@ -413,22 +457,138 @@
     color: white;
   }
 
-  @media (max-width: 768px) {
+  .delete-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Tablet and up */
+  @media (min-width: 768px) {
+    .page-header {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
     h1 {
+      font-size: 2rem;
+    }
+
+    .page-header p {
+      font-size: 1rem;
+    }
+
+    .create-btn {
+      width: auto;
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+    }
+
+    .content-card {
+      padding: 1.5rem;
+      border-radius: 12px;
+    }
+
+    .empty-state {
+      padding: 4rem 2rem;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+    }
+
+    .empty-state h2 {
       font-size: 1.5rem;
     }
 
+    .empty-state p {
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Show table layout on tablets and up */
     .pages-table {
+      display: table;
+      font-size: 1rem;
+    }
+
+    thead {
+      display: table-header-group;
+      border-bottom: 2px solid var(--color-border-secondary);
+      transition: border-color var(--transition-normal);
+    }
+
+    tbody {
+      display: table-row-group;
+    }
+
+    tbody tr {
+      display: table-row;
+      margin-bottom: 0;
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      border: none;
+    }
+
+    th {
+      display: table-cell;
+      text-align: left;
+      padding: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      transition: color var(--transition-normal);
+    }
+
+    td {
+      display: table-cell;
+      padding: 1rem 0.875rem;
+      border-bottom: 1px solid var(--color-border-secondary);
+      transition:
+        color var(--transition-normal),
+        border-color var(--transition-normal);
+    }
+
+    td:before {
+      display: none;
+    }
+
+    .page-title {
+      font-size: inherit;
+      margin-bottom: 0;
+    }
+
+    .page-slug {
+      font-size: inherit;
+    }
+
+    .status-badge {
       font-size: 0.875rem;
     }
 
-    th,
-    td {
-      padding: 0.5rem;
+    .date {
+      font-size: 0.875rem;
     }
 
     .actions {
-      flex-direction: column;
+      flex-wrap: nowrap;
+      margin-top: 0;
+    }
+
+    .view-btn,
+    .preview-btn,
+    .edit-btn {
+      flex: 0 0 auto;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .delete-btn {
+      flex: 0 0 auto;
+      font-size: 0.875rem;
     }
   }
 </style>
