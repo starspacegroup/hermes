@@ -34,9 +34,15 @@ export const GET: RequestHandler = async ({ url, platform, cookies, locals }) =>
     const role = url.searchParams.get('role');
     const status = url.searchParams.get('status');
 
+    // Validate role parameter
+    const validRoles = ['admin', 'user', 'customer', 'platform_engineer'];
+    
     let users;
     if (role) {
-      users = await getUsersByRole(db, siteId, role as any);
+      if (!validRoles.includes(role)) {
+        return json({ success: false, error: 'Invalid role parameter' }, { status: 400 });
+      }
+      users = await getUsersByRole(db, siteId, role as 'admin' | 'user' | 'customer' | 'platform_engineer');
     } else {
       users = await getAllUsers(db, siteId);
     }

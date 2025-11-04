@@ -95,7 +95,12 @@ export const PUT: RequestHandler = async ({ params, request, platform, cookies, 
     let updateData: UpdateUserData = { ...data };
     if (data.expiration_date !== undefined) {
       if (typeof data.expiration_date === 'string') {
-        updateData.expiration_date = Math.floor(new Date(data.expiration_date).getTime() / 1000);
+        const timestamp = Math.floor(new Date(data.expiration_date).getTime() / 1000);
+        // Validate that the date is valid
+        if (isNaN(timestamp)) {
+          return json({ success: false, error: 'Invalid expiration date format' }, { status: 400 });
+        }
+        updateData.expiration_date = timestamp;
       } else {
         updateData.expiration_date = data.expiration_date;
       }

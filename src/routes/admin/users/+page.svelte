@@ -1,8 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { invalidateAll } from '$app/navigation';
   import type { PageData } from './$types';
 
   export let data: PageData;
+
+  // Configuration
+  const EXPIRATION_WARNING_DAYS = 7;
+  const EXPIRATION_WARNING_THRESHOLD = EXPIRATION_WARNING_DAYS * 86400; // 7 days in seconds
 
   let filterRole = 'all';
   let filterStatus = 'all';
@@ -67,8 +72,8 @@
       });
 
       if (response.ok) {
-        // Reload the page to refresh the user list
-        window.location.reload();
+        // Invalidate and reload data without full page refresh
+        await invalidateAll();
       } else {
         const result = await response.json();
         alert(`Failed to delete user: ${result.error || 'Unknown error'}`);
@@ -173,7 +178,7 @@
             </td>
             <td>
               {#if user.expiration_date}
-                <span class:expiring-soon={user.expiration_date < Date.now() / 1000 + 7 * 86400}>
+                <span class:expiring-soon={user.expiration_date < Date.now() / 1000 + EXPIRATION_WARNING_THRESHOLD}>
                   {formatDate(user.expiration_date)}
                 </span>
               {:else}

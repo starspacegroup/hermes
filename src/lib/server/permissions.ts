@@ -6,12 +6,41 @@ import type { DBUser } from './db/users.js';
 import { getRolePermissions } from './db/roles.js';
 
 /**
+ * Default permissions for admin role
+ * Admins have most permissions except for critical operations like deleting users
+ */
+export const ADMIN_DEFAULT_PERMISSIONS = [
+  'orders:read',
+  'orders:write',
+  'orders:refund',
+  'products:read',
+  'products:write',
+  'reports:read',
+  'reports:export',
+  'settings:read',
+  'settings:write',
+  'settings:theme',
+  'users:read',
+  'users:write',
+  'pages:read',
+  'pages:write',
+  'pages:publish',
+  'logs:read'
+];
+
+/**
+ * Expiration warning threshold in seconds (7 days)
+ */
+export const EXPIRATION_WARNING_THRESHOLD = 7 * 86400;
+
+/**
  * Parse permissions from user's JSON permissions field
  */
 export function parseUserPermissions(user: DBUser): string[] {
   try {
     return JSON.parse(user.permissions) as string[];
-  } catch {
+  } catch (error) {
+    console.error(`Failed to parse permissions for user ${user.id}:`, error);
     return [];
   }
 }
@@ -32,8 +61,8 @@ export function userHasPermission(user: DBUser, permission: string): boolean {
     if (userPermissions.length > 0) {
       return userPermissions.includes(permission);
     }
-    // Default admin permissions
-    return !permission.startsWith('users:delete'); // Admins can do everything except delete users
+    // Default admin permissions (configurable list)
+    return ADMIN_DEFAULT_PERMISSIONS.includes(permission);
   }
 
   // Check custom permissions
