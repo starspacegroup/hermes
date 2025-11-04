@@ -1,6 +1,7 @@
 <script lang="ts">
   import BreakpointSwitcher from './BreakpointSwitcher.svelte';
   import ThemeSelector from './ThemeSelector.svelte';
+  import RevisionModal from './RevisionModal.svelte';
   import type { Breakpoint, ColorTheme } from '$lib/types/pages';
 
   export let title: string;
@@ -42,20 +43,16 @@
   export let onShowUndoHistory: (() => void) | undefined = undefined;
   export let onShowRedoHistory: (() => void) | undefined = undefined;
 
-  let showRevisionDropdown = false;
-  let revisionDropdownElement: HTMLDivElement | null = null;
-  let dropdownAlignRight = true;
+  let showRevisionModal = false;
   let undoPressTimer: number | undefined;
   let redoPressTimer: number | undefined;
   const LONG_PRESS_DURATION = 500; // milliseconds
 
-  function toggleRevisionDropdown() {
-    showRevisionDropdown = !showRevisionDropdown;
-    if (showRevisionDropdown) {
-      // Close theme dropdown when opening revision dropdown
+  function toggleRevisionModal() {
+    showRevisionModal = !showRevisionModal;
+    if (showRevisionModal) {
+      // Close theme dropdown when opening revision modal
       closeThemeDropdown();
-      // Use setTimeout to allow the dropdown to render before positioning
-      setTimeout(positionDropdown, 0);
     }
   }
 
@@ -65,40 +62,16 @@
     closeThemeDropdown = closer;
   }
 
-  function positionDropdown() {
-    if (!revisionDropdownElement) return;
-
-    const rect = revisionDropdownElement.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-
-    // If dropdown extends beyond right edge of viewport, align it to the left
-    if (rect.right > viewportWidth - 10) {
-      dropdownAlignRight = false;
-    } else {
-      dropdownAlignRight = true;
-    }
-  }
-
-  function handleRevisionClickOutside(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.revision-selector')) {
-      showRevisionDropdown = false;
-    }
-  }
-
   function handleRevisionSelect(revisionId: string) {
     if (events.loadRevision) {
       events.loadRevision(revisionId);
     }
-    showRevisionDropdown = false;
   }
 
-  function handleRevisionPublish(event: Event, revisionId: string) {
-    event.stopPropagation();
+  function handleRevisionPublish(revisionId: string) {
     if (events.publishRevision) {
       events.publishRevision(revisionId);
     }
-    showRevisionDropdown = false;
   }
 
   function handleUndoMouseDown() {
@@ -140,15 +113,7 @@
     handleRedoMouseUp();
     events.redo();
   }
-
-  function handleResize() {
-    if (showRevisionDropdown) {
-      positionDropdown();
-    }
-  }
 </script>
-
-<svelte:window on:click={handleRevisionClickOutside} on:resize={handleResize} />
 
 <div class="toolbar">
   <div class="toolbar-left">
@@ -162,7 +127,7 @@
       selectedTheme={colorTheme}
       onChange={events.changeTheme}
       onOpen={() => {
-        showRevisionDropdown = false;
+        showRevisionModal = false;
       }}
       {registerThemeDropdownCloser}
     />
@@ -284,84 +249,19 @@
     </button>
     <div class="divider"></div>
 
-    <!-- Revision History Dropdown -->
+    <!-- Revision History Button -->
     {#if pageId && revisions.length > 0}
-      <div class="revision-selector">
-        <button type="button" class="revision-btn" on:click={toggleRevisionDropdown}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          History ({revisions.length})
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M6 9l6 6 6-6"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-
-        {#if showRevisionDropdown}
-          <div
-            class="revision-dropdown"
-            class:align-left={!dropdownAlignRight}
-            bind:this={revisionDropdownElement}
-          >
-            {#each revisions as revision}
-              <div
-                class="revision-item"
-                class:current={revision.id === currentRevisionId}
-                class:published={revision.is_published}
-              >
-                <button
-                  type="button"
-                  class="revision-load"
-                  on:click={() => handleRevisionSelect(revision.id)}
-                >
-                  <div class="revision-info">
-                    <span class="revision-number">#{revision.revision_number}</span>
-                    <span class="revision-date">
-                      {new Date(revision.created_at * 1000).toLocaleString()}
-                    </span>
-                    {#if revision.is_published}
-                      <span class="badge published-badge">Published</span>
-                    {/if}
-                  </div>
-                </button>
-                {#if !revision.is_published}
-                  <button
-                    type="button"
-                    class="revision-publish-btn"
-                    on:click={(e) => handleRevisionPublish(e, revision.id)}
-                    title="Publish this revision"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        d="M5 13l4 4L19 7"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </button>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      <button type="button" class="revision-btn" on:click={toggleRevisionModal}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        History ({revisions.length})
+      </button>
       <div class="divider"></div>
     {/if}
 
@@ -434,6 +334,16 @@
     {/if}
   </div>
 </div>
+
+<!-- Revision Modal -->
+<RevisionModal
+  isOpen={showRevisionModal}
+  {revisions}
+  {currentRevisionId}
+  onSelect={handleRevisionSelect}
+  onPublish={handleRevisionPublish}
+  onClose={() => (showRevisionModal = false)}
+/>
 
 <style>
   /* Mobile-first toolbar */
@@ -619,11 +529,7 @@
     cursor: not-allowed;
   }
 
-  /* Revision selector styles */
-  .revision-selector {
-    position: relative;
-  }
-
+  /* Revision button styles */
   .revision-btn {
     display: flex;
     align-items: center;
@@ -636,108 +542,12 @@
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
   }
 
   .revision-btn:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-  }
-
-  .revision-dropdown {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    min-width: 300px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: var(--color-bg-primary);
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-  }
-
-  .revision-dropdown.align-left {
-    right: auto;
-    left: 0;
-  }
-
-  .revision-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--color-border-secondary);
-    transition: background 0.2s;
-  }
-
-  .revision-item:last-child {
-    border-bottom: none;
-  }
-
-  .revision-item:hover {
-    background: var(--color-bg-secondary);
-  }
-
-  .revision-item.current {
-    background: rgba(59, 130, 246, 0.1);
-    border-left: 3px solid var(--color-primary);
-  }
-
-  .revision-load {
-    flex: 1;
-    background: none;
-    border: none;
-    text-align: left;
-    cursor: pointer;
-    padding: 0;
-    color: var(--color-text-primary);
-  }
-
-  .revision-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .revision-number {
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-
-  .revision-date {
-    font-size: 0.75rem;
-    color: var(--color-text-secondary);
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    margin-top: 0.25rem;
-  }
-
-  .published-badge {
-    background: rgba(34, 197, 94, 0.2);
-    color: rgb(34, 197, 94);
-  }
-
-  .revision-publish-btn {
-    padding: 0.5rem;
-    background: transparent;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 4px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .revision-publish-btn:hover {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: rgb(34, 197, 94);
-    color: rgb(34, 197, 94);
   }
 
   /* Status indicator */
