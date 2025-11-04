@@ -71,6 +71,13 @@
     }
   }
 
+  function handleRevisionClickOutside(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.revision-selector')) {
+      showRevisionDropdown = false;
+    }
+  }
+
   function handleRevisionSelect(revisionId: string) {
     if (events.loadRevision) {
       events.loadRevision(revisionId);
@@ -126,6 +133,8 @@
     events.redo();
   }
 </script>
+
+<svelte:window on:click={handleRevisionClickOutside} />
 
 <div class="toolbar">
   <div class="toolbar-left">

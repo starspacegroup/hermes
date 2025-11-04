@@ -6,6 +6,8 @@
   export let onChange: (theme: ColorTheme | undefined) => void;
 
   let showDropdown = false;
+  let dropdownElement: HTMLDivElement | null = null;
+  let dropdownAlignRight = true;
   const themes = getAvailableThemes();
 
   // Helper to get current applied theme
@@ -14,6 +16,28 @@
     const theme = document.documentElement.getAttribute('data-theme');
     return theme === 'dark' ? 'dark' : 'light';
   };
+
+  function toggleDropdown() {
+    showDropdown = !showDropdown;
+    if (showDropdown) {
+      // Use setTimeout to allow the dropdown to render before positioning
+      setTimeout(positionDropdown, 0);
+    }
+  }
+
+  function positionDropdown() {
+    if (!dropdownElement) return;
+
+    const rect = dropdownElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+
+    // If dropdown extends beyond right edge of viewport, align it to the left
+    if (rect.right > viewportWidth - 10) {
+      dropdownAlignRight = false;
+    } else {
+      dropdownAlignRight = true;
+    }
+  }
 
   function selectTheme(theme: ColorTheme | undefined) {
     selectedTheme = theme;
@@ -44,7 +68,7 @@
   <button
     type="button"
     class="theme-button"
-    on:click|stopPropagation={() => (showDropdown = !showDropdown)}
+    on:click|stopPropagation={toggleDropdown}
     title="Select color theme"
   >
     <div class="theme-preview">
@@ -67,7 +91,7 @@
   </button>
 
   {#if showDropdown}
-    <div class="dropdown">
+    <div class="dropdown" class:align-left={!dropdownAlignRight} bind:this={dropdownElement}>
       <div class="dropdown-header">
         <h4>Color Themes</h4>
         <p class="dropdown-subtitle">Choose a theme for your page</p>
@@ -202,6 +226,11 @@
     max-height: 400px;
     overflow: auto;
     z-index: 1000;
+  }
+
+  .dropdown.align-left {
+    right: auto;
+    left: 0;
   }
 
   .dropdown-header {
