@@ -13,15 +13,14 @@ import { runExpirationCheck } from '$lib/server/user-expiration-scheduler';
  * POST /api/admin/check-expirations
  * Manually trigger expiration check and notifications
  */
-export const POST: RequestHandler = async ({ platform, cookies, locals }) => {
+export const POST: RequestHandler = async ({ platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission (only platform engineers and admins can trigger this)
     if (!canPerformAction(currentUser, 'users:write')) {

@@ -141,7 +141,7 @@
     <div class="header-content">
       <div class="header-title-row">
         <h1>{data.user.name}</h1>
-        {#if data.currentUser.canWrite && !data.user.isSystemUser}
+        {#if data.currentUser.canWrite && !data.user.isSystemUser && data.user.id !== data.currentUser.id}
           <a href="/admin/users/{data.user.id}/edit" class="btn-edit">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -168,7 +168,9 @@
         <span class="status-badge {getStatusBadgeClass(data.user.status)}">
           {data.user.status}
         </span>
-        {#if data.user.isSystemUser}
+        {#if data.user.id === data.currentUser.id}
+          <span class="current-user-badge" title="This is your account"> ✨ Hey it's me! </span>
+        {:else if data.user.isSystemUser}
           <span class="system-user-badge" title="This is a system user and cannot be edited">
             🔒 System User
           </span>
@@ -230,7 +232,19 @@
     {#if data.currentUser.canManageRoles}
       <div class="card">
         <h2>Role Management</h2>
-        {#if data.user.isSystemUser}
+        {#if data.user.id === data.currentUser.id}
+          <div class="info-item">
+            <span class="label">Current Role</span>
+            <span class="value">
+              <span class="role-badge {getRoleBadgeClass(data.user.role)}">
+                {data.user.role.replace('_', ' ')}
+              </span>
+            </span>
+          </div>
+          <div class="system-user-notice">
+            <strong>✨ Hey it's me!</strong> You cannot change your own role.
+          </div>
+        {:else if data.user.isSystemUser}
           <div class="info-item">
             <span class="label">Current Role</span>
             <span class="value">
@@ -287,7 +301,19 @@
     {#if data.currentUser.canWrite}
       <div class="card">
         <h2>Status Management</h2>
-        {#if data.user.isSystemUser}
+        {#if data.user.id === data.currentUser.id}
+          <div class="info-item">
+            <span class="label">Current Status</span>
+            <span class="value">
+              <span class="status-badge {getStatusBadgeClass(data.user.status)}">
+                {data.user.status}
+              </span>
+            </span>
+          </div>
+          <div class="system-user-notice">
+            <strong>✨ Hey it's me!</strong> You cannot change your own status.
+          </div>
+        {:else if data.user.isSystemUser}
           <div class="info-item">
             <span class="label">Current Status</span>
             <span class="value">
@@ -693,6 +719,19 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: #6b7280;
+  }
+
+  .current-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e40af;
   }
 
   .system-user-notice {

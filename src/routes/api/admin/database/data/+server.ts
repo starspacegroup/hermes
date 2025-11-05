@@ -2,15 +2,14 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db/connection';
 
-export const GET: RequestHandler = async ({ platform, cookies, url }) => {
+export const GET: RequestHandler = async ({ platform, locals, url }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       throw error(401, 'Unauthorized');
     }
 
-    const user = JSON.parse(decodeURIComponent(userSession));
+    const user = locals.currentUser;
 
     // Only platform engineers can access table data
     if (user.role !== 'platform_engineer') {

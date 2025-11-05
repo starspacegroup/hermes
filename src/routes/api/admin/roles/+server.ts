@@ -19,15 +19,14 @@ import { createActivityLog } from '$lib/server/db/activity-logs';
  * GET /api/admin/roles
  * List all roles or all permissions
  */
-export const GET: RequestHandler = async ({ url, platform, cookies, locals }) => {
+export const GET: RequestHandler = async ({ url, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'users:roles')) {
@@ -64,15 +63,14 @@ export const GET: RequestHandler = async ({ url, platform, cookies, locals }) =>
  * POST /api/admin/roles
  * Create a new role
  */
-export const POST: RequestHandler = async ({ request, platform, cookies, locals }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'users:roles')) {

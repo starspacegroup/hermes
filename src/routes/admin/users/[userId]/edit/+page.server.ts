@@ -35,6 +35,11 @@ export const load: PageServerLoad = async ({ platform, cookies, locals, params }
     throw error(404, 'User not found');
   }
 
+  // Prevent editing own account
+  if (userId === currentUser.id) {
+    throw error(403, 'Cannot edit your own account');
+  }
+
   // Check if this is a system user
   const isSystem = isSystemUser(userId);
 
@@ -82,6 +87,11 @@ export const actions: Actions = {
     }
 
     const userId = params.userId;
+
+    // Prevent editing own account
+    if (userId === currentUser.id) {
+      throw error(403, 'Cannot edit your own account');
+    }
 
     // Prevent editing system users
     if (isSystemUser(userId)) {

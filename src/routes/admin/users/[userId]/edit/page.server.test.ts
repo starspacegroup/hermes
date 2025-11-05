@@ -219,6 +219,39 @@ describe('Edit User Page Server', () => {
       ).rejects.toThrow('403: Cannot edit system users');
     });
 
+    it('should throw error if trying to edit own account', async () => {
+      const { getUserById } = await import('$lib/server/db');
+      const { canPerformAction, isSystemUser } = await import('$lib/server/permissions');
+      const getUserByIdMock = getUserById as ReturnType<typeof vi.fn>;
+      const canPerformActionMock = canPerformAction as ReturnType<typeof vi.fn>;
+      const isSystemUserMock = isSystemUser as ReturnType<typeof vi.fn>;
+
+      mockCookies.get.mockReturnValue(encodeURIComponent(JSON.stringify({ id: 'current-user' })));
+      getUserByIdMock.mockResolvedValueOnce({
+        id: 'current-user',
+        role: 'admin',
+        permissions: '[]'
+      });
+      getUserByIdMock.mockResolvedValueOnce({
+        id: 'current-user',
+        name: 'Current User',
+        permissions: '[]'
+      });
+      canPerformActionMock.mockReturnValue(true);
+      isSystemUserMock.mockReturnValue(false);
+
+      const { load } = await import('./+page.server');
+
+      await expect(
+        load({
+          platform: mockPlatform,
+          cookies: mockCookies,
+          locals: mockLocals,
+          params: { userId: 'current-user' }
+        } as unknown as Parameters<typeof load>[0])
+      ).rejects.toThrow('403: Cannot edit your own account');
+    });
+
     it('should load user data successfully', async () => {
       const { getUserById } = await import('$lib/server/db');
       const { canPerformAction, isSystemUser } = await import('$lib/server/permissions');
@@ -279,6 +312,46 @@ describe('Edit User Page Server', () => {
   });
 
   describe('actions', () => {
+    it('should throw error if trying to edit own account', async () => {
+      const { getUserById } = await import('$lib/server/db');
+      const { canPerformAction, isSystemUser } = await import('$lib/server/permissions');
+      const getUserByIdMock = getUserById as ReturnType<typeof vi.fn>;
+      const canPerformActionMock = canPerformAction as ReturnType<typeof vi.fn>;
+      const isSystemUserMock = isSystemUser as ReturnType<typeof vi.fn>;
+
+      mockCookies.get.mockReturnValue(encodeURIComponent(JSON.stringify({ id: 'current-user' })));
+      getUserByIdMock.mockResolvedValue({
+        id: 'current-user',
+        role: 'admin',
+        permissions: '[]',
+        status: 'active'
+      });
+      canPerformActionMock.mockReturnValue(true);
+      isSystemUserMock.mockReturnValue(false);
+
+      const formData = new FormData();
+      formData.append('email', 'test@example.com');
+      formData.append('name', 'Test User');
+      formData.append('role', 'admin');
+      formData.append('status', 'active');
+
+      const mockRequest = {
+        formData: async () => formData
+      };
+
+      const { actions } = await import('./+page.server');
+
+      await expect(
+        (actions as Actions).default({
+          request: mockRequest,
+          platform: mockPlatform,
+          cookies: mockCookies,
+          locals: mockLocals,
+          params: { userId: 'current-user' }
+        } as unknown as Parameters<(typeof actions)['default']>[0])
+      ).rejects.toThrow('403: Cannot edit your own account');
+    });
+
     it('should validate required fields', async () => {
       const { getUserById } = await import('$lib/server/db');
       const { canPerformAction, isSystemUser } = await import('$lib/server/permissions');

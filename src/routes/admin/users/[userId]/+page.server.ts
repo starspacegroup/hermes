@@ -80,6 +80,11 @@ export const actions: Actions = {
 
     const userId = params.userId;
 
+    // Prevent editing own account
+    if (userId === currentUser.id) {
+      throw error(403, 'Cannot edit your own account');
+    }
+
     // Prevent editing system users
     if (isSystemUser(userId)) {
       throw error(403, 'Cannot modify system users');
@@ -133,6 +138,11 @@ export const actions: Actions = {
     }
 
     const userId = params.userId;
+
+    // Prevent editing own account
+    if (userId === currentUser.id) {
+      throw error(403, 'Cannot edit your own account');
+    }
 
     // Prevent editing system users
     if (isSystemUser(userId)) {

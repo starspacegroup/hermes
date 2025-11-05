@@ -13,15 +13,14 @@ import { createActivityLog } from '$lib/server/db/activity-logs';
  * GET /api/admin/users/[id]
  * Get a specific user by ID
  */
-export const GET: RequestHandler = async ({ params, platform, cookies, locals }) => {
+export const GET: RequestHandler = async ({ params, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'users:read')) {
@@ -57,15 +56,14 @@ export const GET: RequestHandler = async ({ params, platform, cookies, locals })
  * PUT /api/admin/users/[id]
  * Update a specific user
  */
-export const PUT: RequestHandler = async ({ params, request, platform, cookies, locals }) => {
+export const PUT: RequestHandler = async ({ params, request, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'users:write')) {
@@ -150,15 +148,14 @@ export const PUT: RequestHandler = async ({ params, request, platform, cookies, 
  * DELETE /api/admin/users/[id]
  * Delete a specific user
  */
-export const DELETE: RequestHandler = async ({ params, platform, cookies, locals }) => {
+export const DELETE: RequestHandler = async ({ params, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'users:delete')) {

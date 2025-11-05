@@ -12,15 +12,14 @@ import { canPerformAction } from '$lib/server/permissions';
  * GET /api/admin/activity-logs
  * Query activity logs with optional filters
  */
-export const GET: RequestHandler = async ({ url, platform, cookies, locals }) => {
+export const GET: RequestHandler = async ({ url, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     // Check permission
     if (!canPerformAction(currentUser, 'logs:read')) {

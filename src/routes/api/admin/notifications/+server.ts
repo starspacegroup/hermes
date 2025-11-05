@@ -18,15 +18,14 @@ import {
  * GET /api/admin/notifications
  * Get notifications for the current user
  */
-export const GET: RequestHandler = async ({ url, platform, cookies, locals }) => {
+export const GET: RequestHandler = async ({ url, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     const db = getDB(platform);
     const siteId = locals.siteId;
@@ -65,15 +64,14 @@ export const GET: RequestHandler = async ({ url, platform, cookies, locals }) =>
  * POST /api/admin/notifications/mark-read
  * Mark notifications as read
  */
-export const POST: RequestHandler = async ({ request, platform, cookies, locals }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       return json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    const currentUser = JSON.parse(decodeURIComponent(userSession));
+    const currentUser = locals.currentUser;
 
     const db = getDB(platform);
     const siteId = locals.siteId;

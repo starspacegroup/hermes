@@ -9,6 +9,7 @@ declare global {
     interface Locals {
       siteId: string;
       isAdmin: boolean;
+      currentUser?: import('$lib/server/db/users').DBUser;
       user?: {
         id: string;
       };

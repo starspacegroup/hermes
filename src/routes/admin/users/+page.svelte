@@ -207,7 +207,11 @@
                     <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
                   </svg>
                 </button>
-                {#if user.isSystemUser}
+                {#if user.id === data.currentUser.id}
+                  <span class="current-user-badge" title="This is your account">
+                    ✨ Hey it's me!
+                  </span>
+                {:else if user.isSystemUser}
                   <span class="system-user-badge" title="System user - Cannot be edited">
                     🔒 System User
                   </span>
@@ -239,7 +243,7 @@
                       </svg>
                     </button>
                   {/if}
-                  {#if data.currentUser.canDelete && user.id !== data.currentUser.id}
+                  {#if data.currentUser.canDelete}
                     <button
                       class="btn-icon btn-danger"
                       on:click={() => deleteUser(user.id, user.name)}
@@ -554,6 +558,20 @@
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .current-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e40af;
     white-space: nowrap;
   }
 
