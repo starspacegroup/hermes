@@ -4,12 +4,28 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
 
   let isSidebarOpen = false;
   let currentPath = '';
+  let notifications: any[] = [];
+  let unreadCount = 0;
 
   $: currentPath = $page.url.pathname;
   $: isLoginPage = currentPath === '/auth/login';
+
+  async function fetchNotifications() {
+    try {
+      const response = await fetch('/api/admin/notifications');
+      if (response.ok) {
+        const data = await response.json();
+        notifications = data.notifications;
+        unreadCount = data.unreadCount;
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }
 
   onMount(() => {
     // Check authentication and role on mount, but allow login page
@@ -21,6 +37,13 @@
         // User is authenticated but doesn't have admin privileges
         // Redirect to main site
         goto('/', { replaceState: true });
+      } else {
+        // Fetch notifications for authenticated admin users
+        fetchNotifications();
+        
+        // Refresh notifications every 30 seconds
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
       }
     }
   });
@@ -52,17 +75,20 @@
         </svg>
       </button>
       <h1>Hermes Admin</h1>
-      <a href="/" class="open-site-link-mobile" aria-label="Open main site" on:click={closeSidebar}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ></path>
-        </svg>
-      </a>
-      <ThemeToggle />
+      <div class="header-actions">
+        <NotificationCenter {notifications} {unreadCount} />
+        <a href="/" class="open-site-link-mobile" aria-label="Open main site" on:click={closeSidebar}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+        </a>
+        <ThemeToggle />
+      </div>
     </header>
 
     <!-- Sidebar -->
@@ -305,6 +331,12 @@
     color: var(--color-primary);
     margin: 0;
     transition: color var(--transition-normal);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .menu-toggle {
