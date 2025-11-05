@@ -19,45 +19,14 @@ For development and demo purposes, the following user accounts are available:
 ### Platform Engineer
 
 - **Email:** `engineer@hermes.local`
-- **Password:** Set via environment variable (see below)
+- **Password:** `engineer123` (demo/development only - **CHANGE IN PRODUCTION**)
 - **Role:** platform_engineer
 
-## Platform Engineer Password Configuration
+## Important Security Notes
 
-The platform engineer password is not hardcoded and must be set via an
-environment variable for security reasons.
-
-### Local Development
-
-1. Create a `.dev.vars` file in the project root (copy from
-   `.dev.vars.example`):
-
-   ```bash
-   cp .dev.vars.example .dev.vars
-   ```
-
-2. Set your password in `.dev.vars`:
-
-   ```
-   PLATFORM_ENGINEER_PASSWORD=your_secure_password_here
-   ```
-
-3. The `.dev.vars` file is gitignored and will be automatically loaded by
-   Wrangler during local development.
-
-### Production/Preview Environment
-
-For deployed environments, set the password as a Cloudflare secret:
-
-```bash
-# For production
-wrangler secret put PLATFORM_ENGINEER_PASSWORD
-
-# For preview
-wrangler secret put PLATFORM_ENGINEER_PASSWORD --env preview
-```
-
-You'll be prompted to enter the password securely.
+- **Demo passwords are for development/testing only**
+- **Change all default passwords immediately in production environments**
+- The platform engineer account has full system access - secure it properly
 
 ## Security Notes
 

@@ -1,64 +1,28 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getDB, getUserByEmail } from '$lib/server/db';
 
-// Demo authentication credentials - in production, this would validate against the database with bcrypt
-// Regular user password: TfppPEsXnfZluUi52ne538O
-// Admin user password: 4a6lJebYdNkr2zjq5j59rTt
-// Platform engineer password: Set via PLATFORM_ENGINEER_PASSWORD environment variable
-const demoCredentials = [
-  {
-    email: 'user@hermes.local',
-    password: 'TfppPEsXnfZluUi52ne538O',
-    user: {
-      id: 'user-1',
-      email: 'user@hermes.local',
-      name: 'Demo User',
-      role: 'user' as const,
-      permissions: '[]',
-      status: 'active' as const,
-      expiration_date: null,
-      grace_period_days: 0
-    }
-  },
-  {
-    email: 'owner@hermes.local',
-    password: '4a6lJebYdNkr2zjq5j59rTt',
-    user: {
-      id: 'admin-1',
-      email: 'owner@hermes.local',
-      name: 'Site Owner',
-      role: 'admin' as const,
-      permissions: '[]',
-      status: 'active' as const,
-      expiration_date: null,
-      grace_period_days: 0
-    }
-  }
-];
+/**
+ * Hash a password using SHA-256 (matches the hashing in user edit)
+ * In production, use bcrypt instead
+ */
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-const mockLogin = (email: string, password: string, platformPassword?: string) => {
-  // Check platform engineer credentials from environment variable
-  if (email === 'engineer@hermes.local' && platformPassword && password === platformPassword) {
-    return {
-      id: 'engineer-1',
-      email: 'engineer@hermes.local',
-      name: 'Platform Engineer',
-      role: 'platform_engineer' as const,
-      permissions: '[]',
-      status: 'active' as const,
-      expiration_date: null,
-      grace_period_days: 0
-    };
-  }
+/**
+ * Verify password against stored hash
+ */
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const inputHash = await hashPassword(password);
+  return inputHash === storedHash;
+}
 
-  // Check standard demo credentials
-  const credential = demoCredentials.find(
-    (cred) => cred.email === email && cred.password === password
-  );
-  return credential ? credential.user : null;
-};
-
-export const POST: RequestHandler = async ({ request, cookies, platform }) => {
+export const POST: RequestHandler = async ({ request, cookies, platform, locals }) => {
   try {
     const data = (await request.json()) as {
       email?: string;
@@ -69,47 +33,95 @@ export const POST: RequestHandler = async ({ request, cookies, platform }) => {
       return json({ success: false, error: 'Email and password are required' }, { status: 400 });
     }
 
-    // Get platform engineer password from environment
-    const platformPassword = platform?.env?.PLATFORM_ENGINEER_PASSWORD as string | undefined;
+    const db = getDB(platform);
+    const siteId = locals.siteId;
 
-    const user = mockLogin(data.email, data.password, platformPassword);
+    // Look up user in database by email
+    const dbUser = await getUserByEmail(db, siteId, data.email);
 
-    if (user) {
-      // Set session cookie
-      cookies.set('user_session', JSON.stringify(user), {
-        path: '/',
-        httpOnly: true,
-        secure: false, // Set to true in production with HTTPS
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 // 7 days
-      });
-
-      // Set role-specific session cookies
-      if (user.role === 'admin') {
-        cookies.set('admin_session', 'authenticated', {
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7
-        });
-      } else if (user.role === 'platform_engineer') {
-        cookies.set('engineer_session', 'authenticated', {
-          path: '/',
-          httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7
-        });
-      }
-
-      return json({
-        success: true,
-        user
-      });
-    } else {
+    if (!dbUser) {
+      // User not found
       return json({ success: false, error: 'Invalid email or password' }, { status: 401 });
     }
+
+    // Check if user account is active
+    if (dbUser.status !== 'active') {
+      return json(
+        {
+          success: false,
+          error: `Account is ${dbUser.status}. Please contact an administrator.`
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check if account has expired
+    if (dbUser.expiration_date && dbUser.expiration_date < Date.now() / 1000) {
+      return json(
+        { success: false, error: 'Account has expired. Please contact an administrator.' },
+        { status: 403 }
+      );
+    }
+
+    // Verify password
+    const passwordValid = await verifyPassword(data.password, dbUser.password_hash);
+
+    if (!passwordValid) {
+      return json({ success: false, error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    // Prepare user object for session (without password hash)
+    const user = {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role,
+      permissions: dbUser.permissions,
+      status: dbUser.status,
+      expiration_date: dbUser.expiration_date,
+      grace_period_days: dbUser.grace_period_days
+    };
+
+    // Set session cookie
+    cookies.set('user_session', JSON.stringify(user), {
+      path: '/',
+      httpOnly: true,
+      secure: false, // Set to true in production with HTTPS
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
+
+    // Set role-specific session cookies
+    if (user.role === 'admin') {
+      cookies.set('admin_session', 'authenticated', {
+        path: '/',
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7
+      });
+    } else if (user.role === 'platform_engineer') {
+      cookies.set('engineer_session', 'authenticated', {
+        path: '/',
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7
+      });
+    }
+
+    // Update last login timestamp
+    const { updateUser } = await import('$lib/server/db/users');
+    await updateUser(db, siteId, dbUser.id, {
+      last_login_at: Math.floor(Date.now() / 1000),
+      last_login_ip:
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null
+    });
+
+    return json({
+      success: true,
+      user
+    });
   } catch (error) {
     console.error('Login error:', error);
     return json({ success: false, error: 'An error occurred during login' }, { status: 500 });

@@ -133,12 +133,12 @@
         <button
           type="button"
           class="credential-group clickable"
-          on:click={() => fillCredentials('engineer@hermes.local', '')}
+          on:click={() => fillCredentials('engineer@hermes.local', 'engineer123')}
           disabled={isLoading}
-          title="Password must be set via PLATFORM_ENGINEER_PASSWORD environment variable"
+          title="Demo password - change immediately in production"
         >
           <p>Email: engineer@hermes.local</p>
-          <p>Password: (Set via env var)</p>
+          <p>Password: engineer123</p>
         </button>
       </div>
     </div>

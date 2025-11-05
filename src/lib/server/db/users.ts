@@ -48,6 +48,8 @@ export interface UpdateUserData {
   status?: UserStatus;
   expiration_date?: number | null;
   grace_period_days?: number;
+  last_login_at?: number | null;
+  last_login_ip?: string | null;
   updated_by?: string | null;
 }
 
@@ -198,6 +200,14 @@ export async function updateUser(
   if (data.grace_period_days !== undefined) {
     updates.push('grace_period_days = ?');
     params.push(data.grace_period_days);
+  }
+  if (data.last_login_at !== undefined) {
+    updates.push('last_login_at = ?');
+    params.push(data.last_login_at);
+  }
+  if (data.last_login_ip !== undefined) {
+    updates.push('last_login_ip = ?');
+    params.push(data.last_login_ip);
   }
   if (data.updated_by !== undefined) {
     updates.push('updated_by = ?');

@@ -53,7 +53,7 @@ interface _MockLoadEvent {
   platform: MockPlatform;
   cookies: MockCookies;
   locals: MockLocals;
-  params: { userId: string; };
+  params: { userId: string };
 }
 
 interface _MockActionEvent {
@@ -63,7 +63,7 @@ interface _MockActionEvent {
   platform: MockPlatform;
   cookies: MockCookies;
   locals: MockLocals;
-  params: { userId: string; };
+  params: { userId: string };
 }
 
 describe('Edit User Page Server', () => {
