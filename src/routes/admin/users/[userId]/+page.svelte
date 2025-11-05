@@ -139,7 +139,28 @@
       Back to Users
     </button>
     <div class="header-content">
-      <h1>{data.user.name}</h1>
+      <div class="header-title-row">
+        <h1>{data.user.name}</h1>
+        {#if data.currentUser.canWrite && !data.user.isSystemUser}
+          <a href="/admin/users/{data.user.id}/edit" class="btn-edit">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Edit User
+          </a>
+        {/if}
+      </div>
       <div class="header-badges">
         <span class="role-badge {getRoleBadgeClass(data.user.role)}">
           {data.user.role.replace('_', ' ')}
@@ -435,9 +456,38 @@
     background: var(--color-bg-tertiary);
   }
 
+  .header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
   .header-content h1 {
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     font-size: 2rem;
+  }
+
+  .btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-primary, #0066cc);
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-edit:hover {
+    background: var(--color-primary-hover, #0052a3);
+  }
+
+  .btn-edit svg {
+    width: 16px;
+    height: 16px;
   }
 
   .header-badges {
