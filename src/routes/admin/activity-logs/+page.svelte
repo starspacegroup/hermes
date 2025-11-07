@@ -527,7 +527,7 @@
   }
 
   .log-card.clickable:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px var(--color-shadow-medium);
   }
 
   .log-card-header {
@@ -604,23 +604,24 @@
   }
 
   .severity-info {
-    background: #dbeafe;
-    color: #1e40af;
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    color: var(--color-primary);
   }
 
   .severity-warning {
-    background: #fef3c7;
-    color: #92400e;
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    color: var(--color-warning-hover);
   }
 
   .severity-error {
-    background: #fee2e2;
-    color: #991b1b;
+    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    color: var(--color-danger-hover);
   }
 
   .severity-critical {
-    background: #fce7f3;
-    color: #9f1239;
+    background: color-mix(in srgb, var(--color-danger) 25%, transparent);
+    color: var(--color-danger-hover);
+    font-weight: 700;
   }
 
   .system-tag {

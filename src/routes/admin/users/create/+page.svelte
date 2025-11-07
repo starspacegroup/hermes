@@ -514,10 +514,10 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    background: #fee;
-    color: #c00;
+    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    color: var(--color-danger-hover);
     border-radius: 8px;
-    border: 1px solid #fcc;
+    border: 1px solid var(--color-danger);
   }
 
   .form-section {
@@ -559,7 +559,7 @@
   }
 
   .required {
-    color: #e11d48;
+    color: var(--color-danger);
   }
 
   input[type='text'],
@@ -585,7 +585,7 @@
   }
 
   input.error {
-    border-color: #e11d48;
+    border-color: var(--color-danger);
   }
 
   .password-field {
@@ -617,7 +617,7 @@
   }
 
   .error-message {
-    color: #e11d48;
+    color: var(--color-danger);
     font-size: 0.85rem;
   }
 

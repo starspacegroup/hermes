@@ -253,7 +253,7 @@
     min-width: 1.25rem;
     height: 1.25rem;
     padding: 0 0.25rem;
-    background: #ef4444;
+    background: var(--color-danger);
     color: white;
     font-size: 0.625rem;
     font-weight: 700;
@@ -272,7 +272,7 @@
     background: var(--color-background);
     border: 1px solid var(--color-border);
     border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px var(--color-shadow-medium);
     display: flex;
     flex-direction: column;
     z-index: 1000;
@@ -360,15 +360,15 @@
   }
 
   .notification-item.unread {
-    background: rgba(59, 130, 246, 0.05);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
   }
 
   .notification-item.priority-urgent {
-    border-left: 3px solid #ef4444;
+    border-left: 3px solid var(--color-danger);
   }
 
   .notification-item.priority-high {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-warning);
   }
 
   .notification-icon {
@@ -415,7 +415,7 @@
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    color: #3b82f6;
+    color: var(--color-primary);
     font-size: 0.5rem;
   }
 

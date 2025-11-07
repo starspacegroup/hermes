@@ -464,43 +464,43 @@
   }
 
   .role-badge-engineer {
-    background: #8b5cf6;
+    background: var(--color-engineer-gradient-end);
     color: white;
   }
 
   .role-badge-admin {
-    background: #3b82f6;
+    background: var(--color-primary);
     color: white;
   }
 
   .role-badge-user {
-    background: #10b981;
+    background: var(--color-success);
     color: white;
   }
 
   .role-badge-customer {
-    background: #6b7280;
+    background: var(--color-secondary);
     color: white;
   }
 
   .status-badge-active {
-    background: #d1fae5;
-    color: #065f46;
+    background: color-mix(in srgb, var(--color-success) 15%, transparent);
+    color: var(--color-success-hover);
   }
 
   .status-badge-inactive {
-    background: #f3f4f6;
-    color: #4b5563;
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary-hover);
   }
 
   .status-badge-expired {
-    background: #fee2e2;
-    color: #991b1b;
+    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    color: var(--color-danger-hover);
   }
 
   .status-badge-suspended {
-    background: #fef3c7;
-    color: #92400e;
+    background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+    color: var(--color-warning-hover);
   }
 
   .warning-icon {
@@ -508,7 +508,7 @@
   }
 
   .expiring-soon {
-    color: #dc2626;
+    color: var(--color-danger-hover);
     font-weight: 600;
   }
 
@@ -542,9 +542,9 @@
   }
 
   .btn-icon.btn-danger:hover {
-    background: #fee2e2;
-    border-color: #dc2626;
-    color: #dc2626;
+    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    border-color: var(--color-danger-hover);
+    color: var(--color-danger-hover);
   }
 
   .system-user-badge {
@@ -566,12 +566,12 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.5rem 0.75rem;
-    background: #dbeafe;
-    border: 1px solid #3b82f6;
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border: 1px solid var(--color-primary);
     border-radius: 0.375rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #1e40af;
+    color: var(--color-primary);
     white-space: nowrap;
   }
 

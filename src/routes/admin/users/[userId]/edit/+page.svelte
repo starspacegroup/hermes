@@ -397,7 +397,7 @@
   .form-container {
     background: var(--color-bg-secondary);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px var(--color-shadow-light);
     padding: 2rem;
     border: 1px solid var(--color-border-primary);
   }

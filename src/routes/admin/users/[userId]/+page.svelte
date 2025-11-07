@@ -713,12 +713,12 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.75rem;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-secondary);
     border-radius: 12px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--color-text-secondary);
   }
 
   .current-user-badge {
@@ -726,26 +726,26 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.75rem;
-    background: #dbeafe;
-    border: 1px solid #3b82f6;
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border: 1px solid var(--color-primary);
     border-radius: 12px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #1e40af;
+    color: var(--color-primary);
   }
 
   .system-user-notice {
     padding: 1rem;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-secondary);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     margin-top: 1rem;
   }
 
   .system-user-notice strong {
-    color: #4b5563;
+    color: var(--color-text-primary);
   }
 
   .permissions-list {
