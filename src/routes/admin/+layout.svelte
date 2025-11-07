@@ -5,10 +5,11 @@
   import { onMount } from 'svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
+  import type { Notification } from '$lib/types/notifications';
 
   let isSidebarOpen = false;
   let currentPath = '';
-  let notifications: any[] = [];
+  let notifications: Notification[] = [];
   let unreadCount = 0;
 
   $: currentPath = $page.url.pathname;
@@ -18,7 +19,10 @@
     try {
       const response = await fetch('/api/admin/notifications');
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as {
+          notifications: Notification[];
+          unreadCount: number;
+        };
         notifications = data.notifications;
         unreadCount = data.unreadCount;
       }
@@ -40,7 +44,7 @@
       } else {
         // Fetch notifications for authenticated admin users
         fetchNotifications();
-        
+
         // Refresh notifications every 30 seconds
         const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
@@ -77,7 +81,12 @@
       <h1>Hermes Admin</h1>
       <div class="header-actions">
         <NotificationCenter {notifications} {unreadCount} />
-        <a href="/" class="open-site-link-mobile" aria-label="Open main site" on:click={closeSidebar}>
+        <a
+          href="/"
+          class="open-site-link-mobile"
+          aria-label="Open main site"
+          on:click={closeSidebar}
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path
               d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
@@ -233,7 +242,8 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             ></path>
-            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"
+            ></path>
           </svg>
           Activity Logs
         </a>

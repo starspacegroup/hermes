@@ -136,7 +136,9 @@
       log.ip_address || ''
     ]);
 
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
 
     // Download CSV
     const blob = new Blob([csv], { type: 'text/csv' });

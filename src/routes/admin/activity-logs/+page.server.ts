@@ -21,12 +21,16 @@ export const load: PageServerLoad = async ({ platform, cookies, locals, url }) =
   const siteId = locals.siteId;
 
   // Parse filter parameters from URL
+  const severityParam = url.searchParams.get('severity');
   const filters: ActivityLogFilter = {
     user_id: url.searchParams.get('user_id') || undefined,
     action: url.searchParams.get('action') || undefined,
     entity_type: url.searchParams.get('entity_type') || undefined,
     entity_id: url.searchParams.get('entity_id') || undefined,
-    severity: (url.searchParams.get('severity') as any) || undefined,
+    severity:
+      severityParam && ['info', 'warning', 'error', 'critical'].includes(severityParam)
+        ? (severityParam as 'info' | 'warning' | 'error' | 'critical')
+        : undefined,
     limit: parseInt(url.searchParams.get('limit') || '100'),
     offset: parseInt(url.searchParams.get('offset') || '0')
   };

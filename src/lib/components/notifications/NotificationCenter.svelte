@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import type { Notification } from '$lib/types/notifications';
 
-  export let notifications: any[] = [];
+  export let notifications: Notification[] = [];
   export let unreadCount: number = 0;
 
   let showPanel = false;
@@ -125,7 +126,7 @@
     }
   }
 
-  function handleNotificationClick(notification: any) {
+  function handleNotificationClick(notification: Notification): void {
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
@@ -204,7 +205,9 @@
               <div class="notification-content">
                 <div class="notification-header">
                   <span class="notification-title">{notification.title}</span>
-                  <span class="notification-time">{formatRelativeTime(notification.created_at)}</span>
+                  <span class="notification-time"
+                    >{formatRelativeTime(notification.created_at)}</span
+                  >
                 </div>
                 <p class="notification-message">{notification.message}</p>
                 {#if !notification.is_read}

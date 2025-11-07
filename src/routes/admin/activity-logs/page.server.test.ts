@@ -1,10 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { load } from './+page.server';
+import type { ActivityLog, ActivityLogFilter } from '$lib/server/db/activity-logs';
+
+interface LoadResult {
+  logs: (ActivityLog & { metadata: unknown })[];
+  filters: ActivityLogFilter;
+  currentUser: {
+    id: string;
+    role: string;
+    canExport: boolean;
+  };
+}
 
 describe('Activity Logs Page Server', () => {
-  let mockPlatform: any;
-  let mockCookies: any;
-  let mockLocals: any;
+  let mockPlatform: {
+    env: {
+      DB: {
+        prepare: ReturnType<typeof vi.fn>;
+      };
+    };
+  };
+  let mockCookies: {
+    get: ReturnType<typeof vi.fn>;
+  };
+  let mockLocals: {
+    siteId: string;
+  };
 
   beforeEach(() => {
     mockPlatform = {
@@ -57,12 +78,12 @@ describe('Activity Logs Page Server', () => {
   });
 
   it('should load activity logs for users with logs:read permission', async () => {
-    const result = await load({
+    const result = (await load({
       platform: mockPlatform,
       cookies: mockCookies,
       locals: mockLocals,
       url: new URL('http://localhost/admin/activity-logs')
-    } as any);
+    } as never)) as LoadResult;
 
     expect(result.logs).toBeDefined();
     expect(result.logs.length).toBeGreaterThan(0);
@@ -78,19 +99,21 @@ describe('Activity Logs Page Server', () => {
         cookies: mockCookies,
         locals: mockLocals,
         url: new URL('http://localhost/admin/activity-logs')
-      } as any)
+      } as never)
     ).rejects.toThrow();
   });
 
   it('should parse filter parameters from URL', async () => {
-    const url = new URL('http://localhost/admin/activity-logs?user_id=user-123&action=user.updated');
-    
-    const result = await load({
+    const url = new URL(
+      'http://localhost/admin/activity-logs?user_id=user-123&action=user.updated'
+    );
+
+    const result = (await load({
       platform: mockPlatform,
       cookies: mockCookies,
       locals: mockLocals,
       url
-    } as any);
+    } as never)) as LoadResult;
 
     expect(result.filters).toBeDefined();
     expect(result.filters.user_id).toBe('user-123');
@@ -98,12 +121,12 @@ describe('Activity Logs Page Server', () => {
   });
 
   it('should parse metadata from JSON strings', async () => {
-    const result = await load({
+    const result = (await load({
       platform: mockPlatform,
       cookies: mockCookies,
       locals: mockLocals,
       url: new URL('http://localhost/admin/activity-logs')
-    } as any);
+    } as never)) as LoadResult;
 
     expect(result.logs[0].metadata).toEqual({ email: 'test@example.com' });
   });

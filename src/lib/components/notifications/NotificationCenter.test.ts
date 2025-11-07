@@ -1,28 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import NotificationCenter from './NotificationCenter.svelte';
+import type { Notification } from '$lib/types/notifications';
 
 describe('NotificationCenter Component', () => {
-  const mockNotifications = [
+  const mockNotifications: Notification[] = [
     {
       id: 'notif-1',
+      site_id: 'site-1',
+      user_id: 'user-1',
       type: 'account_expiring',
       title: 'Account Expiring Soon',
       message: 'Your account will expire in 7 days',
+      metadata: null,
       priority: 'high',
       is_read: 0,
+      read_at: null,
       created_at: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
-      action_url: '/admin/profile'
+      action_url: '/admin/profile',
+      expires_at: null
     },
     {
       id: 'notif-2',
+      site_id: 'site-1',
+      user_id: 'user-1',
       type: 'permission_changed',
       title: 'Permissions Updated',
       message: 'Your permissions have been modified',
+      metadata: null,
       priority: 'normal',
       is_read: 1,
+      read_at: Math.floor(Date.now() / 1000) - 3600,
       created_at: Math.floor(Date.now() / 1000) - 86400, // 1 day ago
-      action_url: null
+      action_url: null,
+      expires_at: null
     }
   ];
 
