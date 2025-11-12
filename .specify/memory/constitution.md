@@ -1,28 +1,30 @@
 <!--
-Sync Impact Report - 2025-10-20
+Sync Impact Report - 2025-11-12
 ═══════════════════════════════════════════════════════════════════════
-Version Change: INITIAL → 1.0.0
+Version Change: 1.0.0 → 1.0.1
 
-Action: Initial constitution ratification for Hermes eCommerce Platform
+Action: Patch update - Clarifications and consistency improvements
 
-Modified Principles: N/A (initial version)
-Added Sections:
-  - Core Principles (I-VII)
-  - Technical Standards
-  - Development Workflow
-  - Governance
+Modified Principles: None (wording improvements only)
+Added Sections: None
+Removed Sections: None
 
-Removed Sections: N/A
+Changes:
+  - Clarified TDD workflow with explicit Red-Green-Refactor cycle
+  - Enhanced complexity justification guidelines
+  - Improved browser support specifications
+  - Clarified template compliance verification process
+  - Minor wording improvements for consistency
+  - Updated last amended date
 
 Templates Status:
   ✅ plan-template.md - Aligned with constitution principles
   ✅ spec-template.md - Aligned with user story and testing requirements
   ✅ tasks-template.md - Aligned with test-first and phase-based approach
-  ⚠ checklist-template.md - Review recommended for compliance checks
-  ⚠ agent-file-template.md - Review recommended for principle alignment
+  ✅ checklist-template.md - Verified alignment with quality gates
+  ✅ agent-file-template.md - Verified alignment with principles
 
-Follow-up TODOs:
-  - None at initial ratification
+Follow-up TODOs: None
 ═══════════════════════════════════════════════════════════════════════
 -->
 
@@ -60,17 +62,20 @@ through IntelliSense and autocomplete.
 
 ### III. Test-First Development (NON-NEGOTIABLE)
 
-TDD is mandatory for all feature development:
+TDD is mandatory for all feature development following the Red-Green-Refactor
+cycle:
 
-- Tests MUST be written BEFORE implementation
-- Tests MUST fail initially (Red phase)
-- Implementation MUST make tests pass (Green phase)
-- Code MUST be refactored for quality (Refactor phase)
-- Red-Green-Refactor cycle strictly enforced
+- Tests MUST be written BEFORE implementation (commit tests first)
+- Tests MUST fail initially - RED phase (verify test is valid)
+- Implementation MUST make tests pass - GREEN phase (minimal code)
+- Code MUST be refactored for quality - REFACTOR phase (improve while tests
+  pass)
+- Coverage MUST exceed 80% for new code (run `npm run test:coverage`)
+- Test independence MUST be maintained (no shared mutable state)
 
 **Rationale**: Test-first development ensures code meets requirements, prevents
-regressions, improves design through testability constraints, and provides
-living documentation of system behavior.
+regressions, improves design through testability constraints, provides living
+documentation of system behavior, and enables confident refactoring.
 
 ### IV. User Story Driven Development
 
@@ -147,7 +152,9 @@ that must earn its place.
 ### Browser & Platform Support
 
 - **Modern Browsers**: Last 2 versions of Chrome, Firefox, Safari, Edge
-- **Mobile**: iOS 15+, Android Chrome (last 2 versions)
+- **Mobile**: iOS 15+, Android Chrome (last 2 major versions)
+- **Responsive Breakpoints**: Mobile (<768px), Tablet (768-1024px), Desktop
+  (>1024px)
 - **Progressive Enhancement**: Core functionality MUST work without JavaScript
   where feasible
 - **Accessibility**: WCAG 2.1 AA compliance REQUIRED for all user-facing
@@ -258,11 +265,16 @@ Constitution version follows semantic versioning (MAJOR.MINOR.PATCH):
 
 When violating YAGNI or Simplicity principles, justification MUST include:
 
-- **What**: Specific complexity being added
-- **Why**: Problem that simpler solution cannot solve
-- **Alternatives**: Simpler approaches considered and why rejected
-- **Cost**: Maintenance burden being accepted
-- **Review**: Complexity MUST be reviewed and approved
+- **What**: Specific complexity being added (concrete implementation details)
+- **Why**: Problem that simpler solution cannot solve (with evidence)
+- **Alternatives**: Simpler approaches considered and why rejected (minimum 2
+  alternatives)
+- **Cost**: Maintenance burden being accepted (explicit trade-offs)
+- **Mitigation**: How complexity is contained and documented
+- **Review**: Complexity MUST be reviewed and approved (documented in PR)
+
+**Documentation Location**: Document in plan.md under "Complexity Tracking"
+section or in PR description under "Constitution Check".
 
 ### Guidance Files
 
@@ -270,6 +282,19 @@ For runtime development guidance not covered in this constitution, refer to:
 
 - **AGENTS.md**: AI assistant guidelines and code style conventions
 - **README.md**: Project setup and deployment instructions
+- **.github/copilot-instructions.md**: Comprehensive development guidelines and
+  patterns
 - **.specify/templates/**: Feature specification and planning templates
+- **docs/**: Detailed technical documentation for core features
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-20 | **Last Amended**: 2025-10-20
+### Hierarchy of Authority
+
+When guidance conflicts between documents, follow this priority order:
+
+1. This Constitution (highest authority)
+2. .github/copilot-instructions.md (comprehensive technical guidance)
+3. AGENTS.md (AI assistant specific patterns)
+4. README.md (project overview)
+5. docs/ folder (feature-specific documentation)
+
+**Version**: 1.0.1 | **Ratified**: 2025-10-20 | **Last Amended**: 2025-11-12
