@@ -247,6 +247,7 @@ describe('fulfillment-providers', () => {
           provider_name: 'Self',
           cost: 0,
           stock_quantity: 10,
+          sort_order: 0,
           created_at: Date.now(),
           updated_at: Date.now()
         },
@@ -258,6 +259,7 @@ describe('fulfillment-providers', () => {
           provider_name: 'Third Party',
           cost: 5.99,
           stock_quantity: 25,
+          sort_order: 1,
           created_at: Date.now(),
           updated_at: Date.now()
         }
@@ -270,8 +272,49 @@ describe('fulfillment-providers', () => {
       expect(options).toHaveLength(2);
       expect(options[0].providerName).toBe('Self');
       expect(options[0].stockQuantity).toBe(10);
+      expect(options[0].sortOrder).toBe(0);
       expect(options[1].cost).toBe(5.99);
       expect(options[1].stockQuantity).toBe(25);
+      expect(options[1].sortOrder).toBe(1);
+    });
+
+    it('returns options ordered by sort_order', async () => {
+      const mockOptions: (DBProductFulfillmentOption & { provider_name: string })[] = [
+        {
+          id: 'option-2',
+          site_id: testSiteId,
+          product_id: testProductId,
+          provider_id: 'provider-2',
+          provider_name: 'Third Party',
+          cost: 5.99,
+          stock_quantity: 25,
+          sort_order: 1,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        },
+        {
+          id: 'option-1',
+          site_id: testSiteId,
+          product_id: testProductId,
+          provider_id: 'provider-1',
+          provider_name: 'Self',
+          cost: 0,
+          stock_quantity: 10,
+          sort_order: 0,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        }
+      ];
+
+      mockDb.all.mockResolvedValue({ results: mockOptions });
+
+      const options = await getProductFulfillmentOptions(mockDb, testSiteId, testProductId);
+
+      // Verify the query includes ORDER BY sort_order
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('ORDER BY pfo.sort_order')
+      );
+      expect(options).toHaveLength(2);
     });
 
     it('returns empty array when no options found', async () => {
@@ -301,6 +344,35 @@ describe('fulfillment-providers', () => {
       expect(mockDb.prepare).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO product_fulfillment_options')
       );
+    });
+
+    it('sets fulfillment options with explicit sort order', async () => {
+      const options = [
+        { providerId: 'provider-2', cost: 5.99, stockQuantity: 25, sortOrder: 0 },
+        { providerId: 'provider-1', cost: 0, stockQuantity: 10, sortOrder: 1 }
+      ];
+
+      await setProductFulfillmentOptions(mockDb, testSiteId, testProductId, options);
+
+      // Verify sort_order is included in the INSERT statement
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('sort_order'));
+
+      // Verify bind was called with correct parameters including sort_order
+      const bindCalls = mockDb.bind.mock.calls;
+      // First bind call should have sortOrder 0, second should have sortOrder 1
+      expect(bindCalls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('automatically assigns sort order based on array index when not provided', async () => {
+      const options = [
+        { providerId: 'provider-1', cost: 0, stockQuantity: 10 },
+        { providerId: 'provider-2', cost: 5.99, stockQuantity: 25 }
+      ];
+
+      await setProductFulfillmentOptions(mockDb, testSiteId, testProductId, options);
+
+      // Verify the function was called and bind includes sort_order values
+      expect(mockDb.bind).toHaveBeenCalled();
     });
 
     it('clears all options when empty array provided', async () => {

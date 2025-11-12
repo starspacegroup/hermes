@@ -154,7 +154,7 @@ export async function getProductFulfillmentOptions(
      FROM product_fulfillment_options pfo
      JOIN fulfillment_providers fp ON pfo.provider_id = fp.id
      WHERE pfo.site_id = ? AND pfo.product_id = ?
-     ORDER BY fp.is_default DESC, fp.name ASC`,
+     ORDER BY pfo.sort_order ASC, fp.is_default DESC, fp.name ASC`,
     [siteId, productId]
   );
 
@@ -162,7 +162,8 @@ export async function getProductFulfillmentOptions(
     providerId: option.provider_id,
     providerName: option.provider_name,
     cost: option.cost,
-    stockQuantity: option.stock_quantity || 0
+    stockQuantity: option.stock_quantity || 0,
+    sortOrder: option.sort_order
   }));
 }
 
@@ -173,7 +174,7 @@ export async function setProductFulfillmentOptions(
   db: D1Database,
   siteId: string,
   productId: string,
-  options: Array<{ providerId: string; cost: number; stockQuantity?: number }>
+  options: Array<{ providerId: string; cost: number; stockQuantity?: number; sortOrder?: number }>
 ): Promise<void> {
   // Delete existing options
   await db
@@ -183,12 +184,14 @@ export async function setProductFulfillmentOptions(
 
   // Insert new options
   const timestamp = getCurrentTimestamp();
-  for (const option of options) {
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i];
     const id = generateId();
+    const sortOrder = option.sortOrder !== undefined ? option.sortOrder : i;
     await db
       .prepare(
-        `INSERT INTO product_fulfillment_options (id, site_id, product_id, provider_id, cost, stock_quantity, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO product_fulfillment_options (id, site_id, product_id, provider_id, cost, stock_quantity, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         id,
@@ -197,6 +200,7 @@ export async function setProductFulfillmentOptions(
         option.providerId,
         option.cost,
         option.stockQuantity || 0,
+        sortOrder,
         timestamp,
         timestamp
       )

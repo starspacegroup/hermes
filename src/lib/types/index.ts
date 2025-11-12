@@ -15,6 +15,7 @@ export interface Product {
     providerName: string;
     cost: number;
     stockQuantity: number;
+    sortOrder: number;
   }>;
 }
 
