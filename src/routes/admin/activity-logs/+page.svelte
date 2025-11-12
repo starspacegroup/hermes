@@ -392,7 +392,7 @@
   .header-content h1 {
     margin: 0 0 0.5rem 0;
     font-size: 1.75rem;
-    color: var(--color-text);
+    color: var(--color-text-primary);
   }
 
   .subtitle {
@@ -412,9 +412,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: var(--color-background-secondary);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 2px solid var(--color-border-secondary);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
@@ -423,7 +423,7 @@
   }
 
   .btn-secondary:hover {
-    background: var(--color-background-hover);
+    background: var(--color-bg-tertiary);
     border-color: var(--color-primary);
   }
 
@@ -442,8 +442,8 @@
   }
 
   .filters-section {
-    background: var(--color-background);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-secondary);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 1.5rem;
@@ -465,11 +465,7 @@
   .search-box input {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 3rem;
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
     font-size: 1rem;
-    background: var(--color-background);
-    color: var(--color-text);
   }
 
   .filter-grid {
@@ -488,17 +484,12 @@
   .filter-group label {
     font-weight: 500;
     font-size: 0.875rem;
-    color: var(--color-text);
+    color: var(--color-text-primary);
   }
 
   .filter-group select {
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
     font-size: 0.875rem;
-    background: var(--color-background);
-    color: var(--color-text);
-    cursor: pointer;
+    /* Inherits all other styling from global app.css */
   }
 
   .results-count {
@@ -519,8 +510,8 @@
   }
 
   .log-card {
-    background: var(--color-background);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-secondary);
     border-radius: 0.5rem;
     padding: 1rem;
     transition: box-shadow 0.2s;
@@ -551,7 +542,7 @@
   .log-action {
     font-family: monospace;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-text-primary);
     font-size: 0.9375rem;
   }
 
@@ -566,7 +557,7 @@
     gap: 0.375rem;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border-secondary);
   }
 
   .log-detail {
@@ -651,7 +642,7 @@
   .log-metadata {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--color-border-secondary);
   }
 
   .log-metadata summary {
@@ -669,19 +660,19 @@
   .log-metadata pre {
     margin-top: 0.5rem;
     padding: 0.75rem;
-    background: var(--color-background-secondary);
+    background: var(--color-bg-tertiary);
     border-radius: 0.375rem;
     font-size: 0.75rem;
     overflow-x: auto;
-    color: var(--color-text);
+    color: var(--color-text-primary);
   }
 
   /* Desktop Table View */
   .logs-desktop {
     display: none;
-    background: var(--color-background);
+    background: var(--color-bg-secondary);
     border-radius: 0.5rem;
-    border: 1px solid var(--color-border);
+    border: 2px solid var(--color-border-secondary);
     overflow: hidden;
   }
 
@@ -693,10 +684,10 @@
   .logs-table th {
     text-align: left;
     padding: 1rem;
-    background: var(--color-background-secondary);
+    background: var(--color-bg-tertiary);
     font-weight: 600;
-    color: var(--color-text);
-    border-bottom: 2px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-bottom: 2px solid var(--color-border-secondary);
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -704,13 +695,13 @@
 
   .logs-table td {
     padding: 0.875rem 1rem;
-    border-bottom: 1px solid var(--color-border);
-    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border-secondary);
+    color: var(--color-text-primary);
     font-size: 0.875rem;
   }
 
   .logs-table tbody tr:hover {
-    background: var(--color-background-hover);
+    background: var(--color-bg-tertiary);
   }
 
   .logs-table code {
