@@ -148,9 +148,7 @@ export async function getProductFulfillmentOptions(
   siteId: string,
   productId: string
 ): Promise<ProductFulfillmentOption[]> {
-  const result = await execute<
-    DBProductFulfillmentOption & { provider_name: string }
-  >(
+  const result = await execute<DBProductFulfillmentOption & { provider_name: string }>(
     db,
     `SELECT pfo.*, fp.name as provider_name
      FROM product_fulfillment_options pfo

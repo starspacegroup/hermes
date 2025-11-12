@@ -37,7 +37,7 @@
       const response = await fetch('/api/admin/providers');
       if (response.ok) {
         availableProviders = await response.json();
-        
+
         // Initialize selected providers map
         availableProviders.forEach((provider) => {
           const existingOption = product?.fulfillmentOptions?.find(
@@ -48,7 +48,7 @@
             cost: existingOption?.cost || 0
           });
         });
-        
+
         // Force reactivity update
         selectedProviders = new Map(selectedProviders);
       }
@@ -262,7 +262,7 @@
     <!-- Fulfillment Options -->
     {#if availableProviders.length > 0}
       <div class="form-group">
-        <label>Fulfillment Options</label>
+        <div class="label-wrapper">Fulfillment Options</div>
         <div class="fulfillment-options">
           {#each availableProviders as provider}
             {@const providerData = selectedProviders.get(provider.id)}
@@ -288,7 +288,8 @@
                       type="number"
                       id="cost-{provider.id}"
                       value={providerData.cost}
-                      on:input={(e) => updateProviderCost(provider.id, Number(e.currentTarget.value))}
+                      on:input={(e) =>
+                        updateProviderCost(provider.id, Number(e.currentTarget.value))}
                       min="0"
                       step="0.01"
                       placeholder="0.00"
@@ -336,7 +337,8 @@
     gap: 0.5rem;
   }
 
-  label {
+  label,
+  .label-wrapper {
     font-weight: 500;
     color: var(--color-text-secondary);
     font-size: 0.8125rem;

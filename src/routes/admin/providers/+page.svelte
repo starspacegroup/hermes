@@ -221,6 +221,8 @@
 
 <!-- Add/Edit Modal -->
 {#if showAddModal || showEditModal}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click={closeModals}></div>
   <div class="modal">
     <div class="modal-header">
@@ -272,6 +274,8 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteConfirm && selectedProvider}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click={closeModals}></div>
   <div class="modal confirm-modal">
     <div class="modal-header">
@@ -286,7 +290,12 @@
     <p class="warning">This action cannot be undone.</p>
     <div class="modal-actions">
       <button type="button" class="cancel-btn" on:click={closeModals}>Cancel</button>
-      <button type="button" class="delete-confirm-btn" on:click={confirmDelete} disabled={isSubmitting}>
+      <button
+        type="button"
+        class="delete-confirm-btn"
+        on:click={confirmDelete}
+        disabled={isSubmitting}
+      >
         {isSubmitting ? 'Deleting...' : 'Delete'}
       </button>
     </div>

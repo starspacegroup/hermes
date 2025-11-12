@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getAllFulfillmentProviders,
   getFulfillmentProviderById,
@@ -8,10 +8,7 @@ import {
   getProductFulfillmentOptions,
   setProductFulfillmentOptions
 } from './fulfillment-providers';
-import type {
-  DBFulfillmentProvider,
-  DBProductFulfillmentOption
-} from '$lib/types/fulfillment';
+import type { DBFulfillmentProvider, DBProductFulfillmentOption } from '$lib/types/fulfillment';
 
 describe('fulfillment-providers', () => {
   let mockDb: any;
@@ -60,9 +57,7 @@ describe('fulfillment-providers', () => {
 
       expect(providers).toHaveLength(2);
       expect(providers[0].name).toBe('Self');
-      expect(mockDb.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE site_id = ?')
-      );
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('WHERE site_id = ?'));
       expect(mockDb.bind).toHaveBeenCalledWith(testSiteId);
     });
 
@@ -175,9 +170,7 @@ describe('fulfillment-providers', () => {
         description: 'New desc'
       };
 
-      mockDb.first
-        .mockResolvedValueOnce(existingProvider)
-        .mockResolvedValueOnce(updatedProvider);
+      mockDb.first.mockResolvedValueOnce(existingProvider).mockResolvedValueOnce(updatedProvider);
 
       const provider = await updateFulfillmentProvider(mockDb, testSiteId, testProviderId, {
         name: 'New Name',
