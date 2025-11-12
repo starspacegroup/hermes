@@ -13,3 +13,6 @@ export * from './users.js';
 export * from './orders.js';
 export * from './pages.js';
 export * from './media.js';
+export * from './roles.js';
+export * from './activity-logs.js';
+export * from './notifications.js';

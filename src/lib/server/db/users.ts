@@ -5,29 +5,52 @@
 
 import { executeOne, execute, generateId, getCurrentTimestamp } from './connection.js';
 
+export type UserRole = 'admin' | 'user' | 'customer' | 'platform_engineer';
+export type UserStatus = 'active' | 'inactive' | 'expired' | 'suspended';
+
 export interface DBUser {
   id: string;
   site_id: string;
   email: string;
   name: string;
   password_hash: string;
-  role: 'admin' | 'user' | 'customer' | 'platform_engineer';
+  role: UserRole;
+  permissions: string; // JSON array
+  status: UserStatus;
+  expiration_date: number | null;
+  grace_period_days: number;
+  last_login_at: number | null;
+  last_login_ip: string | null;
   created_at: number;
   updated_at: number;
+  created_by: string | null;
+  updated_by: string | null;
 }
 
 export interface CreateUserData {
   email: string;
   name: string;
   password_hash: string;
-  role?: 'admin' | 'user' | 'customer' | 'platform_engineer';
+  role?: UserRole;
+  permissions?: string[];
+  status?: UserStatus;
+  expiration_date?: number | null;
+  grace_period_days?: number;
+  created_by?: string | null;
 }
 
 export interface UpdateUserData {
   email?: string;
   name?: string;
   password_hash?: string;
-  role?: 'admin' | 'user' | 'customer' | 'platform_engineer';
+  role?: UserRole;
+  permissions?: string[];
+  status?: UserStatus;
+  expiration_date?: number | null;
+  grace_period_days?: number;
+  last_login_at?: number | null;
+  last_login_ip?: string | null;
+  updated_by?: string | null;
 }
 
 /**
@@ -96,11 +119,13 @@ export async function createUser(
 ): Promise<DBUser> {
   const id = generateId();
   const timestamp = getCurrentTimestamp();
+  const permissions = data.permissions ? JSON.stringify(data.permissions) : '[]';
 
   await db
     .prepare(
-      `INSERT INTO users (id, site_id, email, name, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (id, site_id, email, name, password_hash, role, permissions, status, 
+       expiration_date, grace_period_days, created_at, updated_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -109,8 +134,13 @@ export async function createUser(
       data.name,
       data.password_hash,
       data.role || 'customer',
+      permissions,
+      data.status || 'active',
+      data.expiration_date || null,
+      data.grace_period_days || 0,
       timestamp,
-      timestamp
+      timestamp,
+      data.created_by || null
     )
     .run();
 
@@ -155,6 +185,34 @@ export async function updateUser(
     updates.push('role = ?');
     params.push(data.role);
   }
+  if (data.permissions !== undefined) {
+    updates.push('permissions = ?');
+    params.push(JSON.stringify(data.permissions));
+  }
+  if (data.status !== undefined) {
+    updates.push('status = ?');
+    params.push(data.status);
+  }
+  if (data.expiration_date !== undefined) {
+    updates.push('expiration_date = ?');
+    params.push(data.expiration_date);
+  }
+  if (data.grace_period_days !== undefined) {
+    updates.push('grace_period_days = ?');
+    params.push(data.grace_period_days);
+  }
+  if (data.last_login_at !== undefined) {
+    updates.push('last_login_at = ?');
+    params.push(data.last_login_at);
+  }
+  if (data.last_login_ip !== undefined) {
+    updates.push('last_login_ip = ?');
+    params.push(data.last_login_ip);
+  }
+  if (data.updated_by !== undefined) {
+    updates.push('updated_by = ?');
+    params.push(data.updated_by);
+  }
 
   if (updates.length === 0) {
     return user;
@@ -182,4 +240,119 @@ export async function deleteUser(db: D1Database, siteId: string, userId: string)
     .bind(userId, siteId)
     .run();
   return (result.meta?.changes || 0) > 0;
+}
+
+/**
+ * Update user login tracking
+ */
+export async function updateUserLogin(
+  db: D1Database,
+  siteId: string,
+  userId: string,
+  ipAddress: string | null
+): Promise<void> {
+  const timestamp = getCurrentTimestamp();
+  await db
+    .prepare('UPDATE users SET last_login_at = ?, last_login_ip = ? WHERE id = ? AND site_id = ?')
+    .bind(timestamp, ipAddress, userId, siteId)
+    .run();
+}
+
+/**
+ * Get users by status (scoped by site)
+ */
+export async function getUsersByStatus(
+  db: D1Database,
+  siteId: string,
+  status: UserStatus
+): Promise<DBUser[]> {
+  const result = await execute<DBUser>(
+    db,
+    'SELECT * FROM users WHERE site_id = ? AND status = ? ORDER BY created_at DESC',
+    [siteId, status]
+  );
+  return result.results || [];
+}
+
+/**
+ * Get users with expiration dates (for checking expired accounts)
+ */
+export async function getUsersWithExpiration(db: D1Database, siteId: string): Promise<DBUser[]> {
+  const result = await execute<DBUser>(
+    db,
+    `SELECT * FROM users 
+     WHERE site_id = ? AND expiration_date IS NOT NULL 
+     ORDER BY expiration_date ASC`,
+    [siteId]
+  );
+  return result.results || [];
+}
+
+/**
+ * Get expired users (accounts past expiration date + grace period)
+ */
+export async function getExpiredUsers(
+  db: D1Database,
+  siteId: string,
+  currentTimestamp?: number
+): Promise<DBUser[]> {
+  const now = currentTimestamp || getCurrentTimestamp();
+  const result = await execute<DBUser>(
+    db,
+    `SELECT * FROM users 
+     WHERE site_id = ? 
+     AND expiration_date IS NOT NULL 
+     AND (expiration_date + (grace_period_days * 86400)) <= ?
+     AND status = 'active'`,
+    [siteId, now]
+  );
+  return result.results || [];
+}
+
+/**
+ * Get users expiring soon (within specified days)
+ */
+export async function getUsersExpiringSoon(
+  db: D1Database,
+  siteId: string,
+  daysAhead: number,
+  currentTimestamp?: number
+): Promise<DBUser[]> {
+  const now = currentTimestamp || getCurrentTimestamp();
+  const futureTimestamp = now + daysAhead * 86400; // Convert days to seconds
+  const result = await execute<DBUser>(
+    db,
+    `SELECT * FROM users 
+     WHERE site_id = ? 
+     AND expiration_date IS NOT NULL 
+     AND expiration_date > ?
+     AND expiration_date <= ?
+     AND status = 'active'
+     ORDER BY expiration_date ASC`,
+    [siteId, now, futureTimestamp]
+  );
+  return result.results || [];
+}
+
+/**
+ * Deactivate expired users
+ */
+export async function deactivateExpiredUsers(
+  db: D1Database,
+  siteId: string,
+  currentTimestamp?: number
+): Promise<number> {
+  const now = currentTimestamp || getCurrentTimestamp();
+  const result = await db
+    .prepare(
+      `UPDATE users 
+       SET status = 'expired', updated_at = ?
+       WHERE site_id = ? 
+       AND expiration_date IS NOT NULL 
+       AND (expiration_date + (grace_period_days * 86400)) <= ?
+       AND status = 'active'`
+    )
+    .bind(now, siteId, now)
+    .run();
+  return result.meta?.changes || 0;
 }

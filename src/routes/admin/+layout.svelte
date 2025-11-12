@@ -4,12 +4,32 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
+  import type { Notification } from '$lib/types/notifications';
 
   let isSidebarOpen = false;
   let currentPath = '';
+  let notifications: Notification[] = [];
+  let unreadCount = 0;
 
   $: currentPath = $page.url.pathname;
   $: isLoginPage = currentPath === '/auth/login';
+
+  async function fetchNotifications() {
+    try {
+      const response = await fetch('/api/admin/notifications');
+      if (response.ok) {
+        const data = (await response.json()) as {
+          notifications: Notification[];
+          unreadCount: number;
+        };
+        notifications = data.notifications;
+        unreadCount = data.unreadCount;
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }
 
   onMount(() => {
     // Check authentication and role on mount, but allow login page
@@ -21,6 +41,13 @@
         // User is authenticated but doesn't have admin privileges
         // Redirect to main site
         goto('/', { replaceState: true });
+      } else {
+        // Fetch notifications for authenticated admin users
+        fetchNotifications();
+
+        // Refresh notifications every 30 seconds
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
       }
     }
   });
@@ -52,17 +79,25 @@
         </svg>
       </button>
       <h1>Hermes Admin</h1>
-      <a href="/" class="open-site-link-mobile" aria-label="Open main site" on:click={closeSidebar}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ></path>
-        </svg>
-      </a>
-      <ThemeToggle />
+      <div class="header-actions">
+        <NotificationCenter {notifications} {unreadCount} />
+        <a
+          href="/"
+          class="open-site-link-mobile"
+          aria-label="Open main site"
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+        </a>
+        <ThemeToggle />
+      </div>
     </header>
 
     <!-- Sidebar -->
@@ -172,6 +207,47 @@
           Settings
         </a>
 
+        <a
+          href="/admin/users"
+          class:active={currentPath.startsWith('/admin/users')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <circle cx="9" cy="7" r="4" stroke-width="2"></circle>
+            <path
+              d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          Users
+        </a>
+
+        <a
+          href="/admin/activity-logs"
+          class:active={currentPath.startsWith('/admin/activity-logs')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"
+            ></path>
+          </svg>
+          Activity Logs
+        </a>
+
         {#if $authStore.user?.role === 'platform_engineer'}
           <a
             href="/admin/database"
@@ -265,6 +341,12 @@
     color: var(--color-primary);
     margin: 0;
     transition: color var(--transition-normal);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .menu-toggle {

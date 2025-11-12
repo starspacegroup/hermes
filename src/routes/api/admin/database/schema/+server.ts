@@ -45,15 +45,14 @@ interface DatabaseSchema {
   totalIndexes: number;
 }
 
-export const GET: RequestHandler = async ({ platform, cookies }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
   try {
     // Check authentication
-    const userSession = cookies.get('user_session');
-    if (!userSession) {
+    if (!locals.currentUser) {
       throw error(401, 'Unauthorized');
     }
 
-    const user = JSON.parse(decodeURIComponent(userSession));
+    const user = locals.currentUser;
 
     // Only platform engineers can access database schema
     if (user.role !== 'platform_engineer') {
