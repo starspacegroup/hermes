@@ -77,30 +77,82 @@ function validateForm(): CheckoutValidationErrors {
   return errors;
 }
 
-async function submitOrder(): Promise<{ success: boolean; orderId?: string; error?: string }> {
+async function submitOrder(
+  cartItems: Array<{ id: string; name: string; price: number; quantity: number; image: string }>,
+  subtotal: number,
+  shippingCost: number,
+  tax: number,
+  total: number
+): Promise<{ success: boolean; orderId?: string; error?: string }> {
   checkoutState.update((state) => ({ ...state, isSubmitting: true }));
 
   try {
     // Validate the form first
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
+      checkoutState.update((state) => ({ ...state, isSubmitting: false }));
       return { success: false, error: 'Please fix the validation errors' };
     }
 
-    // Get current state
-    await new Promise<CheckoutState>((resolve) => {
-      checkoutState.subscribe((current) => resolve(current))();
+    // Get current state synchronously
+    let currentState: CheckoutState = {
+      formData: { ...initialFormData },
+      currentStep: 1,
+      isSubmitting: false,
+      validationErrors: {}
+    };
+
+    const unsubscribe = checkoutState.subscribe((state) => {
+      currentState = state;
+    });
+    unsubscribe();
+
+    // Prepare order data
+    const orderData = {
+      items: cartItems.map((item) => ({
+        product_id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      })),
+      subtotal,
+      shipping_cost: shippingCost,
+      tax,
+      total,
+      shipping_address: currentState.formData.shippingAddress,
+      billing_address: currentState.formData.sameAsShipping
+        ? copyShippingToBilling(currentState.formData.shippingAddress)
+        : currentState.formData.billingAddress,
+      payment_method: currentState.formData.paymentMethod
+    };
+
+    // Call the API to create the order
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderData)
     });
 
-    // Simulate API call to create order
-    const orderId = await createOrder();
+    const result = (await response.json()) as {
+      success: boolean;
+      orderId?: string;
+      error?: string;
+    };
+
+    if (!response.ok || !result.success) {
+      checkoutState.update((state) => ({ ...state, isSubmitting: false }));
+      return { success: false, error: result.error || 'Failed to process order' };
+    }
 
     checkoutState.update((state) => ({
       ...state,
       isSubmitting: false
     }));
 
-    return { success: true, orderId };
+    return { success: true, orderId: result.orderId };
   } catch (error) {
     checkoutState.update((state) => ({
       ...state,
@@ -146,20 +198,6 @@ export const checkoutStore = {
   getCurrentStep,
   setCurrentStep
 };
-
-// Simulate order creation (in a real app, this would be an API call)
-async function createOrder(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate random failure for testing
-      if (Math.random() < 0.1) {
-        reject(new Error('Payment processing failed'));
-      } else {
-        resolve(`ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-      }
-    }, 2000);
-  });
-}
 
 // Helper function to copy shipping address to billing address
 export function copyShippingToBilling(

@@ -158,6 +158,25 @@
         </a>
 
         <a
+          href="/admin/orders"
+          class:active={currentPath.startsWith('/admin/orders')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke-width="2"></rect>
+            <path d="M9 14l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            ></path>
+          </svg>
+          Orders
+        </a>
+
+        <a
           href="/admin/providers"
           class:active={currentPath.startsWith('/admin/providers')}
           on:click={closeSidebar}

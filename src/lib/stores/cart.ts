@@ -72,6 +72,7 @@ export interface CartStore {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clear: () => void;
+  clearCart: () => void;
   getItemQuantity: (items: CartItem[], productId: string) => number;
   getTotalItems: (items: CartItem[]) => number;
   getTotalPrice: (items: CartItem[]) => number;
@@ -142,6 +143,11 @@ export const cartStore: CartStore = {
     logCartAction('clear', undefined, undefined, undefined, undefined, {
       itemsCleared: itemsCount
     });
+  },
+
+  // Alias for clear() for better readability
+  clearCart: (): void => {
+    cartStore.clear();
   },
 
   getItemQuantity: (items: CartItem[], productId: string): number => {
