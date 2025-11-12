@@ -1,0 +1,323 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  getAllFulfillmentProviders,
+  getFulfillmentProviderById,
+  createFulfillmentProvider,
+  updateFulfillmentProvider,
+  deleteFulfillmentProvider,
+  getProductFulfillmentOptions,
+  setProductFulfillmentOptions
+} from './fulfillment-providers';
+import type {
+  DBFulfillmentProvider,
+  DBProductFulfillmentOption
+} from '$lib/types/fulfillment';
+
+describe('fulfillment-providers', () => {
+  let mockDb: any;
+  const testSiteId = 'test-site';
+  const testProviderId = 'provider-123';
+  const testProductId = 'product-123';
+
+  beforeEach(() => {
+    mockDb = {
+      prepare: vi.fn().mockReturnThis(),
+      bind: vi.fn().mockReturnThis(),
+      run: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+      first: vi.fn(),
+      all: vi.fn()
+    };
+  });
+
+  describe('getAllFulfillmentProviders', () => {
+    it('fetches all active providers for a site', async () => {
+      const mockProviders: DBFulfillmentProvider[] = [
+        {
+          id: 'provider-1',
+          site_id: testSiteId,
+          name: 'Self',
+          description: 'Self-fulfilled',
+          is_default: 1,
+          is_active: 1,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        },
+        {
+          id: 'provider-2',
+          site_id: testSiteId,
+          name: 'Third Party',
+          description: 'Third party fulfillment',
+          is_default: 0,
+          is_active: 1,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        }
+      ];
+
+      mockDb.all.mockResolvedValue({ results: mockProviders });
+
+      const providers = await getAllFulfillmentProviders(mockDb, testSiteId);
+
+      expect(providers).toHaveLength(2);
+      expect(providers[0].name).toBe('Self');
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE site_id = ?')
+      );
+      expect(mockDb.bind).toHaveBeenCalledWith(testSiteId);
+    });
+
+    it('returns empty array when no providers found', async () => {
+      mockDb.all.mockResolvedValue({ results: [] });
+
+      const providers = await getAllFulfillmentProviders(mockDb, testSiteId);
+
+      expect(providers).toEqual([]);
+    });
+  });
+
+  describe('getFulfillmentProviderById', () => {
+    it('fetches a provider by ID', async () => {
+      const mockProvider: DBFulfillmentProvider = {
+        id: testProviderId,
+        site_id: testSiteId,
+        name: 'Self',
+        description: 'Self-fulfilled',
+        is_default: 1,
+        is_active: 1,
+        created_at: Date.now(),
+        updated_at: Date.now()
+      };
+
+      mockDb.first.mockResolvedValue(mockProvider);
+
+      const provider = await getFulfillmentProviderById(mockDb, testSiteId, testProviderId);
+
+      expect(provider).toEqual(mockProvider);
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE id = ? AND site_id = ?')
+      );
+      expect(mockDb.bind).toHaveBeenCalledWith(testProviderId, testSiteId);
+    });
+
+    it('returns null when provider not found', async () => {
+      mockDb.first.mockResolvedValue(null);
+
+      const provider = await getFulfillmentProviderById(mockDb, testSiteId, 'nonexistent');
+
+      expect(provider).toBeNull();
+    });
+  });
+
+  describe('createFulfillmentProvider', () => {
+    it('creates a new provider', async () => {
+      const newProvider: DBFulfillmentProvider = {
+        id: expect.any(String),
+        site_id: testSiteId,
+        name: 'New Provider',
+        description: 'Test provider',
+        is_default: 0,
+        is_active: 1,
+        created_at: expect.any(Number),
+        updated_at: expect.any(Number)
+      };
+
+      mockDb.first.mockResolvedValue(newProvider);
+
+      const provider = await createFulfillmentProvider(mockDb, testSiteId, {
+        name: 'New Provider',
+        description: 'Test provider',
+        isActive: true
+      });
+
+      expect(provider.name).toBe('New Provider');
+      expect(mockDb.prepare).toHaveBeenCalled();
+      expect(mockDb.run).toHaveBeenCalled();
+    });
+
+    it('creates a provider with default values', async () => {
+      const newProvider: DBFulfillmentProvider = {
+        id: expect.any(String),
+        site_id: testSiteId,
+        name: 'Minimal Provider',
+        description: null,
+        is_default: 0,
+        is_active: 1,
+        created_at: expect.any(Number),
+        updated_at: expect.any(Number)
+      };
+
+      mockDb.first.mockResolvedValue(newProvider);
+
+      const provider = await createFulfillmentProvider(mockDb, testSiteId, {
+        name: 'Minimal Provider'
+      });
+
+      expect(provider.name).toBe('Minimal Provider');
+    });
+  });
+
+  describe('updateFulfillmentProvider', () => {
+    it('updates a provider', async () => {
+      const existingProvider: DBFulfillmentProvider = {
+        id: testProviderId,
+        site_id: testSiteId,
+        name: 'Old Name',
+        description: 'Old desc',
+        is_default: 0,
+        is_active: 1,
+        created_at: Date.now(),
+        updated_at: Date.now()
+      };
+
+      const updatedProvider: DBFulfillmentProvider = {
+        ...existingProvider,
+        name: 'New Name',
+        description: 'New desc'
+      };
+
+      mockDb.first
+        .mockResolvedValueOnce(existingProvider)
+        .mockResolvedValueOnce(updatedProvider);
+
+      const provider = await updateFulfillmentProvider(mockDb, testSiteId, testProviderId, {
+        name: 'New Name',
+        description: 'New desc'
+      });
+
+      expect(provider?.name).toBe('New Name');
+      expect(mockDb.run).toHaveBeenCalled();
+    });
+
+    it('returns null when provider not found', async () => {
+      mockDb.first.mockResolvedValue(null);
+
+      const provider = await updateFulfillmentProvider(mockDb, testSiteId, 'nonexistent', {
+        name: 'New Name'
+      });
+
+      expect(provider).toBeNull();
+      expect(mockDb.run).not.toHaveBeenCalled();
+    });
+
+    it('returns existing provider when no updates provided', async () => {
+      const existingProvider: DBFulfillmentProvider = {
+        id: testProviderId,
+        site_id: testSiteId,
+        name: 'Provider',
+        description: 'Desc',
+        is_default: 0,
+        is_active: 1,
+        created_at: Date.now(),
+        updated_at: Date.now()
+      };
+
+      mockDb.first.mockResolvedValue(existingProvider);
+
+      const provider = await updateFulfillmentProvider(mockDb, testSiteId, testProviderId, {});
+
+      expect(provider).toEqual(existingProvider);
+      expect(mockDb.run).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteFulfillmentProvider', () => {
+    it('deletes a provider', async () => {
+      mockDb.run.mockResolvedValue({ meta: { changes: 1 } });
+
+      const result = await deleteFulfillmentProvider(mockDb, testSiteId, testProviderId);
+
+      expect(result).toBe(true);
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM fulfillment_providers')
+      );
+      expect(mockDb.bind).toHaveBeenCalledWith(testProviderId, testSiteId);
+    });
+
+    it('returns false when provider not found', async () => {
+      mockDb.run.mockResolvedValue({ meta: { changes: 0 } });
+
+      const result = await deleteFulfillmentProvider(mockDb, testSiteId, 'nonexistent');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getProductFulfillmentOptions', () => {
+    it('fetches fulfillment options for a product', async () => {
+      const mockOptions: (DBProductFulfillmentOption & { provider_name: string })[] = [
+        {
+          id: 'option-1',
+          site_id: testSiteId,
+          product_id: testProductId,
+          provider_id: 'provider-1',
+          provider_name: 'Self',
+          cost: 0,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        },
+        {
+          id: 'option-2',
+          site_id: testSiteId,
+          product_id: testProductId,
+          provider_id: 'provider-2',
+          provider_name: 'Third Party',
+          cost: 5.99,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        }
+      ];
+
+      mockDb.all.mockResolvedValue({ results: mockOptions });
+
+      const options = await getProductFulfillmentOptions(mockDb, testSiteId, testProductId);
+
+      expect(options).toHaveLength(2);
+      expect(options[0].providerName).toBe('Self');
+      expect(options[1].cost).toBe(5.99);
+    });
+
+    it('returns empty array when no options found', async () => {
+      mockDb.all.mockResolvedValue({ results: [] });
+
+      const options = await getProductFulfillmentOptions(mockDb, testSiteId, testProductId);
+
+      expect(options).toEqual([]);
+    });
+  });
+
+  describe('setProductFulfillmentOptions', () => {
+    it('sets fulfillment options for a product', async () => {
+      const options = [
+        { providerId: 'provider-1', cost: 0 },
+        { providerId: 'provider-2', cost: 5.99 }
+      ];
+
+      await setProductFulfillmentOptions(mockDb, testSiteId, testProductId, options);
+
+      // Should delete existing options
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM product_fulfillment_options')
+      );
+
+      // Should insert new options (2 times)
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO product_fulfillment_options')
+      );
+    });
+
+    it('clears all options when empty array provided', async () => {
+      await setProductFulfillmentOptions(mockDb, testSiteId, testProductId, []);
+
+      // Should delete existing options
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM product_fulfillment_options')
+      );
+
+      // Should not insert any options
+      const insertCalls = mockDb.prepare.mock.calls.filter((call: any) =>
+        call[0].includes('INSERT INTO product_fulfillment_options')
+      );
+      expect(insertCalls.length).toBe(0);
+    });
+  });
+});

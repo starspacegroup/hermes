@@ -10,6 +10,7 @@ export interface Product {
   stock: number;
   type: ProductType;
   tags: string[];
+  fulfillmentOptions?: Array<{ providerId: string; providerName: string; cost: number }>;
 }
 
 export interface CartItem extends Product {
@@ -69,3 +70,14 @@ export type {
   CreateNotificationData,
   NotificationType
 } from './notifications';
+
+// Re-export fulfillment types
+export type {
+  FulfillmentProvider,
+  DBFulfillmentProvider,
+  CreateFulfillmentProviderData,
+  UpdateFulfillmentProviderData,
+  ProductFulfillmentOption,
+  DBProductFulfillmentOption,
+  CreateProductFulfillmentOptionData
+} from './fulfillment';

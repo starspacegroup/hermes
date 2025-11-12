@@ -2,7 +2,8 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import ProductMediaManager from '$lib/components/admin/ProductMediaManager.svelte';
-  import type { Product, ProductType } from '$lib/types';
+  import type { Product, ProductType, FulfillmentProvider } from '$lib/types';
+  import { onMount } from 'svelte';
 
   export let product: Product | null = null;
   export let isEditing = false;
@@ -26,6 +27,52 @@
   // Reference to ProductMediaManager component
   let productMediaManager: ProductMediaManager | undefined;
 
+  // Fulfillment providers
+  let availableProviders: FulfillmentProvider[] = [];
+  let selectedProviders: Map<string, { selected: boolean; cost: number }> = new Map();
+
+  // Load fulfillment providers on mount
+  onMount(async () => {
+    try {
+      const response = await fetch('/api/admin/providers');
+      if (response.ok) {
+        availableProviders = await response.json();
+        
+        // Initialize selected providers map
+        availableProviders.forEach((provider) => {
+          const existingOption = product?.fulfillmentOptions?.find(
+            (opt) => opt.providerId === provider.id
+          );
+          selectedProviders.set(provider.id, {
+            selected: !!existingOption,
+            cost: existingOption?.cost || 0
+          });
+        });
+        
+        // Force reactivity update
+        selectedProviders = new Map(selectedProviders);
+      }
+    } catch (error) {
+      console.error('Error loading fulfillment providers:', error);
+    }
+  });
+
+  function toggleProvider(providerId: string) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, selected: !current.selected });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
+  function updateProviderCost(providerId: string, cost: number) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, cost });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return;
 
@@ -36,6 +83,14 @@
     }
 
     isSubmitting = true;
+
+    // Build fulfillment options array
+    const fulfillmentOptions = Array.from(selectedProviders.entries())
+      .filter(([_, data]) => data.selected)
+      .map(([providerId, data]) => ({
+        providerId,
+        cost: data.cost
+      }));
 
     const productData = {
       name: formName,
@@ -48,7 +103,8 @@
       tags: formTags
         .split(',')
         .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0)
+        .filter((tag) => tag.length > 0),
+      fulfillmentOptions
     };
 
     try {
@@ -203,6 +259,49 @@
       />
     </div>
 
+    <!-- Fulfillment Options -->
+    {#if availableProviders.length > 0}
+      <div class="form-group">
+        <label>Fulfillment Options</label>
+        <div class="fulfillment-options">
+          {#each availableProviders as provider}
+            {@const providerData = selectedProviders.get(provider.id)}
+            {#if providerData}
+              <div class="provider-option">
+                <label class="provider-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={providerData.selected}
+                    on:change={() => toggleProvider(provider.id)}
+                  />
+                  <span class="provider-name">
+                    {provider.name}
+                    {#if provider.isDefault}
+                      <span class="default-badge">Default</span>
+                    {/if}
+                  </span>
+                </label>
+                {#if providerData.selected}
+                  <div class="cost-input">
+                    <label for="cost-{provider.id}">Cost:</label>
+                    <input
+                      type="number"
+                      id="cost-{provider.id}"
+                      value={providerData.cost}
+                      on:input={(e) => updateProviderCost(provider.id, Number(e.currentTarget.value))}
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <div class="form-actions">
       <button type="button" class="cancel-btn" on:click={handleCancel}>Cancel</button>
       <button type="submit" class="submit-btn" disabled={isSubmitting}>
@@ -353,6 +452,83 @@
   .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .fulfillment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .provider-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .provider-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .provider-checkbox input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  .provider-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-primary);
+  }
+
+  .default-badge {
+    padding: 0.125rem 0.5rem;
+    background: var(--color-primary-alpha);
+    color: var(--color-primary);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .cost-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 2rem;
+  }
+
+  .cost-input label {
+    font-size: 0.875rem;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .cost-input input {
+    width: 120px;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+  }
+
+  .cost-input input:focus {
+    border-color: var(--color-primary);
   }
 
   @media (max-width: 768px) {
