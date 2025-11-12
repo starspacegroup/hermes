@@ -10,6 +10,7 @@ import {
 } from './fulfillment-providers';
 import type { DBFulfillmentProvider, DBProductFulfillmentOption } from '$lib/types/fulfillment';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('fulfillment-providers', () => {
   let mockDb: any;
   const testSiteId = 'test-site';

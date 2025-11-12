@@ -158,6 +158,23 @@
         </a>
 
         <a
+          href="/admin/providers"
+          class:active={currentPath.startsWith('/admin/providers')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+          </svg>
+          Providers
+        </a>
+
+        <a
           href="/admin/pages"
           class:active={currentPath.startsWith('/admin/pages')}
           on:click={closeSidebar}
