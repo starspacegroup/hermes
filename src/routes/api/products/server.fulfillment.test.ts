@@ -70,8 +70,8 @@ describe('Products API - Fulfillment Options', () => {
         type: 'physical' as const,
         tags: ['test', 'product'],
         fulfillmentOptions: [
-          { providerId: testProviderId1, cost: 5.99 },
-          { providerId: testProviderId2, cost: 10.99 }
+          { providerId: testProviderId1, cost: 5.99, stockQuantity: 10 },
+          { providerId: testProviderId2, cost: 10.99, stockQuantity: 5 }
         ]
       };
 
@@ -117,12 +117,14 @@ describe('Products API - Fulfillment Options', () => {
                     {
                       provider_id: testProviderId1,
                       provider_name: 'Provider 1',
-                      cost: 5.99
+                      cost: 5.99,
+                      stock_quantity: 10
                     },
                     {
                       provider_id: testProviderId2,
                       provider_name: 'Provider 2',
-                      cost: 10.99
+                      cost: 10.99,
+                      stock_quantity: 5
                     }
                   ]
                 });
@@ -147,8 +149,10 @@ describe('Products API - Fulfillment Options', () => {
       expect(result.fulfillmentOptions).toHaveLength(2);
       expect(result.fulfillmentOptions[0].providerId).toBe(testProviderId1);
       expect(result.fulfillmentOptions[0].cost).toBe(5.99);
+      expect(result.fulfillmentOptions[0].stockQuantity).toBe(10);
       expect(result.fulfillmentOptions[1].providerId).toBe(testProviderId2);
       expect(result.fulfillmentOptions[1].cost).toBe(10.99);
+      expect(result.fulfillmentOptions[1].stockQuantity).toBe(5);
     });
 
     it('should create product without fulfillment options', async () => {
@@ -212,7 +216,7 @@ describe('Products API - Fulfillment Options', () => {
         id: testProductId,
         name: 'Updated Product',
         price: 149.99,
-        fulfillmentOptions: [{ providerId: testProviderId1, cost: 7.99 }]
+        fulfillmentOptions: [{ providerId: testProviderId1, cost: 7.99, stockQuantity: 15 }]
       };
 
       mockRequest.json.mockResolvedValue(updateData);
@@ -248,7 +252,8 @@ describe('Products API - Fulfillment Options', () => {
                   {
                     provider_id: testProviderId1,
                     provider_name: 'Provider 1',
-                    cost: 7.99
+                    cost: 7.99,
+                    stock_quantity: 15
                   }
                 ]
               });
@@ -271,6 +276,7 @@ describe('Products API - Fulfillment Options', () => {
       expect(result.fulfillmentOptions).toHaveLength(1);
       expect(result.fulfillmentOptions[0].providerId).toBe(testProviderId1);
       expect(result.fulfillmentOptions[0].cost).toBe(7.99);
+      expect(result.fulfillmentOptions[0].stockQuantity).toBe(15);
     });
 
     it('should clear fulfillment options when empty array provided', async () => {

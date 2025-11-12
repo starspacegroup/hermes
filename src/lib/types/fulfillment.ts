@@ -37,6 +37,7 @@ export interface ProductFulfillmentOption {
   providerId: string;
   providerName: string;
   cost: number;
+  stockQuantity: number;
 }
 
 export interface DBProductFulfillmentOption {
@@ -45,6 +46,7 @@ export interface DBProductFulfillmentOption {
   product_id: string;
   provider_id: string;
   cost: number;
+  stock_quantity: number;
   created_at: number;
   updated_at: number;
 }
@@ -53,4 +55,5 @@ export interface CreateProductFulfillmentOptionData {
   productId: string;
   providerId: string;
   cost: number;
+  stockQuantity?: number;
 }

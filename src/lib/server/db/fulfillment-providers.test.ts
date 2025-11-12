@@ -246,6 +246,7 @@ describe('fulfillment-providers', () => {
           provider_id: 'provider-1',
           provider_name: 'Self',
           cost: 0,
+          stock_quantity: 10,
           created_at: Date.now(),
           updated_at: Date.now()
         },
@@ -256,6 +257,7 @@ describe('fulfillment-providers', () => {
           provider_id: 'provider-2',
           provider_name: 'Third Party',
           cost: 5.99,
+          stock_quantity: 25,
           created_at: Date.now(),
           updated_at: Date.now()
         }
@@ -267,7 +269,9 @@ describe('fulfillment-providers', () => {
 
       expect(options).toHaveLength(2);
       expect(options[0].providerName).toBe('Self');
+      expect(options[0].stockQuantity).toBe(10);
       expect(options[1].cost).toBe(5.99);
+      expect(options[1].stockQuantity).toBe(25);
     });
 
     it('returns empty array when no options found', async () => {
@@ -282,8 +286,8 @@ describe('fulfillment-providers', () => {
   describe('setProductFulfillmentOptions', () => {
     it('sets fulfillment options for a product', async () => {
       const options = [
-        { providerId: 'provider-1', cost: 0 },
-        { providerId: 'provider-2', cost: 5.99 }
+        { providerId: 'provider-1', cost: 0, stockQuantity: 10 },
+        { providerId: 'provider-2', cost: 5.99, stockQuantity: 25 }
       ];
 
       await setProductFulfillmentOptions(mockDb, testSiteId, testProductId, options);

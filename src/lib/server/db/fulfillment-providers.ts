@@ -161,7 +161,8 @@ export async function getProductFulfillmentOptions(
   return (result.results || []).map((option) => ({
     providerId: option.provider_id,
     providerName: option.provider_name,
-    cost: option.cost
+    cost: option.cost,
+    stockQuantity: option.stock_quantity || 0
   }));
 }
 
@@ -172,7 +173,7 @@ export async function setProductFulfillmentOptions(
   db: D1Database,
   siteId: string,
   productId: string,
-  options: Array<{ providerId: string; cost: number }>
+  options: Array<{ providerId: string; cost: number; stockQuantity?: number }>
 ): Promise<void> {
   // Delete existing options
   await db
@@ -186,10 +187,19 @@ export async function setProductFulfillmentOptions(
     const id = generateId();
     await db
       .prepare(
-        `INSERT INTO product_fulfillment_options (id, site_id, product_id, provider_id, cost, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO product_fulfillment_options (id, site_id, product_id, provider_id, cost, stock_quantity, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(id, siteId, productId, option.providerId, option.cost, timestamp, timestamp)
+      .bind(
+        id,
+        siteId,
+        productId,
+        option.providerId,
+        option.cost,
+        option.stockQuantity || 0,
+        timestamp,
+        timestamp
+      )
       .run();
   }
 }

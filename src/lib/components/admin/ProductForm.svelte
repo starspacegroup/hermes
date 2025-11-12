@@ -29,7 +29,8 @@
 
   // Fulfillment providers
   let availableProviders: FulfillmentProvider[] = [];
-  let selectedProviders: Map<string, { selected: boolean; cost: number }> = new Map();
+  let selectedProviders: Map<string, { selected: boolean; cost: number; stockQuantity: number }> =
+    new Map();
 
   // Load fulfillment providers on mount
   onMount(async () => {
@@ -45,7 +46,8 @@
           );
           selectedProviders.set(provider.id, {
             selected: !!existingOption,
-            cost: existingOption?.cost || 0
+            cost: existingOption?.cost || 0,
+            stockQuantity: existingOption?.stockQuantity || 0
           });
         });
 
@@ -73,6 +75,14 @@
     }
   }
 
+  function updateProviderStock(providerId: string, stockQuantity: number) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, stockQuantity });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return;
 
@@ -89,7 +99,8 @@
       .filter(([_, data]) => data.selected)
       .map(([providerId, data]) => ({
         providerId,
-        cost: data.cost
+        cost: data.cost,
+        stockQuantity: data.stockQuantity
       }));
 
     const productData = {
@@ -222,7 +233,7 @@
     </div>
 
     <!-- Product Details Grid -->
-    <div class="form-grid">
+    <div class="form-grid form-grid-2col">
       <div class="form-group">
         <label for="product-category">Category</label>
         <input
@@ -241,11 +252,6 @@
           <option value="service">Service</option>
         </select>
       </div>
-
-      <div class="form-group">
-        <label for="product-stock">Stock Quantity</label>
-        <input type="number" id="product-stock" bind:value={formStock} min="0" placeholder="0" />
-      </div>
     </div>
 
     <!-- Tags -->
@@ -262,7 +268,10 @@
     <!-- Fulfillment Options -->
     {#if availableProviders.length > 0}
       <div class="form-group">
-        <div class="label-wrapper">Fulfillment Options</div>
+        <div class="label-wrapper">Fulfillment Options & Stock</div>
+        <p class="helper-text">
+          Select fulfillment providers and set stock quantity for each option
+        </p>
         <div class="fulfillment-options">
           {#each availableProviders as provider}
             {@const providerData = selectedProviders.get(provider.id)}
@@ -282,18 +291,32 @@
                   </span>
                 </label>
                 {#if providerData.selected}
-                  <div class="cost-input">
-                    <label for="cost-{provider.id}">Cost:</label>
-                    <input
-                      type="number"
-                      id="cost-{provider.id}"
-                      value={providerData.cost}
-                      on:input={(e) =>
-                        updateProviderCost(provider.id, Number(e.currentTarget.value))}
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                    />
+                  <div class="provider-details">
+                    <div class="detail-input">
+                      <label for="cost-{provider.id}">Cost:</label>
+                      <input
+                        type="number"
+                        id="cost-{provider.id}"
+                        value={providerData.cost}
+                        on:input={(e) =>
+                          updateProviderCost(provider.id, Number(e.currentTarget.value))}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div class="detail-input">
+                      <label for="stock-{provider.id}">Stock:</label>
+                      <input
+                        type="number"
+                        id="stock-{provider.id}"
+                        value={providerData.stockQuantity}
+                        on:input={(e) =>
+                          updateProviderStock(provider.id, Number(e.currentTarget.value))}
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
                 {/if}
               </div>
@@ -331,6 +354,10 @@
     gap: 1rem;
   }
 
+  .form-grid-2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .form-group {
     display: flex;
     flex-direction: column;
@@ -344,6 +371,12 @@
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .helper-text {
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary);
+    margin: -0.25rem 0 0.5rem 0;
   }
 
   input,
@@ -506,22 +539,29 @@
     text-transform: uppercase;
   }
 
-  .cost-input {
+  .provider-details {
+    display: flex;
+    gap: 1rem;
+    padding-left: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .detail-input {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding-left: 2rem;
   }
 
-  .cost-input label {
+  .detail-input label {
     font-size: 0.875rem;
     text-transform: none;
     letter-spacing: normal;
     color: var(--color-text-secondary);
     margin: 0;
+    min-width: 45px;
   }
 
-  .cost-input input {
+  .detail-input input {
     width: 120px;
     padding: 0.5rem;
     border: 1px solid var(--color-border-secondary);
@@ -529,7 +569,7 @@
     background: var(--color-bg-primary);
   }
 
-  .cost-input input:focus {
+  .detail-input input:focus {
     border-color: var(--color-primary);
   }
 

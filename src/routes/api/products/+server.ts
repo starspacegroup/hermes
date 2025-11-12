@@ -68,7 +68,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       stock: number;
       type: 'physical' | 'service' | 'digital';
       tags?: string[];
-      fulfillmentOptions?: Array<{ providerId: string; cost: number }>;
+      fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
     };
 
     const productData = {
@@ -131,7 +131,7 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       stock?: number;
       type?: 'physical' | 'service' | 'digital';
       tags?: string[];
-      fulfillmentOptions?: Array<{ providerId: string; cost: number }>;
+      fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
     };
 
     const updateData: {

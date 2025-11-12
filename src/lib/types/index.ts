@@ -10,7 +10,12 @@ export interface Product {
   stock: number;
   type: ProductType;
   tags: string[];
-  fulfillmentOptions?: Array<{ providerId: string; providerName: string; cost: number }>;
+  fulfillmentOptions?: Array<{
+    providerId: string;
+    providerName: string;
+    cost: number;
+    stockQuantity: number;
+  }>;
 }
 
 export interface CartItem extends Product {
