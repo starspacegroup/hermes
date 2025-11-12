@@ -2,8 +2,16 @@ import { error } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as pagesDb from '$lib/server/db/pages';
 import type { PageServerLoad } from './$types';
+import { logPageAction } from '$lib/server/activity-logger';
 
-export const load: PageServerLoad = async ({ params, platform, locals, url }) => {
+export const load: PageServerLoad = async ({
+  params,
+  platform,
+  locals,
+  url,
+  getClientAddress,
+  request
+}) => {
   const db = getDB(platform);
   const siteId = locals.siteId;
 
@@ -37,6 +45,25 @@ export const load: PageServerLoad = async ({ params, platform, locals, url }) =>
       ...w,
       config: JSON.parse(w.config)
     }));
+
+    // Log page view (only for published pages, not previews)
+    if (!isPreview && page.status === 'published') {
+      try {
+        await logPageAction(db, {
+          siteId,
+          userId: locals.currentUser?.id || null,
+          action: 'viewed',
+          pageId: page.id,
+          pageName: page.title,
+          pageUrl: slug,
+          ipAddress: getClientAddress(),
+          userAgent: request.headers.get('user-agent')
+        });
+      } catch (logError) {
+        // Don't fail the request if logging fails
+        console.error('Failed to log page view:', logError);
+      }
+    }
 
     return {
       page,

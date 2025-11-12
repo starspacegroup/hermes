@@ -1,8 +1,15 @@
 import { getDB, getProductById, getProductMedia } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { logProductAction } from '$lib/server/activity-logger';
 
-export const load: PageServerLoad = async ({ params, platform, locals }) => {
+export const load: PageServerLoad = async ({
+  params,
+  platform,
+  locals,
+  getClientAddress,
+  request
+}) => {
   // If platform is not available (development without D1), return error
   if (!platform?.env?.DB) {
     throw error(503, 'Database not available');
@@ -50,6 +57,22 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       duration: m.duration || undefined,
       displayOrder: m.display_order
     }));
+
+    // Log product view
+    try {
+      await logProductAction(db, {
+        siteId,
+        userId: locals.currentUser?.id || null,
+        action: 'viewed',
+        productId: product.id,
+        productName: product.name,
+        ipAddress: getClientAddress(),
+        userAgent: request.headers.get('user-agent')
+      });
+    } catch (logError) {
+      // Don't fail the request if logging fails
+      console.error('Failed to log product view:', logError);
+    }
 
     return {
       product,

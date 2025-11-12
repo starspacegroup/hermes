@@ -3,6 +3,31 @@ import { browser } from '$app/environment';
 import type { Product, CartItem } from '../types/index.js';
 import { toastStore } from './toast.js';
 
+/**
+ * Log cart action to backend for activity tracking
+ */
+async function logCartAction(
+  action: 'add' | 'remove' | 'update' | 'clear',
+  productId?: string,
+  productName?: string,
+  quantity?: number,
+  price?: number,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  if (!browser) return;
+
+  try {
+    await fetch('/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, productId, productName, quantity, price, metadata })
+    });
+  } catch (error) {
+    // Silently fail - logging shouldn't break cart functionality
+    console.debug('Failed to log cart action:', error);
+  }
+}
+
 // Initialize with persisted data if available
 const getInitialCartItems = (): CartItem[] => {
   if (browser) {
@@ -18,6 +43,17 @@ const getInitialCartItems = (): CartItem[] => {
 };
 
 export const cartItems: Writable<CartItem[]> = writable(getInitialCartItems());
+
+// Helper to get current cart state
+let currentCartItems: CartItem[] = [];
+cartItems.subscribe((items) => {
+  currentCartItems = items;
+});
+
+// Helper to get item by ID from current cart state
+function getItemByIdHelper(productId: string): CartItem | undefined {
+  return currentCartItems.find((item) => item.id === productId);
+}
 
 // Persist cart changes to localStorage
 if (browser) {
@@ -56,6 +92,9 @@ export const cartStore: CartStore = {
       }
     });
 
+    // Log cart action
+    logCartAction('add', product.id, product.name, quantity, product.price);
+
     // Show toast notification with link to cart
     const message = `${product.name} added to cart`;
     toastStore.success(message, 4000, {
@@ -65,7 +104,13 @@ export const cartStore: CartStore = {
   },
 
   removeItem: (productId: string): void => {
+    const item = getItemByIdHelper(productId);
     cartItems.update((items: CartItem[]) => items.filter((item) => item.id !== productId));
+
+    // Log cart action
+    if (item) {
+      logCartAction('remove', item.id, item.name, item.quantity, item.price);
+    }
   },
 
   updateQuantity: (productId: string, quantity: number): void => {
@@ -74,6 +119,7 @@ export const cartStore: CartStore = {
       return;
     }
 
+    const item = getItemByIdHelper(productId);
     cartItems.update((items: CartItem[]) => {
       const item = items.find((item) => item.id === productId);
       if (item) {
@@ -81,10 +127,21 @@ export const cartStore: CartStore = {
       }
       return items;
     });
+
+    // Log cart action
+    if (item) {
+      logCartAction('update', item.id, item.name, quantity, item.price);
+    }
   },
 
   clear: (): void => {
+    const itemsCount = currentCartItems.length;
     cartItems.set([]);
+
+    // Log cart action
+    logCartAction('clear', undefined, undefined, undefined, undefined, {
+      itemsCleared: itemsCount
+    });
   },
 
   getItemQuantity: (items: CartItem[], productId: string): number => {
