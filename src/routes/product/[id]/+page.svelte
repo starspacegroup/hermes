@@ -2,12 +2,14 @@
   import Button from '../../../lib/components/Button.svelte';
   import ProductMediaGallery from '../../../lib/components/ProductMediaGallery.svelte';
   import { cartStore, cartItems } from '../../../lib/stores/cart.ts';
+  import { calculateTotalStock } from '$lib/utils/stock';
 
   export let data;
 
   const { product, media } = data;
 
   $: cartQuantity = cartStore.getItemQuantity($cartItems, product.id);
+  $: totalStock = calculateTotalStock(product.fulfillmentOptions);
 
   function addToCart() {
     cartStore.addItem(product, 1);
@@ -39,13 +41,13 @@
 
     <div class="price-section">
       <span class="price">${product.price}</span>
-      <span class="stock">{product.stock} in stock</span>
+      <span class="stock">{totalStock} in stock</span>
     </div>
 
     <div class="purchase-section">
       {#if cartQuantity === 0}
-        <Button variant="primary" disabled={product.stock === 0} on:click={addToCart}>
-          {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+        <Button variant="primary" disabled={totalStock === 0} on:click={addToCart}>
+          {totalStock === 0 ? 'Out of Stock' : 'Add to Cart'}
         </Button>
       {:else}
         <div class="quantity-controls">
@@ -60,7 +62,7 @@
           <button
             class="quantity-btn"
             on:click={incrementCartQuantity}
-            disabled={cartQuantity >= product.stock}
+            disabled={cartQuantity >= totalStock}
             aria-label="Increase quantity"
           >
             +
