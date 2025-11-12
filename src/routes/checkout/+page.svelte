@@ -68,9 +68,12 @@
       return;
     }
 
-    const result = await checkoutStore.submitOrder();
+    const result = await checkoutStore.submitOrder(cartItems, subtotal, shippingCost, tax, total);
 
     if (result.success && result.orderId) {
+      // Clear cart after successful order
+      cartStore.clearCart();
+
       // Navigate to success page with order details
       goto(
         `/checkout/success?orderId=${result.orderId}&total=${total.toFixed(2)}&email=${checkoutState.formData.shippingAddress.email}`

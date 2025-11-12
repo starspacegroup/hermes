@@ -158,6 +158,42 @@
         </a>
 
         <a
+          href="/admin/orders"
+          class:active={currentPath.startsWith('/admin/orders')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke-width="2"></rect>
+            <path d="M9 14l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            ></path>
+          </svg>
+          Orders
+        </a>
+
+        <a
+          href="/admin/providers"
+          class:active={currentPath.startsWith('/admin/providers')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+          </svg>
+          Providers
+        </a>
+
+        <a
           href="/admin/pages"
           class:active={currentPath.startsWith('/admin/pages')}
           on:click={closeSidebar}

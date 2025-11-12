@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { checkoutStore, copyShippingToBilling } from './checkout';
 import type { CheckoutFormData, CheckoutValidationErrors } from '../types/checkout';
 
@@ -183,7 +183,16 @@ describe('Checkout Store', () => {
 
   describe('submitOrder', () => {
     it('should fail with validation errors', async () => {
-      const result = await checkoutStore.submitOrder();
+      const mockCartItems = [
+        {
+          id: 'prod-1',
+          name: 'Test Product',
+          price: 29.99,
+          quantity: 2,
+          image: '/test.jpg'
+        }
+      ];
+      const result = await checkoutStore.submitOrder(mockCartItems, 59.98, 9.99, 5.6, 75.57);
       expect(result.success).toBe(false);
       expect(result.error).toBe('Please fix the validation errors');
     });
@@ -220,19 +229,27 @@ describe('Checkout Store', () => {
         }
       });
 
-      // Mock Math.random to avoid random failures
-      const originalRandom = Math.random;
-      Math.random = () => 0.5;
+      // Mock fetch for API call
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, orderId: 'test-order-123' })
+      });
 
-      const result = await checkoutStore.submitOrder();
+      const mockCartItems = [
+        {
+          id: 'prod-1',
+          name: 'Test Product',
+          price: 29.99,
+          quantity: 2,
+          image: '/test.jpg'
+        }
+      ];
 
-      Math.random = originalRandom;
+      const result = await checkoutStore.submitOrder(mockCartItems, 59.98, 9.99, 5.6, 75.57);
 
-      // May succeed or fail based on random, just check structure
       expect(result).toHaveProperty('success');
       if (result.success) {
         expect(result.orderId).toBeDefined();
-        expect(result.orderId).toContain('ORDER-');
       }
     }, 10000);
 
@@ -268,11 +285,23 @@ describe('Checkout Store', () => {
         }
       });
 
-      // Mock Math.random to avoid random failures
-      const originalRandom = Math.random;
-      Math.random = () => 0.5;
+      // Mock fetch for API call
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, orderId: 'test-order-123' })
+      });
 
-      const submitPromise = checkoutStore.submitOrder();
+      const mockCartItems = [
+        {
+          id: 'prod-1',
+          name: 'Test Product',
+          price: 29.99,
+          quantity: 2,
+          image: '/test.jpg'
+        }
+      ];
+
+      const submitPromise = checkoutStore.submitOrder(mockCartItems, 59.98, 9.99, 5.6, 75.57);
 
       // Check isSubmitting is true during submission
       let wasSubmitting = false;
@@ -284,8 +313,6 @@ describe('Checkout Store', () => {
 
       await submitPromise;
       unsubscribe();
-
-      Math.random = originalRandom;
 
       expect(wasSubmitting).toBe(true);
     }, 10000);

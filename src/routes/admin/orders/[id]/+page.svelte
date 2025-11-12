@@ -1,0 +1,578 @@
+<script lang="ts">
+  import { goto } from '$app/navigation';
+
+  interface OrderItem {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+  }
+
+  interface Order {
+    id: string;
+    status: string;
+    subtotal: number;
+    shipping_cost: number;
+    tax: number;
+    total: number;
+    created_at: string;
+    updated_at: string;
+    shipping_address: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+    billing_address: {
+      firstName: string;
+      lastName: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+    payment_method: {
+      type: string;
+      cardNumber: string;
+      cardHolderName: string;
+      expiryMonth: string;
+      expiryYear: string;
+    };
+    items: OrderItem[];
+  }
+
+  export let data: { order: Order };
+
+  $: order = data.order;
+
+  let isUpdatingStatus = false;
+  let statusMessage = '';
+
+  function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function getStatusColor(status: string): string {
+    switch (status) {
+      case 'pending':
+        return '#FFA500';
+      case 'processing':
+        return '#3B82F6';
+      case 'shipped':
+        return '#8B5CF6';
+      case 'delivered':
+        return '#10B981';
+      case 'cancelled':
+        return '#EF4444';
+      default:
+        return '#6B7280';
+    }
+  }
+
+  async function handleStatusChange(newStatus: string): Promise<void> {
+    isUpdatingStatus = true;
+    statusMessage = '';
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        statusMessage = 'Status updated successfully';
+        // Reload page to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        statusMessage = 'Failed to update status';
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      statusMessage = 'Error updating status';
+    } finally {
+      isUpdatingStatus = false;
+      setTimeout(() => {
+        statusMessage = '';
+      }, 3000);
+    }
+  }
+</script>
+
+<svelte:head>
+  <title>Order {order.id.substring(0, 8)} - Admin Dashboard</title>
+</svelte:head>
+
+<div class="order-details-container">
+  <div class="order-header">
+    <button class="btn-back" on:click={() => goto('/admin/orders')}>← Back to Orders</button>
+    <h1>Order Details</h1>
+  </div>
+
+  <div class="order-content">
+    <!-- Order Summary Card -->
+    <div class="card">
+      <h2>Order Summary</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Order ID:</span>
+          <span class="value monospace">{order.id}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Status:</span>
+          <span class="status-badge" style="background-color: {getStatusColor(order.status)}">
+            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="label">Order Date:</span>
+          <span class="value">{formatDate(order.created_at)}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Last Updated:</span>
+          <span class="value">{formatDate(order.updated_at)}</span>
+        </div>
+      </div>
+
+      <!-- Status Update -->
+      <div class="status-update-section">
+        <h3>Update Status</h3>
+        {#if statusMessage}
+          <div class="status-message">{statusMessage}</div>
+        {/if}
+        <div class="status-buttons">
+          <button
+            class="btn-status"
+            class:active={order.status === 'pending'}
+            disabled={isUpdatingStatus || order.status === 'pending'}
+            on:click={() => handleStatusChange('pending')}
+          >
+            Pending
+          </button>
+          <button
+            class="btn-status"
+            class:active={order.status === 'processing'}
+            disabled={isUpdatingStatus || order.status === 'processing'}
+            on:click={() => handleStatusChange('processing')}
+          >
+            Processing
+          </button>
+          <button
+            class="btn-status"
+            class:active={order.status === 'shipped'}
+            disabled={isUpdatingStatus || order.status === 'shipped'}
+            on:click={() => handleStatusChange('shipped')}
+          >
+            Shipped
+          </button>
+          <button
+            class="btn-status"
+            class:active={order.status === 'delivered'}
+            disabled={isUpdatingStatus || order.status === 'delivered'}
+            on:click={() => handleStatusChange('delivered')}
+          >
+            Delivered
+          </button>
+          <button
+            class="btn-status danger"
+            class:active={order.status === 'cancelled'}
+            disabled={isUpdatingStatus || order.status === 'cancelled'}
+            on:click={() => handleStatusChange('cancelled')}
+          >
+            Cancelled
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Items Card -->
+    <div class="card">
+      <h2>Order Items</h2>
+      <div class="items-list">
+        {#each order.items as item}
+          <div class="item">
+            <img src={item.image} alt={item.name} class="item-image" />
+            <div class="item-details">
+              <h3>{item.name}</h3>
+              <p>Quantity: {item.quantity}</p>
+              <p class="item-price">${item.price.toFixed(2)} each</p>
+            </div>
+            <div class="item-total">
+              ${(item.price * item.quantity).toFixed(2)}
+            </div>
+          </div>
+        {/each}
+      </div>
+      <div class="order-totals">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span>${order.subtotal.toFixed(2)}</span>
+        </div>
+        <div class="total-row">
+          <span>Shipping:</span>
+          <span>${order.shipping_cost.toFixed(2)}</span>
+        </div>
+        <div class="total-row">
+          <span>Tax:</span>
+          <span>${order.tax.toFixed(2)}</span>
+        </div>
+        <div class="total-row final">
+          <span>Total:</span>
+          <span>${order.total.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Information -->
+    <div class="card">
+      <h2>Customer Information</h2>
+      <div class="customer-grid">
+        <div class="customer-section">
+          <h3>Shipping Address</h3>
+          <p>
+            {order.shipping_address.firstName}
+            {order.shipping_address.lastName}
+          </p>
+          <p>{order.shipping_address.email}</p>
+          <p>{order.shipping_address.phone}</p>
+          <p>{order.shipping_address.address}</p>
+          <p>
+            {order.shipping_address.city}, {order.shipping_address.state}
+            {order.shipping_address.zipCode}
+          </p>
+          <p>{order.shipping_address.country}</p>
+        </div>
+        <div class="customer-section">
+          <h3>Billing Address</h3>
+          <p>
+            {order.billing_address.firstName}
+            {order.billing_address.lastName}
+          </p>
+          <p>{order.billing_address.address}</p>
+          <p>
+            {order.billing_address.city}, {order.billing_address.state}
+            {order.billing_address.zipCode}
+          </p>
+          <p>{order.billing_address.country}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Information -->
+    <div class="card">
+      <h2>Payment Information</h2>
+      <div class="payment-info">
+        <div class="info-item">
+          <span class="label">Payment Type:</span>
+          <span class="value">{order.payment_method.type}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Card Number:</span>
+          <span class="value monospace">{order.payment_method.cardNumber}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Cardholder:</span>
+          <span class="value">{order.payment_method.cardHolderName}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Expiry:</span>
+          <span class="value"
+            >{order.payment_method.expiryMonth}/{order.payment_method.expiryYear}</span
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .order-details-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .order-header {
+    margin-bottom: 2rem;
+  }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .btn-back:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+  }
+
+  .order-header h1 {
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+
+  .order-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--color-bg-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px var(--color-shadow-light);
+  }
+
+  .card h2 {
+    margin: 0 0 1rem 0;
+    color: var(--color-text-primary);
+    font-size: 1.25rem;
+  }
+
+  .card h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+  }
+
+  .value {
+    color: var(--color-text-primary);
+  }
+
+  .monospace {
+    font-family: monospace;
+    font-size: 0.875rem;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+  }
+
+  .status-update-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border-primary);
+  }
+
+  .status-message {
+    padding: 0.75rem;
+    background: var(--color-success);
+    color: white;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .status-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn-status {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--color-border-primary);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-status:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-status.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-status.danger:hover:not(:disabled) {
+    border-color: var(--color-danger);
+    background: var(--color-danger);
+  }
+
+  .btn-status:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-primary);
+    border-radius: 4px;
+  }
+
+  .item-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .item-details {
+    flex: 1;
+  }
+
+  .item-details h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+  }
+
+  .item-details p {
+    margin: 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .item-price {
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .item-total {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+  }
+
+  .order-totals {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--color-border-primary);
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    color: var(--color-text-secondary);
+  }
+
+  .total-row.final {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    border-top: 1px solid var(--color-border-primary);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .customer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+  }
+
+  .customer-section p {
+    margin: 0.25rem 0;
+    color: var(--color-text-secondary);
+  }
+
+  .payment-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .order-details-container {
+      padding: 1rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .item {
+      flex-direction: column;
+    }
+
+    .item-image {
+      width: 100%;
+      height: 200px;
+    }
+
+    .customer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .payment-info {
+      grid-template-columns: 1fr;
+    }
+
+    .status-buttons {
+      flex-direction: column;
+    }
+
+    .btn-status {
+      width: 100%;
+    }
+  }
+</style>

@@ -13,6 +13,13 @@
     });
   }
 
+  function updateExpiryFields(month: string, year: string) {
+    const updatedPayment = { ...formData, expiryMonth: month, expiryYear: year };
+    checkoutStore.updateFormData({
+      paymentMethod: updatedPayment
+    });
+  }
+
   function formatCardNumber(value: string): string {
     // Remove all non-digits
     const digits = value.replace(/\D/g, '');
@@ -33,28 +40,53 @@
     // Remove all non-digits
     const digits = value.replace(/\D/g, '');
 
-    if (digits.length >= 2) {
-      return digits.substring(0, 2) + '/' + digits.substring(2, 4);
+    // Limit to 4 digits (MMYY)
+    const limitedDigits = digits.substring(0, 4);
+
+    if (limitedDigits.length >= 3) {
+      // If we have 3 or more digits, format as MM/YY
+      return limitedDigits.substring(0, 2) + '/' + limitedDigits.substring(2);
+    } else if (limitedDigits.length === 2) {
+      // If we have exactly 2 digits, add the slash
+      return limitedDigits + '/';
     }
-    return digits;
+    // If we have 0 or 1 digit, return as is
+    return limitedDigits;
   }
 
   function handleExpiryInput(event: Event) {
     const target = event.target as HTMLInputElement;
+    const cursorPosition = target.selectionStart || 0;
+    const previousValue = target.value;
+
     const formatted = formatExpiry(target.value);
     target.value = formatted;
 
+    // Adjust cursor position
+    let newCursorPosition = cursorPosition;
+
+    // If we just added a slash automatically, move cursor after it
+    if (formatted.length === 3 && previousValue.length === 2 && formatted[2] === '/') {
+      newCursorPosition = 3;
+    }
+    // If cursor was after the slash, keep it there
+    else if (cursorPosition >= 3) {
+      newCursorPosition = formatted.length;
+    }
+
+    target.setSelectionRange(newCursorPosition, newCursorPosition);
+
+    // Update store with split values - both at once to avoid race condition
     if (formatted.includes('/')) {
       const [month, year] = formatted.split('/');
-      updateField('expiryMonth', month);
-      updateField('expiryYear', year);
+      console.log('DEBUG: Setting month:', month, 'year:', year); // Debug log
+      updateExpiryFields(month, year || '');
     } else {
-      updateField('expiryMonth', formatted);
+      updateExpiryFields(formatted, '');
     }
   }
 </script>
 
-?
 <div class="payment-method-form">
   <h3>Payment Method</h3>
 
@@ -89,12 +121,14 @@
       id="cardNumber"
       value={formData.cardNumber}
       on:input={handleCardNumberInput}
-      placeholder="1234 5678 9012 3456"
+      placeholder="4111 1111 1111 1111"
       maxlength="19"
       class:error={errors.cardNumber}
     />
     {#if errors.cardNumber}
       <span class="error-message">{errors.cardNumber}</span>
+    {:else}
+      <span class="help-text">Test cards: 4111 1111 1111 1111, 5555 5555 5555 4444</span>
     {/if}
   </div>
 
@@ -121,7 +155,7 @@
         id="expiry"
         value={formData.expiryMonth && formData.expiryYear
           ? `${formData.expiryMonth}/${formData.expiryYear}`
-          : ''}
+          : formData.expiryMonth || ''}
         on:input={handleExpiryInput}
         placeholder="MM/YY"
         maxlength="5"
@@ -129,6 +163,10 @@
       />
       {#if errors.expiryMonth || errors.expiryYear}
         <span class="error-message">{errors.expiryMonth || errors.expiryYear}</span>
+      {:else}
+        <span class="help-text" style="font-size: 0.7rem;"
+          >Month: '{formData.expiryMonth}' Year: '{formData.expiryYear}'</span
+        >
       {/if}
     </div>
 
@@ -248,6 +286,15 @@
     color: var(--color-danger);
     font-size: 0.875rem;
     margin-top: 0.25rem;
+    transition: color var(--transition-normal);
+  }
+
+  .help-text {
+    display: block;
+    color: var(--color-text-tertiary);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    font-style: italic;
     transition: color var(--transition-normal);
   }
 

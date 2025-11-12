@@ -16,3 +16,4 @@ export * from './media.js';
 export * from './roles.js';
 export * from './activity-logs.js';
 export * from './notifications.js';
+export * from './fulfillment-providers.js';

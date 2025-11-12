@@ -3,10 +3,12 @@
   import { cartStore, cartItems } from '../stores/cart.ts';
   import type { Product } from '../types/index.js';
   import { onMount } from 'svelte';
+  import { calculateTotalStock } from '../utils/stock.js';
 
   export let product: Product;
 
   $: quantity = cartStore.getItemQuantity($cartItems, product.id);
+  $: totalStock = calculateTotalStock(product.fulfillmentOptions);
 
   let isImageLoaded = false;
   let imageError = false;
@@ -76,8 +78,8 @@
   <div class="product-info">
     <div class="product-header">
       <span class="category-badge">{product.category}</span>
-      {#if product.stock < 10 && product.stock > 0}
-        <span class="low-stock-badge">Only {product.stock} left!</span>
+      {#if totalStock < 10 && totalStock > 0}
+        <span class="low-stock-badge">Only {totalStock} left!</span>
       {/if}
     </div>
 
@@ -88,7 +90,7 @@
       <div class="price-container">
         <span class="price">${product.price.toFixed(2)}</span>
         <span class="stock-info">
-          {#if product.stock === 0}
+          {#if totalStock === 0}
             <span class="out-of-stock">Out of Stock</span>
           {:else}
             <span class="in-stock">✓ In Stock</span>
@@ -98,8 +100,8 @@
 
       <div class="actions">
         {#if quantity === 0}
-          <Button variant="primary" on:click={addToCart} disabled={product.stock === 0}>
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+          <Button variant="primary" on:click={addToCart} disabled={totalStock === 0}>
+            {totalStock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </Button>
         {:else}
           <div class="quantity-controls">
@@ -114,7 +116,7 @@
             <button
               class="quantity-btn"
               on:click={incrementQuantity}
-              disabled={quantity >= product.stock}
+              disabled={quantity >= totalStock}
               aria-label="Increase quantity"
             >
               +

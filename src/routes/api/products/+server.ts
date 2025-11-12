@@ -7,7 +7,9 @@ import {
   updateProduct,
   deleteProduct,
   getProductById,
-  syncProductImageFromMedia
+  syncProductImageFromMedia,
+  getProductFulfillmentOptions,
+  setProductFulfillmentOptions
 } from '$lib/server/db';
 
 // GET all products
@@ -22,17 +24,23 @@ export const GET: RequestHandler = async ({ platform, locals }) => {
 
     const dbProducts = await getAllProducts(db, siteId);
 
-    const products = dbProducts.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      image: p.image,
-      category: p.category,
-      stock: p.stock,
-      type: p.type,
-      tags: JSON.parse(p.tags || '[]')
-    }));
+    const products = await Promise.all(
+      dbProducts.map(async (p) => {
+        const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          image: p.image,
+          category: p.category,
+          stock: p.stock,
+          type: p.type,
+          tags: JSON.parse(p.tags || '[]'),
+          fulfillmentOptions
+        };
+      })
+    );
 
     return json(products);
   } catch (err) {
@@ -60,6 +68,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       stock: number;
       type: 'physical' | 'service' | 'digital';
       tags?: string[];
+      fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
     };
 
     const productData = {
@@ -75,6 +84,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
     const dbProduct = await createProduct(db, siteId, productData);
 
+    // Set fulfillment options if provided
+    if (data.fulfillmentOptions && data.fulfillmentOptions.length > 0) {
+      await setProductFulfillmentOptions(db, siteId, dbProduct.id, data.fulfillmentOptions);
+    }
+
+    const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, dbProduct.id);
+
     const product = {
       id: dbProduct.id,
       name: dbProduct.name,
@@ -84,7 +100,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       category: dbProduct.category,
       stock: dbProduct.stock,
       type: dbProduct.type,
-      tags: JSON.parse(dbProduct.tags || '[]')
+      tags: JSON.parse(dbProduct.tags || '[]'),
+      fulfillmentOptions
     };
 
     return json(product, { status: 201 });
@@ -114,6 +131,7 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       stock?: number;
       type?: 'physical' | 'service' | 'digital';
       tags?: string[];
+      fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
     };
 
     const updateData: {
@@ -142,6 +160,11 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       throw error(404, 'Product not found');
     }
 
+    // Update fulfillment options if provided
+    if (data.fulfillmentOptions !== undefined) {
+      await setProductFulfillmentOptions(db, siteId, data.id, data.fulfillmentOptions);
+    }
+
     // Sync product image from media to ensure thumbnail is up to date
     await syncProductImageFromMedia(db, siteId, data.id);
 
@@ -152,6 +175,8 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       throw error(404, 'Product not found after update');
     }
 
+    const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, data.id);
+
     const product = {
       id: updatedDbProduct.id,
       name: updatedDbProduct.name,
@@ -161,7 +186,8 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       category: updatedDbProduct.category,
       stock: updatedDbProduct.stock,
       type: updatedDbProduct.type,
-      tags: JSON.parse(updatedDbProduct.tags || '[]')
+      tags: JSON.parse(updatedDbProduct.tags || '[]'),
+      fulfillmentOptions
     };
 
     return json(product);

@@ -2,7 +2,8 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import ProductMediaManager from '$lib/components/admin/ProductMediaManager.svelte';
-  import type { Product, ProductType } from '$lib/types';
+  import type { Product, ProductType, FulfillmentProvider } from '$lib/types';
+  import { onMount } from 'svelte';
 
   export let product: Product | null = null;
   export let isEditing = false;
@@ -26,6 +27,112 @@
   // Reference to ProductMediaManager component
   let productMediaManager: ProductMediaManager | undefined;
 
+  // Fulfillment providers
+  let availableProviders: FulfillmentProvider[] = [];
+  let selectedProviders: Map<string, { selected: boolean; cost: number; stockQuantity: number }> =
+    new Map();
+  let orderedProviderIds: string[] = [];
+
+  // Drag and drop state
+  let draggedIndex: number | null = null;
+
+  // Load fulfillment providers on mount
+  onMount(async () => {
+    try {
+      const response = await fetch('/api/admin/providers');
+      if (response.ok) {
+        availableProviders = await response.json();
+
+        // Initialize selected providers map and ordering
+        const existingOptions = product?.fulfillmentOptions || [];
+
+        // Sort existing options by sortOrder
+        const sortedOptions = [...existingOptions].sort((a, b) => a.sortOrder - b.sortOrder);
+
+        // Build ordered list from existing options first
+        orderedProviderIds = sortedOptions.map((opt) => opt.providerId);
+
+        // Add remaining providers that aren't selected
+        availableProviders.forEach((provider) => {
+          const existingOption = sortedOptions.find((opt) => opt.providerId === provider.id);
+
+          if (!orderedProviderIds.includes(provider.id)) {
+            orderedProviderIds.push(provider.id);
+          }
+
+          selectedProviders.set(provider.id, {
+            selected: !!existingOption,
+            cost: existingOption?.cost || 0,
+            stockQuantity: existingOption?.stockQuantity || 0
+          });
+        });
+
+        // Force reactivity update
+        selectedProviders = new Map(selectedProviders);
+        orderedProviderIds = [...orderedProviderIds];
+      }
+    } catch (error) {
+      console.error('Error loading fulfillment providers:', error);
+    }
+  });
+
+  function toggleProvider(providerId: string) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, selected: !current.selected });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
+  function updateProviderCost(providerId: string, cost: number) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, cost });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
+  function updateProviderStock(providerId: string, stockQuantity: number) {
+    const current = selectedProviders.get(providerId);
+    if (current) {
+      selectedProviders.set(providerId, { ...current, stockQuantity });
+      selectedProviders = new Map(selectedProviders);
+    }
+  }
+
+  // Drag and drop handlers
+  function handleDragStart(event: DragEvent, index: number) {
+    if (!event.dataTransfer) return;
+    draggedIndex = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', ''); // Required for Firefox
+  }
+
+  function handleDragOver(event: DragEvent, index: number) {
+    event.preventDefault();
+    if (!event.dataTransfer || draggedIndex === null || draggedIndex === index) return;
+
+    event.dataTransfer.dropEffect = 'move';
+
+    // Reorder the array
+    const newOrder = [...orderedProviderIds];
+    const draggedItem = newOrder[draggedIndex];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(index, 0, draggedItem);
+
+    orderedProviderIds = newOrder;
+    draggedIndex = index;
+  }
+
+  function handleDragEnd() {
+    draggedIndex = null;
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    draggedIndex = null;
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return;
 
@@ -36,6 +143,20 @@
     }
 
     isSubmitting = true;
+
+    // Build fulfillment options array with sortOrder based on orderedProviderIds
+    const fulfillmentOptions = orderedProviderIds
+      .map((providerId, index) => {
+        const data = selectedProviders.get(providerId);
+        if (!data || !data.selected) return null;
+        return {
+          providerId,
+          cost: data.cost,
+          stockQuantity: data.stockQuantity,
+          sortOrder: index
+        };
+      })
+      .filter((opt) => opt !== null);
 
     const productData = {
       name: formName,
@@ -48,7 +169,8 @@
       tags: formTags
         .split(',')
         .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0)
+        .filter((tag) => tag.length > 0),
+      fulfillmentOptions
     };
 
     try {
@@ -166,7 +288,7 @@
     </div>
 
     <!-- Product Details Grid -->
-    <div class="form-grid">
+    <div class="form-grid form-grid-2col">
       <div class="form-group">
         <label for="product-category">Category</label>
         <input
@@ -185,11 +307,6 @@
           <option value="service">Service</option>
         </select>
       </div>
-
-      <div class="form-group">
-        <label for="product-stock">Stock Quantity</label>
-        <input type="number" id="product-stock" bind:value={formStock} min="0" placeholder="0" />
-      </div>
     </div>
 
     <!-- Tags -->
@@ -202,6 +319,80 @@
         placeholder="e.g., wireless, premium, audio"
       />
     </div>
+
+    <!-- Fulfillment Options -->
+    {#if availableProviders.length > 0}
+      <div class="form-group">
+        <div class="label-wrapper">Fulfillment Options & Stock</div>
+        <p class="helper-text">
+          Select fulfillment providers, set stock quantity, and drag to reorder priority
+        </p>
+        <div class="fulfillment-options" role="list">
+          {#each orderedProviderIds as providerId, index (providerId)}
+            {@const provider = availableProviders.find((p) => p.id === providerId)}
+            {@const providerData = selectedProviders.get(providerId)}
+            {#if provider && providerData}
+              <div
+                class="provider-option"
+                class:dragging={draggedIndex === index}
+                draggable="true"
+                role="listitem"
+                on:dragstart={(e) => handleDragStart(e, index)}
+                on:dragover={(e) => handleDragOver(e, index)}
+                on:dragend={handleDragEnd}
+                on:drop={handleDrop}
+              >
+                <div class="provider-header">
+                  <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+                  <label class="provider-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={providerData.selected}
+                      on:change={() => toggleProvider(providerId)}
+                    />
+                    <span class="provider-name">
+                      {provider.name}
+                      {#if provider.isDefault}
+                        <span class="default-badge">Default</span>
+                      {/if}
+                    </span>
+                  </label>
+                </div>
+                {#if providerData.selected}
+                  <div class="provider-details">
+                    <div class="detail-input">
+                      <label for="cost-{providerId}">Cost:</label>
+                      <input
+                        type="number"
+                        id="cost-{providerId}"
+                        value={providerData.cost}
+                        on:input={(e) =>
+                          updateProviderCost(providerId, Number(e.currentTarget.value))}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div class="detail-input">
+                      <label for="stock-{providerId}">Stock:</label>
+                      <input
+                        type="number"
+                        id="stock-{providerId}"
+                        value={providerData.stockQuantity}
+                        on:input={(e) =>
+                          updateProviderStock(providerId, Number(e.currentTarget.value))}
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     <div class="form-actions">
       <button type="button" class="cancel-btn" on:click={handleCancel}>Cancel</button>
@@ -231,18 +422,29 @@
     gap: 1rem;
   }
 
+  .form-grid-2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  label {
+  label,
+  .label-wrapper {
     font-weight: 500;
     color: var(--color-text-secondary);
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .helper-text {
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary);
+    margin: -0.25rem 0 0.5rem 0;
   }
 
   input,
@@ -353,6 +555,126 @@
   .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .fulfillment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .provider-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    cursor: move;
+    transition: all 0.2s ease;
+  }
+
+  .provider-option:hover {
+    border-color: var(--color-text-tertiary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .provider-option.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+
+  .provider-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .drag-handle {
+    color: var(--color-text-tertiary);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: grab;
+    user-select: none;
+    padding: 0.25rem;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .provider-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
+    flex: 1;
+  }
+
+  .provider-checkbox input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  .provider-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-primary);
+  }
+
+  .default-badge {
+    padding: 0.125rem 0.5rem;
+    background: var(--color-primary-alpha);
+    color: var(--color-primary);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .provider-details {
+    display: flex;
+    gap: 1rem;
+    padding-left: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .detail-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .detail-input label {
+    font-size: 0.875rem;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--color-text-secondary);
+    margin: 0;
+    min-width: 45px;
+  }
+
+  .detail-input input {
+    width: 120px;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+  }
+
+  .detail-input input:focus {
+    border-color: var(--color-primary);
   }
 
   @media (max-width: 768px) {

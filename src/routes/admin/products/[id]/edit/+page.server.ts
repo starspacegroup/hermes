@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getDB } from '$lib/server/db';
+import { getDB, getProductFulfillmentOptions } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
@@ -23,6 +23,9 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       throw error(404, 'Product not found');
     }
 
+    // Fetch fulfillment options for this product
+    const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, productId);
+
     // Transform database product to match the Product type
     const product = {
       id: dbProduct.id as string,
@@ -33,7 +36,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       category: dbProduct.category as string,
       stock: dbProduct.stock as number,
       type: dbProduct.type as 'physical' | 'digital' | 'service',
-      tags: JSON.parse((dbProduct.tags as string) || '[]') as string[]
+      tags: JSON.parse((dbProduct.tags as string) || '[]') as string[],
+      fulfillmentOptions
     };
 
     return {

@@ -1,4 +1,9 @@
-import { getDB, getProductById, getProductMedia } from '$lib/server/db';
+import {
+  getDB,
+  getProductById,
+  getProductMedia,
+  getProductFulfillmentOptions
+} from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { logProductAction } from '$lib/server/activity-logger';
@@ -29,6 +34,9 @@ export const load: PageServerLoad = async ({
     // Fetch product media
     const dbMedia = await getProductMedia(db, siteId, params.id);
 
+    // Fetch fulfillment options
+    const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, params.id);
+
     // Transform database product to match the Product type
     const product = {
       id: dbProduct.id,
@@ -39,7 +47,8 @@ export const load: PageServerLoad = async ({
       category: dbProduct.category,
       stock: dbProduct.stock,
       type: dbProduct.type,
-      tags: JSON.parse(dbProduct.tags || '[]') as string[]
+      tags: JSON.parse(dbProduct.tags || '[]') as string[],
+      fulfillmentOptions
     };
 
     // Transform media items
