@@ -3,11 +3,52 @@
   import { goto } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import Button from '$lib/components/Button.svelte';
+  import { page } from '$app/stores';
 
   let email = '';
   let password = '';
   let isLoading = false;
   let error = '';
+
+  // Check for OAuth error in URL
+  $: if ($page.url.searchParams.get('error')) {
+    const errorType = $page.url.searchParams.get('error');
+    const provider = $page.url.searchParams.get('provider');
+    
+    switch (errorType) {
+      case 'oauth_denied':
+        error = `${provider} sign-in was cancelled. Please try again.`;
+        break;
+      case 'oauth_failed':
+        error = `${provider} sign-in failed. Please try again or use email/password.`;
+        break;
+      case 'no_email':
+        error = `${provider} did not provide an email address. Please use a different method.`;
+        break;
+      case 'account_inactive':
+        error = 'Your account is inactive. Please contact support.';
+        break;
+      default:
+        error = 'Authentication failed. Please try again.';
+    }
+  }
+
+  type OAuthProvider = {
+    id: string;
+    name: string;
+    icon: string;
+    enabled: boolean;
+  };
+
+  const oauthProviders: OAuthProvider[] = [
+    { id: 'google', name: 'Google', icon: '🔍', enabled: true },
+    { id: 'linkedin', name: 'LinkedIn', icon: '💼', enabled: true },
+    { id: 'apple', name: 'Apple', icon: '🍎', enabled: true },
+    { id: 'facebook', name: 'Facebook', icon: '📘', enabled: true },
+    { id: 'github', name: 'GitHub', icon: '🐙', enabled: true },
+    { id: 'twitter', name: 'X (Twitter)', icon: '𝕏', enabled: true },
+    { id: 'microsoft', name: 'Microsoft', icon: '🪟', enabled: true }
+  ];
 
   async function handleLogin() {
     error = '';
@@ -38,6 +79,10 @@
     }
   }
 
+  function handleOAuthLogin(provider: string) {
+    window.location.href = `/api/auth/oauth/${provider}`;
+  }
+
   function handleKeyPress(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       handleLogin();
@@ -60,6 +105,31 @@
     <div class="login-header">
       <h1>Login</h1>
       <p>Sign in to access your account</p>
+    </div>
+
+    <!-- SSO Provider Buttons -->
+    <div class="sso-section">
+      <p class="sso-title">Sign in with</p>
+      <div class="sso-providers">
+        {#each oauthProviders as provider}
+          {#if provider.enabled}
+            <button
+              type="button"
+              class="sso-button"
+              on:click={() => handleOAuthLogin(provider.id)}
+              disabled={isLoading}
+              title={`Sign in with ${provider.name}`}
+            >
+              <span class="sso-icon">{provider.icon}</span>
+              <span class="sso-name">{provider.name}</span>
+            </button>
+          {/if}
+        {/each}
+      </div>
+    </div>
+
+    <div class="divider">
+      <span>or continue with email</span>
     </div>
 
     <form on:submit|preventDefault={handleLogin}>
@@ -239,6 +309,94 @@
     margin-top: 0.5rem;
   }
 
+  /* SSO Styles */
+  .sso-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .sso-title {
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 1rem 0;
+    font-weight: 500;
+  }
+
+  .sso-providers {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .sso-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      transform var(--transition-fast);
+  }
+
+  .sso-button:hover:not(:disabled) {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .sso-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .sso-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .sso-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .sso-name {
+    font-size: 0.85rem;
+  }
+
+  .divider {
+    position: relative;
+    text-align: center;
+    margin: 1.5rem 0;
+  }
+
+  .divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--color-border-secondary);
+  }
+
+  .divider span {
+    position: relative;
+    display: inline-block;
+    padding: 0 1rem;
+    background: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
   .demo-credentials {
     margin-top: 2rem;
     padding-top: 2rem;
@@ -324,6 +482,18 @@
 
     .login-header h1 {
       font-size: 1.5rem;
+    }
+
+    .sso-providers {
+      grid-template-columns: 1fr;
+    }
+
+    .sso-button {
+      padding: 0.8rem;
+    }
+
+    .sso-name {
+      font-size: 0.9rem;
     }
 
     .demo-credentials p {
