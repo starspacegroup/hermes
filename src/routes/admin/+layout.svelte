@@ -289,7 +289,7 @@
                     stroke-linejoin="round"
                   ></path>
                 </svg>
-                Shippers
+                Shipping
               </a>
               <a
                 href="/admin/categories"
