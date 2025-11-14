@@ -1,13 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  createShippingOption,
   getShippingOptionById,
   getAllShippingOptions,
-  updateShippingOption,
   deleteShippingOption,
-  setProductShippingOptions,
   getProductShippingOptions,
-  setCategoryShippingOptions,
   getCategoryShippingOptions
 } from './shipping-options.js';
 

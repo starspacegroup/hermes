@@ -44,7 +44,12 @@
   }> = [];
   let selectedShippingOptions: Map<
     string,
-    { selected: boolean; isDefault: boolean; priceOverride: number | null; thresholdOverride: number | null }
+    {
+      selected: boolean;
+      isDefault: boolean;
+      priceOverride: number | null;
+      thresholdOverride: number | null;
+    }
   > = new Map();
 
   // Load fulfillment providers and shipping options on mount

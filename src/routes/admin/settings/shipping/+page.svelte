@@ -294,7 +294,12 @@
 
         <div class="form-group">
           <label for="carrier">Carrier</label>
-          <input type="text" id="carrier" bind:value={formCarrier} placeholder="e.g., USPS, FedEx" />
+          <input
+            type="text"
+            id="carrier"
+            bind:value={formCarrier}
+            placeholder="e.g., USPS, FedEx"
+          />
         </div>
       </div>
 

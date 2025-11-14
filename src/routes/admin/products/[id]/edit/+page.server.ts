@@ -1,9 +1,5 @@
 import type { PageServerLoad } from './$types';
-import {
-  getDB,
-  getProductFulfillmentOptions,
-  getProductShippingOptions
-} from '$lib/server/db';
+import { getDB, getProductFulfillmentOptions, getProductShippingOptions } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
