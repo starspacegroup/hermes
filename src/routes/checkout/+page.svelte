@@ -46,6 +46,24 @@
       ? calculateTotalShippingCost(shippingGroups, selectedShippingOptions)
       : (selectedShippingOption?.price ?? 0)
     : 0;
+
+  // Determine if shipping cost is known (selected) or pending selection
+  // Show -- if we're before step 2 OR if we have non-free groups without selections
+  $: shippingCostKnown = (() => {
+    if (!hasPhysicalProducts) return true; // No physical products = no shipping
+    if (currentStep < 2) return false; // Before shipping step
+
+    // Check if all non-free groups have selections
+    if (shippingGroupsLoaded && shippingGroups.length > 0) {
+      const nonFreeGroups = shippingGroups.filter((g) => !g.isFree);
+      if (nonFreeGroups.length === 0) return true; // All free shipping
+      // Check if all non-free groups have selections
+      return nonFreeGroups.every((g) => selectedShippingOptions[g.id]);
+    }
+
+    return false; // Shipping not yet determined
+  })();
+
   $: tax = subtotal * 0.08;
   $: total = subtotal + shippingCost + tax;
 
@@ -297,13 +315,29 @@
             {/each}
             <div class="total-row">
               <span>Total Shipping:</span>
-              <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
+              <span>
+                {#if !shippingCostKnown}
+                  --
+                {:else if shippingCost === 0}
+                  FREE
+                {:else}
+                  ${shippingCost.toFixed(2)}
+                {/if}
+              </span>
             </div>
           {:else}
             <!-- Single shipping cost display -->
             <div class="total-row">
               <span>Shipping:</span>
-              <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
+              <span>
+                {#if !shippingCostKnown}
+                  --
+                {:else if shippingCost === 0}
+                  FREE
+                {:else}
+                  ${shippingCost.toFixed(2)}
+                {/if}
+              </span>
             </div>
           {/if}
           <div class="total-row">
