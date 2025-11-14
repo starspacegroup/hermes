@@ -37,6 +37,7 @@ export async function load({ platform, locals, params }: ServerLoadEvent) {
       shipping_address: JSON.parse(dbOrder.shipping_address),
       billing_address: JSON.parse(dbOrder.billing_address),
       payment_method: JSON.parse(dbOrder.payment_method),
+      shipping_details: dbOrder.shipping_details ? JSON.parse(dbOrder.shipping_details) : null,
       items: items.map((item) => ({
         id: item.id,
         name: item.name,

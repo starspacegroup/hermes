@@ -8,12 +8,19 @@
   import type { Notification } from '$lib/types/notifications';
 
   let isSidebarOpen = false;
+  let isSettingsSubmenuOpen = false;
   let currentPath = '';
   let notifications: Notification[] = [];
   let unreadCount = 0;
 
   $: currentPath = $page.url.pathname;
   $: isLoginPage = currentPath === '/auth/login';
+  $: {
+    // Auto-expand settings submenu if on a settings page
+    if (currentPath.startsWith('/admin/settings') || currentPath.startsWith('/admin/providers')) {
+      isSettingsSubmenuOpen = true;
+    }
+  }
 
   async function fetchNotifications() {
     try {
@@ -63,6 +70,10 @@
 
   function closeSidebar() {
     isSidebarOpen = false;
+  }
+
+  function toggleSettingsSubmenu() {
+    isSettingsSubmenuOpen = !isSettingsSubmenuOpen;
   }
 </script>
 
@@ -177,23 +188,6 @@
         </a>
 
         <a
-          href="/admin/providers"
-          class:active={currentPath.startsWith('/admin/providers')}
-          on:click={closeSidebar}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-            <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
-          </svg>
-          Providers
-        </a>
-
-        <a
           href="/admin/pages"
           class:active={currentPath.startsWith('/admin/pages')}
           on:click={closeSidebar}
@@ -227,21 +221,93 @@
           Themes
         </a>
 
-        <a
-          href="/admin/settings"
-          class:active={currentPath.startsWith('/admin/settings')}
-          on:click={closeSidebar}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
-            <path
-              d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.36 6.36l-4.24-4.24m-6.24 0l-4.24 4.24M18.36 5.64l-4.24 4.24m-6.24 0L3.64 5.64"
-              stroke-width="2"
-              stroke-linecap="round"
-            ></path>
-          </svg>
-          Settings
-        </a>
+        <!-- Settings with submenu -->
+        <div class="menu-item-with-submenu">
+          <button
+            class="menu-item-button"
+            class:active={currentPath.startsWith('/admin/settings') ||
+              currentPath.startsWith('/admin/providers')}
+            on:click={toggleSettingsSubmenu}
+          >
+            <div class="menu-item-content">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                <path
+                  d="M12 1v6m0 6v6m9-9h-6m-6 0H3m15.36 6.36l-4.24-4.24m-6.24 0l-4.24 4.24M18.36 5.64l-4.24 4.24m-6.24 0L3.64 5.64"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                ></path>
+              </svg>
+              <span>Settings</span>
+            </div>
+            <svg
+              class="chevron"
+              class:open={isSettingsSubmenuOpen}
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M9 18l6-6-6-6"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+          </button>
+
+          {#if isSettingsSubmenuOpen}
+            <div class="submenu">
+              <a
+                href="/admin/providers"
+                class:active={currentPath.startsWith('/admin/providers')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                </svg>
+                Providers
+              </a>
+              <a
+                href="/admin/settings/shipping"
+                class:active={currentPath.startsWith('/admin/settings/shipping')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Shipping
+              </a>
+              <a
+                href="/admin/categories"
+                class:active={currentPath.startsWith('/admin/categories')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M4 7h16M4 7v13a2 2 0 002 2h12a2 2 0 002-2V7M4 7l2-3h12l2 3M10 11v6M14 11v6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  ></path>
+                </svg>
+                Categories
+              </a>
+            </div>
+          {/if}
+        </div>
 
         <a
           href="/admin/users"
@@ -502,6 +568,86 @@
   }
 
   .sidebar-nav a.active {
+    background: var(--color-bg-accent);
+    color: var(--color-primary);
+    border-right: 3px solid var(--color-primary);
+  }
+
+  /* Submenu styles */
+  .menu-item-with-submenu {
+    margin: 0;
+  }
+
+  .menu-item-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+    font-weight: 500;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu-item-button:hover {
+    background: var(--color-bg-accent);
+    color: var(--color-text-primary);
+  }
+
+  .menu-item-button.active {
+    background: var(--color-bg-accent);
+    color: var(--color-primary);
+  }
+
+  .menu-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .chevron {
+    transition: transform var(--transition-normal);
+    flex-shrink: 0;
+  }
+
+  .chevron.open {
+    transform: rotate(90deg);
+  }
+
+  .submenu {
+    background: var(--color-bg-secondary);
+    border-left: 2px solid var(--color-border-secondary);
+    margin-left: 1.5rem;
+  }
+
+  .submenu a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .submenu a:hover {
+    background: var(--color-bg-accent);
+    color: var(--color-text-primary);
+  }
+
+  .submenu a.active {
     background: var(--color-bg-accent);
     color: var(--color-primary);
     border-right: 3px solid var(--color-primary);

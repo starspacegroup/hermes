@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getDB, getProductFulfillmentOptions } from '$lib/server/db';
+import { getDB, getProductFulfillmentOptions, getProductShippingOptions } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
@@ -26,6 +26,16 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     // Fetch fulfillment options for this product
     const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, productId);
 
+    // Fetch shipping options for this product
+    const shippingOptionsRaw = await getProductShippingOptions(db, siteId, productId);
+    const shippingOptions = shippingOptionsRaw.map((opt) => ({
+      shippingOptionId: opt.shippingOptionId,
+      optionName: opt.optionName || '',
+      isDefault: opt.isDefault,
+      priceOverride: opt.priceOverride,
+      thresholdOverride: opt.thresholdOverride
+    }));
+
     // Transform database product to match the Product type
     const product = {
       id: dbProduct.id as string,
@@ -37,7 +47,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       stock: dbProduct.stock as number,
       type: dbProduct.type as 'physical' | 'digital' | 'service',
       tags: JSON.parse((dbProduct.tags as string) || '[]') as string[],
-      fulfillmentOptions
+      fulfillmentOptions,
+      shippingOptions
     };
 
     return {

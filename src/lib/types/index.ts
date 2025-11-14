@@ -17,6 +17,13 @@ export interface Product {
     stockQuantity: number;
     sortOrder: number;
   }>;
+  shippingOptions?: Array<{
+    shippingOptionId: string;
+    optionName: string;
+    isDefault: boolean;
+    priceOverride?: number | null;
+    thresholdOverride?: number | null;
+  }>;
 }
 
 export interface CartItem extends Product {
@@ -87,3 +94,15 @@ export type {
   DBProductFulfillmentOption,
   CreateProductFulfillmentOptionData
 } from './fulfillment';
+
+// Re-export shipping types
+export type {
+  ShippingOption,
+  ProductShippingOption,
+  CategoryShippingOption,
+  CreateShippingOptionData,
+  UpdateShippingOptionData,
+  ProductShippingAssignment,
+  CategoryShippingAssignment,
+  AvailableShippingOption
+} from './shipping';

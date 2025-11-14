@@ -9,7 +9,9 @@ import {
   getProductById,
   syncProductImageFromMedia,
   getProductFulfillmentOptions,
-  setProductFulfillmentOptions
+  setProductFulfillmentOptions,
+  getProductShippingOptions,
+  setProductShippingOptions
 } from '$lib/server/db';
 
 // GET all products
@@ -27,6 +29,14 @@ export const GET: RequestHandler = async ({ platform, locals }) => {
     const products = await Promise.all(
       dbProducts.map(async (p) => {
         const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, p.id);
+        const shippingOptionsRaw = await getProductShippingOptions(db, siteId, p.id);
+        const shippingOptions = shippingOptionsRaw.map((opt) => ({
+          shippingOptionId: opt.shippingOptionId,
+          optionName: opt.optionName || '',
+          isDefault: opt.isDefault,
+          priceOverride: opt.priceOverride,
+          thresholdOverride: opt.thresholdOverride
+        }));
         return {
           id: p.id,
           name: p.name,
@@ -37,7 +47,8 @@ export const GET: RequestHandler = async ({ platform, locals }) => {
           stock: p.stock,
           type: p.type,
           tags: JSON.parse(p.tags || '[]'),
-          fulfillmentOptions
+          fulfillmentOptions,
+          shippingOptions
         };
       })
     );
@@ -69,6 +80,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       type: 'physical' | 'service' | 'digital';
       tags?: string[];
       fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
+      shippingOptions?: Array<{
+        shippingOptionId: string;
+        isDefault: boolean;
+        priceOverride?: number;
+        thresholdOverride?: number;
+      }>;
     };
 
     const productData = {
@@ -89,7 +106,20 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       await setProductFulfillmentOptions(db, siteId, dbProduct.id, data.fulfillmentOptions);
     }
 
+    // Set shipping options if provided
+    if (data.shippingOptions && data.shippingOptions.length > 0) {
+      await setProductShippingOptions(db, siteId, dbProduct.id, data.shippingOptions);
+    }
+
     const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, dbProduct.id);
+    const shippingOptionsRaw = await getProductShippingOptions(db, siteId, dbProduct.id);
+    const shippingOptions = shippingOptionsRaw.map((opt) => ({
+      shippingOptionId: opt.shippingOptionId,
+      optionName: opt.optionName || '',
+      isDefault: opt.isDefault,
+      priceOverride: opt.priceOverride,
+      thresholdOverride: opt.thresholdOverride
+    }));
 
     const product = {
       id: dbProduct.id,
@@ -101,7 +131,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       stock: dbProduct.stock,
       type: dbProduct.type,
       tags: JSON.parse(dbProduct.tags || '[]'),
-      fulfillmentOptions
+      fulfillmentOptions,
+      shippingOptions
     };
 
     return json(product, { status: 201 });
@@ -132,6 +163,12 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       type?: 'physical' | 'service' | 'digital';
       tags?: string[];
       fulfillmentOptions?: Array<{ providerId: string; cost: number; stockQuantity?: number }>;
+      shippingOptions?: Array<{
+        shippingOptionId: string;
+        isDefault: boolean;
+        priceOverride?: number;
+        thresholdOverride?: number;
+      }>;
     };
 
     const updateData: {
@@ -165,6 +202,11 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       await setProductFulfillmentOptions(db, siteId, data.id, data.fulfillmentOptions);
     }
 
+    // Update shipping options if provided
+    if (data.shippingOptions !== undefined) {
+      await setProductShippingOptions(db, siteId, data.id, data.shippingOptions);
+    }
+
     // Sync product image from media to ensure thumbnail is up to date
     await syncProductImageFromMedia(db, siteId, data.id);
 
@@ -176,6 +218,14 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
     }
 
     const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, data.id);
+    const shippingOptionsRaw = await getProductShippingOptions(db, siteId, data.id);
+    const shippingOptions = shippingOptionsRaw.map((opt) => ({
+      shippingOptionId: opt.shippingOptionId,
+      optionName: opt.optionName || '',
+      isDefault: opt.isDefault,
+      priceOverride: opt.priceOverride,
+      thresholdOverride: opt.thresholdOverride
+    }));
 
     const product = {
       id: updatedDbProduct.id,
@@ -187,7 +237,8 @@ export const PUT: RequestHandler = async ({ request, platform, locals }) => {
       stock: updatedDbProduct.stock,
       type: updatedDbProduct.type,
       tags: JSON.parse(updatedDbProduct.tags || '[]'),
-      fulfillmentOptions
+      fulfillmentOptions,
+      shippingOptions
     };
 
     return json(product);

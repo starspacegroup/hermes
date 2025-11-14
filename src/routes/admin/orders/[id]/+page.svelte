@@ -9,6 +9,18 @@
     image: string;
   }
 
+  interface ShippingGroup {
+    id: string;
+    shippingOptionId: string;
+    shippingOptionName: string;
+    shippingCost: number;
+    products: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+    }>;
+  }
+
   interface Order {
     id: string;
     status: string;
@@ -45,6 +57,9 @@
       expiryMonth: string;
       expiryYear: string;
     };
+    shipping_details: {
+      groups: ShippingGroup[];
+    } | null;
     items: OrderItem[];
   }
 
@@ -240,6 +255,66 @@
         </div>
       </div>
     </div>
+
+    <!-- Shipping Details -->
+    {#if order.shipping_details && order.shipping_details.groups.length > 0}
+      <div class="card">
+        <h2>Shipping Details</h2>
+        <p class="section-description">
+          This order contains {order.shipping_details.groups.length}
+          {order.shipping_details.groups.length === 1 ? 'package' : 'packages'} with different shipping
+          options.
+        </p>
+
+        <div class="shipping-groups">
+          {#each order.shipping_details.groups as group, index}
+            <div class="shipping-group">
+              <div class="group-header">
+                <h3>Package {index + 1}</h3>
+                <div class="shipping-option-badge">
+                  <span class="shipping-icon">📦</span>
+                  <div class="shipping-option-info">
+                    <span class="option-name">{group.shippingOptionName}</span>
+                    <span class="option-cost">${group.shippingCost.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="group-products">
+                <h4>Products in this package:</h4>
+                <ul class="product-list">
+                  {#each group.products as product}
+                    <li class="product-item">
+                      <span class="product-name">{product.name}</span>
+                      <span class="product-quantity">× {product.quantity}</span>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="shipping-summary">
+          <div class="summary-row">
+            <span>Total Packages:</span>
+            <span class="summary-value">{order.shipping_details.groups.length}</span>
+          </div>
+          <div class="summary-row">
+            <span>Total Shipping Cost:</span>
+            <span class="summary-value">${order.shipping_cost.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    {:else}
+      <div class="card">
+        <h2>Shipping Details</h2>
+        <p class="no-shipping-info">
+          No detailed shipping information available for this order. This order may have been placed
+          before shipping tracking was implemented.
+        </p>
+      </div>
+    {/if}
 
     <!-- Customer Information -->
     <div class="card">
@@ -541,6 +616,140 @@
     gap: 1rem;
   }
 
+  .section-description {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+  }
+
+  .shipping-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .shipping-group {
+    border: 2px solid var(--color-border-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    background: var(--color-bg-secondary);
+  }
+
+  .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-primary);
+  }
+
+  .group-header h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+  }
+
+  .shipping-option-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--color-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .shipping-icon {
+    font-size: 1.25rem;
+  }
+
+  .shipping-option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .option-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .option-cost {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
+  .group-products {
+    margin-top: 1rem;
+  }
+
+  .group-products h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .product-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .product-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--color-bg-primary);
+    border-radius: 4px;
+    border: 1px solid var(--color-border-primary);
+  }
+
+  .product-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+
+  .product-quantity {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--color-bg-secondary);
+    border-radius: 4px;
+  }
+
+  .shipping-summary {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-border-primary);
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    color: var(--color-text-secondary);
+  }
+
+  .summary-value {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .no-shipping-info {
+    color: var(--color-text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+  }
+
   @media (max-width: 768px) {
     .order-details-container {
       padding: 1rem;
@@ -573,6 +782,17 @@
 
     .btn-status {
       width: 100%;
+    }
+
+    .group-header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .shipping-option-badge {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>

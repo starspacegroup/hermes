@@ -4,6 +4,7 @@ import {
   getProductMedia,
   getProductFulfillmentOptions
 } from '$lib/server/db';
+import { getProductShippingOptions } from '$lib/server/db/shipping-options';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { logProductAction } from '$lib/server/activity-logger';
@@ -37,6 +38,21 @@ export const load: PageServerLoad = async ({
     // Fetch fulfillment options
     const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, params.id);
 
+    // Fetch shipping options for physical products
+    const shippingOptionsRaw =
+      dbProduct.type === 'physical' ? await getProductShippingOptions(db, siteId, params.id) : [];
+
+    const shippingOptions = shippingOptionsRaw.map((opt) => ({
+      shippingOptionId: opt.shippingOptionId,
+      optionName: opt.optionName || '',
+      isDefault: opt.isDefault,
+      priceOverride: opt.priceOverride,
+      thresholdOverride: opt.thresholdOverride,
+      estimatedDaysMin: opt.optionEstimatedDaysMin,
+      estimatedDaysMax: opt.optionEstimatedDaysMax,
+      carrier: opt.optionCarrier
+    }));
+
     // Transform database product to match the Product type
     const product = {
       id: dbProduct.id,
@@ -48,7 +64,8 @@ export const load: PageServerLoad = async ({
       stock: dbProduct.stock,
       type: dbProduct.type,
       tags: JSON.parse(dbProduct.tags || '[]') as string[],
-      fulfillmentOptions
+      fulfillmentOptions,
+      shippingOptions
     };
 
     // Transform media items

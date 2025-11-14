@@ -53,6 +53,19 @@ interface CreateOrderRequest {
     expiryYear: string;
     cvv: string;
   };
+  shipping_details?: {
+    groups: Array<{
+      id: string;
+      shippingOptionId: string;
+      shippingOptionName: string;
+      shippingCost: number;
+      products: Array<{
+        id: string;
+        name: string;
+        quantity: number;
+      }>;
+    }>;
+  };
 }
 
 /**
@@ -159,7 +172,8 @@ export async function POST({ request, platform, locals }: RequestEvent): Promise
         expiryMonth: data.payment_method.expiryMonth,
         expiryYear: data.payment_method.expiryYear
         // Never store CVV
-      }
+      },
+      shipping_details: data.shipping_details
     });
 
     return json({
