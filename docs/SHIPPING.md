@@ -10,23 +10,27 @@ The Shipping Options system allows store owners to configure flexible shipping m
 ## Features
 
 ### Global Shipping Options
+
 - Create, edit, and delete shipping methods site-wide
 - Configure name, price, estimated delivery time, carrier
 - Set free shipping thresholds
 - Enable/disable shipping options
 
 ### Product-Level Configuration
+
 - Assign specific shipping options to individual products
 - Set a default shipping option
 - Override price and free shipping threshold per product
 - Automatic exclusion for digital/downloadable products
 
 ### Category-Level Defaults (Database Support)
+
 - Database schema supports category-level shipping defaults
 - Products inherit category shipping options when not overridden
 - UI implementation can be added in future
 
 ### Checkout Integration
+
 - Calculate available shipping based on cart contents
 - Show union of shipping options for all products
 - Display only options common to all physical items
@@ -38,6 +42,7 @@ The Shipping Options system allows store owners to configure flexible shipping m
 ### Tables
 
 #### `shipping_options`
+
 Global shipping methods available site-wide.
 
 ```sql
@@ -59,6 +64,7 @@ CREATE TABLE shipping_options (
 ```
 
 #### `product_shipping_options`
+
 Many-to-many junction table linking products to shipping options.
 
 ```sql
@@ -80,6 +86,7 @@ CREATE TABLE product_shipping_options (
 ```
 
 #### `category_shipping_options`
+
 Many-to-many junction table for category-level defaults.
 
 ```sql
@@ -102,9 +109,11 @@ CREATE TABLE category_shipping_options (
 ### Admin Shipping Management
 
 #### `GET /api/admin/shipping`
+
 List all shipping options for the site.
 
 **Response:**
+
 ```json
 [
   {
@@ -116,7 +125,7 @@ List all shipping options for the site.
     "estimatedDaysMin": 5,
     "estimatedDaysMax": 7,
     "carrier": "USPS",
-    "freeShippingThreshold": 50.00,
+    "freeShippingThreshold": 50.0,
     "isActive": true,
     "createdAt": 1234567890,
     "updatedAt": 1234567890
@@ -125,9 +134,11 @@ List all shipping options for the site.
 ```
 
 #### `POST /api/admin/shipping`
+
 Create a new shipping option.
 
 **Request Body:**
+
 ```json
 {
   "name": "Express Shipping",
@@ -136,27 +147,31 @@ Create a new shipping option.
   "estimatedDaysMin": 2,
   "estimatedDaysMax": 3,
   "carrier": "FedEx",
-  "freeShippingThreshold": 100.00,
+  "freeShippingThreshold": 100.0,
   "isActive": true
 }
 ```
 
 #### `PUT /api/admin/shipping`
+
 Update an existing shipping option.
 
 **Request Body:**
+
 ```json
 {
   "id": "ship-1",
   "price": 12.99,
-  "freeShippingThreshold": 75.00
+  "freeShippingThreshold": 75.0
 }
 ```
 
 #### `DELETE /api/admin/shipping`
+
 Delete a shipping option.
 
 **Request Body:**
+
 ```json
 {
   "id": "ship-1"
@@ -168,9 +183,11 @@ Delete a shipping option.
 Shipping options are managed through the products API:
 
 #### `GET /api/products`
+
 Includes `shippingOptions` array in product data.
 
 #### `POST /api/products` and `PUT /api/products`
+
 Include `shippingOptions` in request body:
 
 ```json
@@ -197,9 +214,11 @@ Include `shippingOptions` in request body:
 ### Checkout Shipping Calculation
 
 #### `POST /api/checkout/shipping`
+
 Calculate available shipping options for cart items.
 
 **Request Body:**
+
 ```json
 {
   "cartItems": [
@@ -215,6 +234,7 @@ Calculate available shipping options for cart items.
 ```
 
 **Response:**
+
 ```json
 {
   "options": [
@@ -241,6 +261,7 @@ Calculate available shipping options for cart items.
 Navigate to **Admin → Settings → Shipping** to manage shipping options.
 
 **Features:**
+
 - View all shipping options in card layout
 - Create new shipping option (modal dialog)
 - Edit existing shipping option
@@ -253,6 +274,7 @@ Navigate to **Admin → Settings → Shipping** to manage shipping options.
 When editing a product, the shipping options appear after fulfillment options (physical products only).
 
 **Features:**
+
 - Multi-select shipping options with checkboxes
 - Radio button to set default shipping
 - Optional price override per product
@@ -279,6 +301,7 @@ When calculating available shipping for a checkout:
 6. Return empty array for digital-only carts
 
 **Example:**
+
 - Product A: Standard, Express
 - Product B: Express, Overnight
 - Cart Result: **Express** (only common option)
@@ -293,6 +316,7 @@ When calculating available shipping for a checkout:
 ## TypeScript Types
 
 ### ShippingOption
+
 ```typescript
 interface ShippingOption {
   id: string;
@@ -311,6 +335,7 @@ interface ShippingOption {
 ```
 
 ### ProductShippingOption
+
 ```typescript
 interface ProductShippingOption {
   id: string;
@@ -326,6 +351,7 @@ interface ProductShippingOption {
 ```
 
 ### AvailableShippingOption
+
 ```typescript
 interface AvailableShippingOption {
   id: string;
@@ -345,12 +371,14 @@ interface AvailableShippingOption {
 ### Unit Tests
 
 Database functions are tested in `src/lib/server/db/shipping-options.test.ts`:
+
 - CRUD operations for shipping options
 - Product shipping assignment
 - Category shipping assignment
 - Cart shipping calculation logic
 
 Run tests:
+
 ```bash
 npm test -- shipping-options.test.ts
 ```
@@ -382,6 +410,7 @@ npm run db:migrate
 ### Default Data
 
 Migration `0018_shipping_options.sql` creates three default options:
+
 - Standard Shipping ($9.99, 5-7 days)
 - Express Shipping ($19.99, 2-3 days)
 - Overnight Shipping ($29.99, 1 day)
@@ -397,6 +426,7 @@ DROP TABLE IF EXISTS shipping_options;
 ## Future Enhancements
 
 ### Not Implemented (Scope)
+
 - Real-time carrier rate shopping (UPS, FedEx, USPS APIs)
 - Geographic shipping zones or restrictions
 - Weight-based shipping calculations
@@ -405,6 +435,7 @@ DROP TABLE IF EXISTS shipping_options;
 - Category UI for shipping defaults
 
 ### Possible Extensions
+
 - Volume/dimensional weight pricing
 - Multiple warehouse support with location-based shipping
 - International shipping with customs support
@@ -417,12 +448,14 @@ DROP TABLE IF EXISTS shipping_options;
 ### No shipping options show at checkout
 
 **Possible causes:**
+
 1. Cart contains only digital products (expected behavior)
 2. No shipping options assigned to products
 3. Products have different shipping options with no common intersection
 4. All shipping options are inactive
 
 **Solution:**
+
 - Verify products have type="physical"
 - Check product shipping assignments
 - Ensure at least one common shipping option across all cart products
@@ -431,6 +464,7 @@ DROP TABLE IF EXISTS shipping_options;
 ### Free shipping not applied
 
 **Check:**
+
 1. Cart total meets or exceeds threshold
 2. Threshold set correctly in shipping option
 3. No product-level threshold override conflicting
@@ -438,6 +472,7 @@ DROP TABLE IF EXISTS shipping_options;
 ### Price overrides not working
 
 **Verify:**
+
 1. Override value is set in product shipping options
 2. Product API is saving overrides correctly
 3. Checkout API is reading overrides from product_shipping_options table
