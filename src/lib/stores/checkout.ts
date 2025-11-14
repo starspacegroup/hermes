@@ -1,6 +1,14 @@
 import { writable, type Writable } from 'svelte/store';
 import type { CheckoutFormData, CheckoutValidationErrors } from '../types/checkout';
+import type { AvailableShippingOption } from '../types/shipping';
 import { validateCheckoutForm } from '../utils/checkoutValidation';
+import {
+  groupCartItemsByShipping,
+  calculateTotalShippingCost,
+  validateShippingSelections,
+  type ShippingGroup
+} from '../utils/shippingGroups';
+import type { CartItem } from '../types';
 
 // Initial form data
 const initialFormData: CheckoutFormData = {
@@ -32,7 +40,9 @@ const initialFormData: CheckoutFormData = {
     expiryYear: '',
     cvv: ''
   },
-  sameAsShipping: true
+  sameAsShipping: true,
+  selectedShippingOptionId: null,
+  selectedShippingOptions: {}
 };
 
 // Checkout state
@@ -41,13 +51,21 @@ interface CheckoutState {
   currentStep: number;
   isSubmitting: boolean;
   validationErrors: CheckoutValidationErrors;
+  availableShippingOptions: AvailableShippingOption[];
+  loadingShippingOptions: boolean;
+  shippingGroups: ShippingGroup[];
+  shippingGroupsLoaded: boolean;
 }
 
 const checkoutState: Writable<CheckoutState> = writable({
   formData: { ...initialFormData },
   currentStep: 1,
   isSubmitting: false,
-  validationErrors: {}
+  validationErrors: {},
+  availableShippingOptions: [],
+  loadingShippingOptions: false,
+  shippingGroups: [],
+  shippingGroupsLoaded: false
 });
 
 // Store functions
@@ -99,7 +117,11 @@ async function submitOrder(
       formData: { ...initialFormData },
       currentStep: 1,
       isSubmitting: false,
-      validationErrors: {}
+      validationErrors: {},
+      availableShippingOptions: [],
+      loadingShippingOptions: false,
+      shippingGroups: [],
+      shippingGroupsLoaded: false
     };
 
     const unsubscribe = checkoutState.subscribe((state) => {
@@ -108,6 +130,24 @@ async function submitOrder(
     unsubscribe();
 
     // Prepare order data
+    // Validate shipping options for all groups
+    const shippingErrors = validateShippingSelections(
+      currentState.shippingGroups,
+      currentState.formData.selectedShippingOptions
+    );
+
+    if (Object.keys(shippingErrors).length > 0) {
+      checkoutState.update((state) => ({
+        ...state,
+        isSubmitting: false,
+        validationErrors: {
+          ...state.validationErrors,
+          shippingOptions: shippingErrors
+        }
+      }));
+      return { success: false, error: 'Please select shipping options for all groups' };
+    }
+
     const orderData = {
       items: cartItems.map((item) => ({
         product_id: item.id,
@@ -171,7 +211,11 @@ function reset(): void {
     formData: { ...initialFormData },
     currentStep: 1,
     isSubmitting: false,
-    validationErrors: {}
+    validationErrors: {},
+    availableShippingOptions: [],
+    loadingShippingOptions: false,
+    shippingGroups: [],
+    shippingGroupsLoaded: false
   });
 }
 
@@ -187,6 +231,128 @@ function setCurrentStep(step: number): void {
   checkoutState.update((state) => ({ ...state, currentStep: step }));
 }
 
+function setSelectedShippingOption(optionId: string | null): void {
+  checkoutState.update((state) => ({
+    ...state,
+    formData: { ...state.formData, selectedShippingOptionId: optionId }
+  }));
+}
+
+async function loadShippingOptions(
+  cartItems: Array<{ id: string; type: 'physical' | 'digital' | 'service'; category?: string }>
+): Promise<void> {
+  checkoutState.update((state) => ({ ...state, loadingShippingOptions: true }));
+
+  try {
+    const response = await fetch('/api/checkout/shipping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cartItems })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load shipping options');
+    }
+
+    const data = (await response.json()) as {
+      options: AvailableShippingOption[];
+      hasPhysicalProducts: boolean;
+    };
+
+    checkoutState.update((state) => ({
+      ...state,
+      availableShippingOptions: data.options,
+      loadingShippingOptions: false
+    }));
+  } catch (error) {
+    console.error('Failed to load shipping options:', error);
+    checkoutState.update((state) => ({
+      ...state,
+      availableShippingOptions: [],
+      loadingShippingOptions: false
+    }));
+  }
+}
+
+async function loadShippingGroups(cartItems: CartItem[]): Promise<void> {
+  checkoutState.update((state) => ({ ...state, loadingShippingOptions: true }));
+
+  try {
+    // Fetch shipping options for all products
+    const response = await fetch('/api/checkout/shipping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cartItems })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load shipping options');
+    }
+
+    const data = (await response.json()) as {
+      options: AvailableShippingOption[];
+      hasPhysicalProducts: boolean;
+      productOptions?: Record<string, AvailableShippingOption[]>;
+    };
+
+    // Create a map of product ID to shipping options
+    const productShippingMap = new Map<string, AvailableShippingOption[]>();
+
+    // If we have product-specific options from API, use them
+    if (data.productOptions) {
+      for (const [productId, options] of Object.entries(data.productOptions)) {
+        productShippingMap.set(productId, options);
+      }
+    } else {
+      // Fallback: use the same options for all physical products
+      for (const item of cartItems) {
+        if (item.type === 'physical') {
+          productShippingMap.set(item.id, data.options);
+        }
+      }
+    }
+
+    // Group cart items by shared shipping options
+    const groups = groupCartItemsByShipping(cartItems, productShippingMap);
+
+    checkoutState.update((state) => ({
+      ...state,
+      shippingGroups: groups,
+      shippingGroupsLoaded: true,
+      loadingShippingOptions: false
+    }));
+  } catch (error) {
+    console.error('Failed to load shipping groups:', error);
+    checkoutState.update((state) => ({
+      ...state,
+      shippingGroups: [],
+      shippingGroupsLoaded: false,
+      loadingShippingOptions: false
+    }));
+  }
+}
+
+function setShippingOptionForGroup(groupId: string, optionId: string): void {
+  checkoutState.update((state) => ({
+    ...state,
+    formData: {
+      ...state.formData,
+      selectedShippingOptions: {
+        ...state.formData.selectedShippingOptions,
+        [groupId]: optionId
+      }
+    }
+  }));
+}
+
+function getTotalShippingCost(): number {
+  let cost = 0;
+  checkoutState.subscribe((state) => {
+    cost = calculateTotalShippingCost(state.shippingGroups, state.formData.selectedShippingOptions);
+  })();
+  return cost;
+}
+
 // Export the store
 export const checkoutStore = {
   subscribe: checkoutState.subscribe,
@@ -196,7 +362,12 @@ export const checkoutStore = {
   submitOrder,
   reset,
   getCurrentStep,
-  setCurrentStep
+  setCurrentStep,
+  setSelectedShippingOption,
+  loadShippingOptions,
+  loadShippingGroups,
+  setShippingOptionForGroup,
+  getTotalShippingCost
 };
 
 // Helper function to copy shipping address to billing address

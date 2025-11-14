@@ -6,8 +6,10 @@
   import ShippingAddressForm from '../../lib/components/ShippingAddressForm.svelte';
   import BillingAddressForm from '../../lib/components/BillingAddressForm.svelte';
   import PaymentMethodForm from '../../lib/components/PaymentMethodForm.svelte';
+  import ShippingOptionsSelector from '../../lib/components/ShippingOptionsSelector.svelte';
   import Button from '../../lib/components/Button.svelte';
   import type { CheckoutValidationErrors } from '../../lib/types/checkout';
+  import type { AvailableShippingOption } from '../../lib/types/shipping';
 
   let currentStep = 1;
   let isSubmitting = false;
@@ -16,40 +18,67 @@
 
   $: cartItems = $cartStore;
   $: subtotal = cartStore.getTotalPrice(cartItems);
-  $: shippingCost = subtotal > 50 ? 0 : 9.99;
-  $: tax = subtotal * 0.08;
-  $: total = subtotal + shippingCost + tax;
+  $: hasPhysicalProducts = cartItems.some((item) => item.type === 'physical');
 
   $: checkoutState = $checkoutStore;
   $: currentStep = checkoutState.currentStep;
   $: validationErrors = checkoutState.validationErrors;
   $: isSubmitting = checkoutState.isSubmitting;
 
-  onMount(() => {
+  // Selected shipping option object from available options
+  $: selectedShippingOption =
+    checkoutState.availableShippingOptions?.find(
+      (opt) => opt.id === checkoutState.formData.selectedShippingOptionId
+    ) || null;
+
+  // Compute shipping cost from selected option, fall back to 0
+  $: shippingCost = hasPhysicalProducts ? (selectedShippingOption?.price ?? 0) : 0;
+  $: tax = subtotal * 0.08;
+  $: total = subtotal + shippingCost + tax;
+
+  onMount(async () => {
     // Redirect to cart if empty
     if (cartItems.length === 0) {
       goto('/cart');
+      return;
+    }
+
+    // Load shipping options if cart has physical products
+    if (hasPhysicalProducts) {
+      await checkoutStore.loadShippingOptions(cartItems);
     }
   });
 
   function nextStep() {
-    // Validate current step
+    // Validate current step using existing validation utility
     const errors = checkoutStore.validateForm();
 
-    if (
-      currentStep === 1 &&
-      (!errors.shippingAddress || Object.keys(errors.shippingAddress).length === 0)
-    ) {
-      checkoutStore.setCurrentStep(2);
-    } else if (
-      currentStep === 2 &&
-      (!errors.billingAddress || Object.keys(errors.billingAddress).length === 0)
-    ) {
+    if (currentStep === 1) {
+      // Shipping address validated in step 1
+      if (!errors.shippingAddress || Object.keys(errors.shippingAddress).length === 0) {
+        checkoutStore.setCurrentStep(2);
+        return;
+      }
+    } else if (currentStep === 2) {
+      // Shipping options selection step
+      // If cart contains physical products, require a selected shipping option
+      if (hasPhysicalProducts && !checkoutState.formData.selectedShippingOptionId) {
+        errorMessage = 'Please select a shipping option to continue';
+        setTimeout(() => (errorMessage = ''), 3000);
+        return;
+      }
       checkoutStore.setCurrentStep(3);
-    } else {
-      errorMessage = 'Please fix the errors before proceeding';
-      setTimeout(() => (errorMessage = ''), 3000);
+      return;
+    } else if (currentStep === 3) {
+      // Billing step
+      if (!errors.billingAddress || Object.keys(errors.billingAddress).length === 0) {
+        checkoutStore.setCurrentStep(4);
+        return;
+      }
     }
+
+    errorMessage = 'Please fix the errors before proceeding';
+    setTimeout(() => (errorMessage = ''), 3000);
   }
 
   function previousStep() {
@@ -83,6 +112,10 @@
       setTimeout(() => (errorMessage = ''), 5000);
     }
   }
+
+  function handleShippingSelection(event: CustomEvent<AvailableShippingOption>) {
+    checkoutStore.setSelectedShippingOption(event.detail.id);
+  }
 </script>
 
 <svelte:head>
@@ -108,16 +141,21 @@
         <div class="checkout-steps">
           <div class="step" class:active={currentStep === 1} class:completed={currentStep > 1}>
             <div class="step-number">1</div>
-            <div class="step-label">Shipping</div>
+            <div class="step-label">Shipping Address</div>
           </div>
           <div class="step-connector" class:completed={currentStep > 1}></div>
           <div class="step" class:active={currentStep === 2} class:completed={currentStep > 2}>
             <div class="step-number">2</div>
-            <div class="step-label">Billing</div>
+            <div class="step-label">Shipping Method</div>
           </div>
           <div class="step-connector" class:completed={currentStep > 2}></div>
-          <div class="step" class:active={currentStep === 3}>
+          <div class="step" class:active={currentStep === 3} class:completed={currentStep > 3}>
             <div class="step-number">3</div>
+            <div class="step-label">Billing</div>
+          </div>
+          <div class="step-connector" class:completed={currentStep > 3}></div>
+          <div class="step" class:active={currentStep === 4}>
+            <div class="step-number">4</div>
             <div class="step-label">Payment</div>
           </div>
         </div>
@@ -134,8 +172,16 @@
           {#if currentStep === 1}
             <ShippingAddressForm errors={validationErrors.shippingAddress || {}} />
           {:else if currentStep === 2}
-            <BillingAddressForm errors={validationErrors.billingAddress || {}} />
+            <ShippingOptionsSelector
+              shippingOptions={checkoutState.availableShippingOptions}
+              selectedOptionId={checkoutState.formData.selectedShippingOptionId}
+              loading={checkoutState.loadingShippingOptions}
+              error={validationErrors.shippingOption}
+              on:selectionChange={handleShippingSelection}
+            />
           {:else if currentStep === 3}
+            <BillingAddressForm errors={validationErrors.billingAddress || {}} />
+          {:else if currentStep === 4}
             <PaymentMethodForm errors={validationErrors.paymentMethod || {}} />
           {/if}
         </div>
@@ -146,7 +192,7 @@
             <Button variant="secondary" on:click={previousStep}>Previous</Button>
           {/if}
 
-          {#if currentStep < 3}
+          {#if currentStep < 4}
             <Button variant="primary" on:click={nextStep}>Continue</Button>
           {:else}
             <Button variant="primary" on:click={submitOrder} disabled={isSubmitting}>

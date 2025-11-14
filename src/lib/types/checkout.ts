@@ -57,11 +57,15 @@ export interface CheckoutFormData {
   billingAddress: BillingAddress;
   paymentMethod: PaymentMethod;
   sameAsShipping: boolean;
+  selectedShippingOptionId: string | null; // Deprecated - kept for backward compatibility
+  selectedShippingOptions: Record<string, string>; // Map of groupId -> selectedShippingOptionId
 }
 
 export interface CheckoutValidationErrors {
   shippingAddress?: Partial<Record<keyof ShippingAddress, string>>;
   billingAddress?: Partial<Record<keyof BillingAddress, string>>;
   paymentMethod?: Partial<Record<keyof PaymentMethod, string>>;
+  shippingOption?: string;
+  shippingOptions?: Record<string, string>; // Map of groupId -> error message
   general?: string;
 }
