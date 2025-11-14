@@ -78,12 +78,14 @@ https://your-domain.com/api/auth/oauth/{provider}/callback
 ```
 
 Examples:
+
 - `https://mystore.com/api/auth/oauth/google/callback`
 - `https://mystore.com/api/auth/oauth/github/callback`
 
 ### 1. Google OAuth Setup
 
 **Step 1: Create OAuth Client**
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
 3. Navigate to "APIs & Services" > "Credentials"
@@ -92,6 +94,7 @@ Examples:
 6. Add authorized redirect URI: `https://your-domain.com/api/auth/oauth/google/callback`
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
@@ -106,6 +109,7 @@ wrangler secret put GOOGLE_CLIENT_SECRET
 ### 2. LinkedIn OAuth Setup
 
 **Step 1: Create LinkedIn App**
+
 1. Go to [LinkedIn Developers](https://www.linkedin.com/developers/)
 2. Click "Create app"
 3. Fill in app details
@@ -114,6 +118,7 @@ wrangler secret put GOOGLE_CLIENT_SECRET
 6. Request access to "Sign In with LinkedIn using OpenID Connect"
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put LINKEDIN_CLIENT_ID
 wrangler secret put LINKEDIN_CLIENT_SECRET
@@ -128,6 +133,7 @@ wrangler secret put LINKEDIN_CLIENT_SECRET
 ### 3. Apple Sign In Setup
 
 **Step 1: Configure Apple Developer Account**
+
 1. Go to [Apple Developer](https://developer.apple.com/)
 2. Navigate to "Certificates, Identifiers & Profiles"
 3. Create a new "App ID" or "Services ID"
@@ -136,6 +142,7 @@ wrangler secret put LINKEDIN_CLIENT_SECRET
 6. Create a private key for Sign in with Apple
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put APPLE_CLIENT_ID
 wrangler secret put APPLE_CLIENT_SECRET  # This is a JWT created with your private key
@@ -152,6 +159,7 @@ wrangler secret put APPLE_CLIENT_SECRET  # This is a JWT created with your priva
 ### 4. Facebook Login Setup
 
 **Step 1: Create Facebook App**
+
 1. Go to [Facebook Developers](https://developers.facebook.com/)
 2. Click "Create App"
 3. Choose "Consumer" app type
@@ -160,6 +168,7 @@ wrangler secret put APPLE_CLIENT_SECRET  # This is a JWT created with your priva
 6. Enable "Client OAuth Login" and "Web OAuth Login"
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put FACEBOOK_CLIENT_ID
 wrangler secret put FACEBOOK_CLIENT_SECRET
@@ -174,12 +183,14 @@ wrangler secret put FACEBOOK_CLIENT_SECRET
 ### 5. GitHub OAuth Setup
 
 **Step 1: Register OAuth App**
+
 1. Go to [GitHub Settings](https://github.com/settings/developers)
 2. Click "OAuth Apps" > "New OAuth App"
 3. Fill in application details
 4. Set authorization callback URL: `https://your-domain.com/api/auth/oauth/github/callback`
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
@@ -196,6 +207,7 @@ wrangler secret put GITHUB_CLIENT_SECRET
 ### 6. X (Twitter) OAuth Setup
 
 **Step 1: Create Twitter App**
+
 1. Go to [Twitter Developer Portal](https://developer.twitter.com/)
 2. Create a new project and app
 3. Enable OAuth 2.0
@@ -203,6 +215,7 @@ wrangler secret put GITHUB_CLIENT_SECRET
 5. Set app permissions to read
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put TWITTER_CLIENT_ID
 wrangler secret put TWITTER_CLIENT_SECRET
@@ -219,6 +232,7 @@ wrangler secret put TWITTER_CLIENT_SECRET
 ### 7. Microsoft OAuth Setup
 
 **Step 1: Register Azure AD App**
+
 1. Go to [Azure Portal](https://portal.azure.com/)
 2. Navigate to "Azure Active Directory" > "App registrations"
 3. Click "New registration"
@@ -226,6 +240,7 @@ wrangler secret put TWITTER_CLIENT_SECRET
 5. Under "Certificates & secrets", create a new client secret
 
 **Step 2: Configure Environment Variables**
+
 ```bash
 wrangler secret put MICROSOFT_CLIENT_ID
 wrangler secret put MICROSOFT_CLIENT_SECRET
@@ -301,11 +316,13 @@ wrangler secret put GOOGLE_CLIENT_SECRET
 ### Account Linking
 
 **Automatic Linking:**
+
 - If a user signs in with Google using `user@example.com`
 - Then later signs in with GitHub using the same `user@example.com`
 - The system automatically links both accounts to the same user
 
 **Manual Unlinking:**
+
 - Users can manage connected accounts in profile settings (future feature)
 - Admins can view linked accounts in the user management dashboard
 
@@ -325,6 +342,7 @@ To test SSO integration:
 ### PKCE (Proof Key for Code Exchange)
 
 All providers use PKCE flow:
+
 - Code verifier generated (128 random characters)
 - Code challenge created (SHA-256 hash, base64url encoded)
 - Prevents authorization code interception attacks
@@ -332,6 +350,7 @@ All providers use PKCE flow:
 ### State Parameter
 
 CSRF protection via state:
+
 - Random 32-character state generated
 - Stored in database with 10-minute expiration
 - Validated on callback
@@ -345,6 +364,7 @@ CSRF protection via state:
 ### Audit Logging
 
 Every SSO event is logged:
+
 - `sso_initiated` - User starts OAuth flow
 - `sso_completed` - Successful authentication
 - `sso_failed` - Failed authentication
@@ -352,6 +372,7 @@ Every SSO event is logged:
 - `token_refreshed` - Token refresh occurred
 
 Logs include:
+
 - User ID
 - Provider
 - IP address
@@ -364,24 +385,29 @@ Logs include:
 ### Common Errors
 
 **Error: `oauth_denied`**
+
 - User cancelled the authorization
 - Solution: Try again or use different provider
 
 **Error: `oauth_failed`**
+
 - OAuth flow failed
 - Check provider configuration
 - Verify credentials are correct
 
 **Error: `no_email`**
+
 - Provider didn't provide email
 - Some providers (Twitter) may not share email
 - User needs to grant email permission
 
 **Error: `account_inactive`**
+
 - User account is suspended or expired
 - Contact administrator
 
 **Error: `invalid_state`**
+
 - CSRF validation failed or session expired
 - Try logging in again
 
@@ -390,6 +416,7 @@ Logs include:
 ### Provider button not appearing
 
 Check:
+
 1. Environment variables are set correctly
 2. Client ID and Secret are valid
 3. Provider is enabled in the code
@@ -397,6 +424,7 @@ Check:
 ### Redirect URI mismatch
 
 Ensure:
+
 1. Redirect URI in provider config matches exactly
 2. Include protocol (https://)
 3. No trailing slashes unless in config
@@ -404,6 +432,7 @@ Ensure:
 ### Token refresh not working
 
 Verify:
+
 1. Provider supports token refresh
 2. Refresh token was granted
 3. Scopes include offline access (if required)
@@ -411,6 +440,7 @@ Verify:
 ### Email not provided
 
 Some providers require:
+
 1. Email scope explicitly requested
 2. User approval for email sharing
 3. Separate API call (GitHub)
@@ -503,6 +533,7 @@ CREATE TABLE auth_audit_logs (
 ## Support
 
 For issues or questions:
+
 1. Check the troubleshooting section
 2. Review provider-specific documentation
 3. Check audit logs for detailed error information
