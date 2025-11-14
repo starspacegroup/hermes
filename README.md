@@ -23,6 +23,9 @@ and customer support. It will comply with relevant data protection regulations.
 - **Cloudflare D1** - Serverless SQL database with multi-tenant support
 - **TypeScript** - Type-safe development
 - **Multi-Tenant Architecture** - Support for multiple stores/sites
+- **Multi-Provider SSO** - OAuth 2.0 authentication with Google, LinkedIn, Apple, Facebook, GitHub, X (Twitter), and Microsoft
+- **PKCE Security** - Enhanced OAuth security with Proof Key for Code Exchange
+- **Account Linking** - Automatic linking of provider accounts with same email
 - **Responsive Design** - Mobile-first approach
 - **Modern Tooling** - ESLint, Prettier, and Vitest configured
 
