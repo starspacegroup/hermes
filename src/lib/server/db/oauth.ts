@@ -234,11 +234,9 @@ export async function createOAuthSession(
     )
     .run();
 
-  const session = await executeOne<OAuthSession>(
-    db,
-    'SELECT * FROM oauth_sessions WHERE id = ?',
-    [id]
-  );
+  const session = await executeOne<OAuthSession>(db, 'SELECT * FROM oauth_sessions WHERE id = ?', [
+    id
+  ]);
   if (!session) {
     throw new Error('Failed to create OAuth session');
   }
@@ -248,10 +246,7 @@ export async function createOAuthSession(
 /**
  * Get OAuth session by state
  */
-export async function getOAuthSession(
-  db: D1Database,
-  state: string
-): Promise<OAuthSession | null> {
+export async function getOAuthSession(db: D1Database, state: string): Promise<OAuthSession | null> {
   const session = await executeOne<OAuthSession>(
     db,
     'SELECT * FROM oauth_sessions WHERE state = ?',

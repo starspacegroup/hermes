@@ -21,6 +21,8 @@ declare global {
         DB: D1Database;
         MEDIA_BUCKET: R2Bucket;
         PLATFORM_ENGINEER_PASSWORD?: string;
+        // OAuth provider credentials (dynamically indexed)
+        [key: string]: string | D1Database | R2Bucket | undefined;
       };
       context: ExecutionContext;
       caches: CacheStorage & { default: Cache };

@@ -14,7 +14,7 @@
   $: if ($page.url.searchParams.get('error')) {
     const errorType = $page.url.searchParams.get('error');
     const provider = $page.url.searchParams.get('provider');
-    
+
     switch (errorType) {
       case 'oauth_denied':
         error = `${provider} sign-in was cancelled. Please try again.`;

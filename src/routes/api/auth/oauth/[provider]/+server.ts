@@ -37,11 +37,18 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
 
   // Get OAuth credentials from environment
   // In production, these should be stored securely per site
-  const clientId = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
-  const clientSecret = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+  const clientIdValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
+  const clientSecretValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+
+  if (!clientIdValue || !clientSecretValue) {
+    throw new Error(`OAuth credentials not configured for ${provider}`);
+  }
+
+  const clientId = typeof clientIdValue === 'string' ? clientIdValue : '';
+  const clientSecret = typeof clientSecretValue === 'string' ? clientSecretValue : '';
 
   if (!clientId || !clientSecret) {
-    throw new Error(`OAuth credentials not configured for ${provider}`);
+    throw new Error(`OAuth credentials must be strings for ${provider}`);
   }
 
   try {
@@ -67,8 +74,8 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
       event_type: 'sso_initiated',
       provider,
       ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-      user_agent: request.headers.get('user-agent') || null,
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
       details: { redirect_uri: redirectUri }
     });
 
@@ -76,14 +83,14 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
     redirect(302, authParams.authUrl);
   } catch (error) {
     console.error(`OAuth initiation error for ${provider}:`, error);
-    
+
     // Log failure
     await createAuthAuditLog(db, siteId, {
       event_type: 'sso_failed',
       provider,
       ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-      user_agent: request.headers.get('user-agent') || null,
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
       details: { error: String(error) }
     });
 

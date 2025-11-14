@@ -55,10 +55,7 @@ export async function generatePKCEChallenge(): Promise<PKCEChallenge> {
 /**
  * Verify PKCE challenge
  */
-export async function verifyPKCEChallenge(
-  verifier: string,
-  challenge: string
-): Promise<boolean> {
+export async function verifyPKCEChallenge(verifier: string, challenge: string): Promise<boolean> {
   const computedChallenge = await sha256(verifier);
   return computedChallenge === challenge;
 }

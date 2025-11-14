@@ -37,7 +37,7 @@ export class AppleOAuthProvider extends BaseOAuthProvider {
   /**
    * Apple provides user info in the ID token, not via a separate API
    */
-  async getUserProfile(accessToken: string): Promise<OAuthUserProfile> {
+  async getUserProfile(_accessToken: string): Promise<OAuthUserProfile> {
     // For Apple, we should decode the ID token instead
     // This is a simplified version - in production, properly decode and verify JWT
     throw new Error('Apple user profile should be extracted from ID token');

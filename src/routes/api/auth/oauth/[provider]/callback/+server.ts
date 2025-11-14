@@ -12,7 +12,6 @@ import {
   deleteOAuthSession,
   createProviderAccount,
   getProviderAccountByProviderId,
-  findProviderAccountsByEmail,
   createAuthAuditLog
 } from '$lib/server/db/oauth.js';
 import { createOAuthProvider } from '$lib/server/oauth/providers/index.js';
@@ -38,8 +37,8 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       event_type: 'sso_failed',
       provider,
       ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-      user_agent: request.headers.get('user-agent') || null,
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
       details: { error, description: url.searchParams.get('error_description') }
     });
     redirect(302, `/auth/login?error=oauth_denied&provider=${provider}`);
@@ -58,11 +57,18 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
     }
 
     // Get OAuth credentials
-    const clientId = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
-    const clientSecret = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+    const clientIdValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
+    const clientSecretValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+
+    if (!clientIdValue || !clientSecretValue) {
+      throw new Error(`OAuth credentials not configured for ${provider}`);
+    }
+
+    const clientId = typeof clientIdValue === 'string' ? clientIdValue : '';
+    const clientSecret = typeof clientSecretValue === 'string' ? clientSecretValue : '';
 
     if (!clientId || !clientSecret) {
-      throw new Error(`OAuth credentials not configured for ${provider}`);
+      throw new Error(`OAuth credentials must be strings for ${provider}`);
     }
 
     // Create provider instance and exchange code for tokens
@@ -84,7 +90,7 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
     await deleteOAuthSession(db, state);
 
     // Check if provider account already exists
-    let providerAccount = await getProviderAccountByProviderId(
+    const providerAccount = await getProviderAccountByProviderId(
       db,
       siteId,
       provider,
@@ -104,7 +110,7 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
         refresh_token: tokens.refresh_token,
         token_expires_at: tokens.expires_in
           ? Math.floor(Date.now() / 1000) + tokens.expires_in
-          : null,
+          : undefined,
         scope: tokens.scope
       });
     } else {
@@ -142,7 +148,7 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
         refresh_token: tokens.refresh_token,
         token_expires_at: tokens.expires_in
           ? Math.floor(Date.now() / 1000) + tokens.expires_in
-          : null,
+          : undefined,
         scope: tokens.scope,
         id_token: tokens.id_token,
         profile_data: userProfile
@@ -154,8 +160,8 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
         event_type: 'account_linked',
         provider,
         ip_address:
-          request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-        user_agent: request.headers.get('user-agent') || null,
+          request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+        user_agent: request.headers.get('user-agent') || undefined,
         details: { email: userProfile.email }
       });
     }
@@ -221,8 +227,8 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       event_type: 'sso_completed',
       provider,
       ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-      user_agent: request.headers.get('user-agent') || null,
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
       details: { email: user.email }
     });
 
@@ -235,8 +241,8 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       event_type: 'sso_failed',
       provider,
       ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
-      user_agent: request.headers.get('user-agent') || null,
+        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
+      user_agent: request.headers.get('user-agent') || undefined,
       details: { error: String(error) }
     });
 
