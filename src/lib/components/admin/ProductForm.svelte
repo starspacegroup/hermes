@@ -36,12 +36,24 @@
   // Drag and drop state
   let draggedIndex: number | null = null;
 
-  // Load fulfillment providers on mount
+  // Shipping options
+  let availableShippingOptions: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }> = [];
+  let selectedShippingOptions: Map<
+    string,
+    { selected: boolean; isDefault: boolean; priceOverride: number | null; thresholdOverride: number | null }
+  > = new Map();
+
+  // Load fulfillment providers and shipping options on mount
   onMount(async () => {
     try {
-      const response = await fetch('/api/admin/providers');
-      if (response.ok) {
-        availableProviders = await response.json();
+      // Load fulfillment providers
+      const providerResponse = await fetch('/api/admin/providers');
+      if (providerResponse.ok) {
+        availableProviders = await providerResponse.json();
 
         // Initialize selected providers map and ordering
         const existingOptions = product?.fulfillmentOptions || [];
@@ -71,8 +83,31 @@
         selectedProviders = new Map(selectedProviders);
         orderedProviderIds = [...orderedProviderIds];
       }
+
+      // Load shipping options
+      const shippingResponse = await fetch('/api/admin/shipping');
+      if (shippingResponse.ok) {
+        availableShippingOptions = await shippingResponse.json();
+
+        // Initialize selected shipping options
+        const existingShipping = product?.shippingOptions || [];
+
+        availableShippingOptions.forEach((option) => {
+          const existing = existingShipping.find((opt) => opt.shippingOptionId === option.id);
+
+          selectedShippingOptions.set(option.id, {
+            selected: !!existing,
+            isDefault: existing?.isDefault || false,
+            priceOverride: existing?.priceOverride || null,
+            thresholdOverride: existing?.thresholdOverride || null
+          });
+        });
+
+        // Force reactivity update
+        selectedShippingOptions = new Map(selectedShippingOptions);
+      }
     } catch (error) {
-      console.error('Error loading fulfillment providers:', error);
+      console.error('Error loading options:', error);
     }
   });
 
@@ -133,6 +168,39 @@
     draggedIndex = null;
   }
 
+  // Shipping option handlers
+  function toggleShippingOption(optionId: string) {
+    const current = selectedShippingOptions.get(optionId);
+    if (current) {
+      selectedShippingOptions.set(optionId, { ...current, selected: !current.selected });
+      selectedShippingOptions = new Map(selectedShippingOptions);
+    }
+  }
+
+  function setShippingDefault(optionId: string) {
+    // Clear all defaults first
+    selectedShippingOptions.forEach((data, id) => {
+      selectedShippingOptions.set(id, { ...data, isDefault: id === optionId });
+    });
+    selectedShippingOptions = new Map(selectedShippingOptions);
+  }
+
+  function updateShippingPriceOverride(optionId: string, price: number | null) {
+    const current = selectedShippingOptions.get(optionId);
+    if (current) {
+      selectedShippingOptions.set(optionId, { ...current, priceOverride: price });
+      selectedShippingOptions = new Map(selectedShippingOptions);
+    }
+  }
+
+  function updateShippingThresholdOverride(optionId: string, threshold: number | null) {
+    const current = selectedShippingOptions.get(optionId);
+    if (current) {
+      selectedShippingOptions.set(optionId, { ...current, thresholdOverride: threshold });
+      selectedShippingOptions = new Map(selectedShippingOptions);
+    }
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return;
 
@@ -158,6 +226,19 @@
       })
       .filter((opt) => opt !== null);
 
+    // Build shipping options array
+    const shippingOptions = Array.from(selectedShippingOptions.entries())
+      .map(([shippingOptionId, data]) => {
+        if (!data.selected) return null;
+        return {
+          shippingOptionId,
+          isDefault: data.isDefault,
+          priceOverride: data.priceOverride,
+          thresholdOverride: data.thresholdOverride
+        };
+      })
+      .filter((opt) => opt !== null);
+
     const productData = {
       name: formName,
       description: formDescription,
@@ -170,7 +251,8 @@
         .split(',')
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0),
-      fulfillmentOptions
+      fulfillmentOptions,
+      shippingOptions
     };
 
     try {
@@ -383,6 +465,82 @@
                           updateProviderStock(providerId, Number(e.currentTarget.value))}
                         min="0"
                         placeholder="0"
+                      />
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    <!-- Shipping Options (only for physical products) -->
+    {#if formType === 'physical' && availableShippingOptions.length > 0}
+      <div class="form-group">
+        <div class="label-wrapper">Shipping Options</div>
+        <p class="helper-text">
+          Select applicable shipping methods, set default, and optionally override price/threshold
+        </p>
+        <div class="shipping-options">
+          {#each availableShippingOptions as option (option.id)}
+            {@const shippingData = selectedShippingOptions.get(option.id)}
+            {#if shippingData}
+              <div class="shipping-option" class:selected={shippingData.selected}>
+                <div class="shipping-header">
+                  <label class="shipping-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={shippingData.selected}
+                      on:change={() => toggleShippingOption(option.id)}
+                    />
+                    <span class="shipping-name">
+                      {option.name} (${option.price.toFixed(2)})
+                    </span>
+                  </label>
+                  {#if shippingData.selected}
+                    <label class="default-radio">
+                      <input
+                        type="radio"
+                        name="default-shipping"
+                        checked={shippingData.isDefault}
+                        on:change={() => setShippingDefault(option.id)}
+                      />
+                      <span>Default</span>
+                    </label>
+                  {/if}
+                </div>
+                {#if shippingData.selected}
+                  <div class="shipping-details">
+                    <div class="detail-input">
+                      <label for="price-override-{option.id}">Price Override:</label>
+                      <input
+                        type="number"
+                        id="price-override-{option.id}"
+                        value={shippingData.priceOverride ?? ''}
+                        on:input={(e) => {
+                          const val = e.currentTarget.value;
+                          updateShippingPriceOverride(option.id, val ? Number(val) : null);
+                        }}
+                        min="0"
+                        step="0.01"
+                        placeholder="Leave empty to use default"
+                      />
+                    </div>
+                    <div class="detail-input">
+                      <label for="threshold-override-{option.id}">Free Threshold:</label>
+                      <input
+                        type="number"
+                        id="threshold-override-{option.id}"
+                        value={shippingData.thresholdOverride ?? ''}
+                        on:input={(e) => {
+                          const val = e.currentTarget.value;
+                          updateShippingThresholdOverride(option.id, val ? Number(val) : null);
+                        }}
+                        min="0"
+                        step="0.01"
+                        placeholder="Leave empty to use default"
                       />
                     </div>
                   </div>
@@ -677,6 +835,88 @@
     border-color: var(--color-primary);
   }
 
+  /* Shipping Options Styles */
+  .shipping-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .shipping-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    transition: all 0.2s ease;
+  }
+
+  .shipping-option.selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-alpha);
+  }
+
+  .shipping-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .shipping-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
+    flex: 1;
+  }
+
+  .shipping-checkbox input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  .shipping-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+
+  .default-radio {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .default-radio input[type='radio'] {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  .shipping-details {
+    display: flex;
+    gap: 1rem;
+    padding-left: 2rem;
+    flex-wrap: wrap;
+  }
+
   @media (max-width: 768px) {
     .form-grid {
       grid-template-columns: 1fr;
@@ -691,6 +931,21 @@
     .submit-btn {
       width: 100%;
       justify-content: center;
+    }
+
+    .provider-details,
+    .shipping-details {
+      padding-left: 0;
+      flex-direction: column;
+    }
+
+    .detail-input {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detail-input input {
+      width: 100%;
     }
   }
 </style>
