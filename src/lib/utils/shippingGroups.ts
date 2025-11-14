@@ -11,7 +11,8 @@ export interface ShippingGroup {
 /**
  * Groups cart items by their shared shipping options.
  * Items with the same set of shipping options are grouped together.
- * Items with no shipping options get their own "free" group.
+ * Items with no shipping options (free shipping) are merged into groups with shipping options.
+ * If ALL items have no shipping, returns a single free shipping group.
  */
 export function groupCartItemsByShipping(
   cartItems: CartItem[],
@@ -23,20 +24,42 @@ export function groupCartItemsByShipping(
     return [];
   }
 
-  // Group products by their shipping options signature
-  const groupsMap = new Map<string, CartItem[]>();
+  // Separate products with shipping options from those without
+  const productsWithShipping: CartItem[] = [];
+  const productsWithoutShipping: CartItem[] = [];
 
   for (const product of physicalProducts) {
     const shippingOptions = productShippingMap.get(product.id) || [];
+    if (shippingOptions.length > 0) {
+      productsWithShipping.push(product);
+    } else {
+      productsWithoutShipping.push(product);
+    }
+  }
+
+  // If no products have shipping options, return a single free shipping group
+  if (productsWithShipping.length === 0) {
+    return [
+      {
+        id: 'group-0',
+        products: productsWithoutShipping,
+        shippingOptions: [],
+        isFree: true
+      }
+    ];
+  }
+
+  // Group products with shipping options by their signature
+  const groupsMap = new Map<string, CartItem[]>();
+
+  for (const product of productsWithShipping) {
+    const shippingOptions = productShippingMap.get(product.id) || [];
 
     // Create a signature from the shipping option IDs (sorted for consistency)
-    const signature =
-      shippingOptions.length === 0
-        ? 'FREE'
-        : shippingOptions
-            .map((opt) => opt.id)
-            .sort()
-            .join(',');
+    const signature = shippingOptions
+      .map((opt) => opt.id)
+      .sort()
+      .join(',');
 
     if (!groupsMap.has(signature)) {
       groupsMap.set(signature, []);
@@ -48,16 +71,39 @@ export function groupCartItemsByShipping(
   const groups: ShippingGroup[] = [];
   let groupIndex = 0;
 
-  for (const [signature, products] of groupsMap.entries()) {
-    const isFree = signature === 'FREE';
-    const shippingOptions = isFree ? [] : productShippingMap.get(products[0].id) || [];
+  for (const [_signature, products] of groupsMap.entries()) {
+    const shippingOptions = productShippingMap.get(products[0].id) || [];
 
     groups.push({
       id: `group-${groupIndex++}`,
       products,
       shippingOptions,
-      isFree
+      isFree: false
     });
+  }
+
+  // If there are free shipping products and only one group with shipping,
+  // merge free products into that group
+  if (productsWithoutShipping.length > 0) {
+    if (groups.length === 1) {
+      // Merge free items into the single shipping group
+      groups[0].products.push(...productsWithoutShipping);
+    } else {
+      // Multiple shipping groups - add free items to the group with cheapest option
+      let cheapestGroup = groups[0];
+      let cheapestPrice = Math.min(...groups[0].shippingOptions.map((opt) => opt.price));
+
+      for (const group of groups.slice(1)) {
+        const minPrice = Math.min(...group.shippingOptions.map((opt) => opt.price));
+        if (minPrice < cheapestPrice) {
+          cheapestPrice = minPrice;
+          cheapestGroup = group;
+        }
+      }
+
+      // Add free products to cheapest group
+      cheapestGroup.products.push(...productsWithoutShipping);
+    }
   }
 
   return groups;

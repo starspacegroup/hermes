@@ -19,15 +19,16 @@ describe('Orders Repository', () => {
     site_id: siteId,
     user_id: 'user-1',
     status: 'pending',
-    subtotal: 100.0,
-    shipping_cost: 10.0,
-    tax: 5.0,
-    total: 115.0,
-    shipping_address: '{"street": "123 Main St"}',
-    billing_address: '{"street": "123 Main St"}',
-    payment_method: '{"type": "credit-card"}',
-    created_at: 1234567890,
-    updated_at: 1234567890
+    subtotal: 100,
+    shipping_cost: 10,
+    tax: 5,
+    total: 115,
+    shipping_address: '123 Main St',
+    billing_address: '123 Main St',
+    payment_method: 'stripe',
+    shipping_details: '{}',
+    created_at: Date.now(),
+    updated_at: Date.now()
   };
 
   const mockOrderItem: DBOrderItem = {

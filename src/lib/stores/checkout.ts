@@ -148,6 +148,28 @@ async function submitOrder(
       return { success: false, error: 'Please select shipping options for all groups' };
     }
 
+    // Build shipping details from groups
+    const shippingDetails = {
+      groups: currentState.shippingGroups
+        .filter((group) => !group.isFree)
+        .map((group) => {
+          const selectedOptionId = currentState.formData.selectedShippingOptions[group.id];
+          const selectedOption = group.shippingOptions.find((opt) => opt.id === selectedOptionId);
+
+          return {
+            id: group.id,
+            shippingOptionId: selectedOptionId || '',
+            shippingOptionName: selectedOption?.name || '',
+            shippingCost: selectedOption?.price || 0,
+            products: group.products.map((product) => ({
+              id: product.id,
+              name: product.name,
+              quantity: product.quantity
+            }))
+          };
+        })
+    };
+
     const orderData = {
       items: cartItems.map((item) => ({
         product_id: item.id,
@@ -164,7 +186,8 @@ async function submitOrder(
       billing_address: currentState.formData.sameAsShipping
         ? copyShippingToBilling(currentState.formData.shippingAddress)
         : currentState.formData.billingAddress,
-      payment_method: currentState.formData.paymentMethod
+      payment_method: currentState.formData.paymentMethod,
+      shipping_details: shippingDetails
     };
 
     // Call the API to create the order

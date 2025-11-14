@@ -93,7 +93,23 @@ describe('shippingGroups', () => {
       expect(groups[1].products[0].id).toBe('2');
     });
 
-    it('creates free group for products with no shipping options', () => {
+    it('creates single free group when all products have no shipping options', () => {
+      const cartItems: CartItem[] = [
+        createMockCartItem({ id: '1', name: 'Product 1' }),
+        createMockCartItem({ id: '2', name: 'Product 2' })
+      ];
+      const productShippingMap = new Map<string, AvailableShippingOption[]>([
+        ['1', []],
+        ['2', []]
+      ]);
+      const groups = groupCartItemsByShipping(cartItems, productShippingMap);
+      expect(groups).toHaveLength(1);
+      expect(groups[0].isFree).toBe(true);
+      expect(groups[0].products).toHaveLength(2);
+      expect(groups[0].shippingOptions).toHaveLength(0);
+    });
+
+    it('merges free shipping products into groups with shipping options', () => {
       const shippingOption = createMockShippingOption({ id: 'opt1', price: 5.99 });
       const cartItems: CartItem[] = [
         createMockCartItem({ id: '1', name: 'Product 1' }),
@@ -104,41 +120,51 @@ describe('shippingGroups', () => {
         ['2', []]
       ]);
       const groups = groupCartItemsByShipping(cartItems, productShippingMap);
-      expect(groups).toHaveLength(2);
-      const freeGroup = groups.find((g) => g.isFree);
-      expect(freeGroup).toBeDefined();
-      expect(freeGroup!.products).toHaveLength(1);
-      expect(freeGroup!.products[0].id).toBe('2');
-      expect(freeGroup!.shippingOptions).toHaveLength(0);
+      // Should merge into a single group since product 2 has no shipping options
+      expect(groups).toHaveLength(1);
+      expect(groups[0].isFree).toBe(false);
+      expect(groups[0].products).toHaveLength(2);
+      expect(groups[0].products.some((p) => p.id === '1')).toBe(true);
+      expect(groups[0].products.some((p) => p.id === '2')).toBe(true);
+      expect(groups[0].shippingOptions).toHaveLength(1);
     });
 
     it('handles mixed cart with shared, different, and free shipping', () => {
       const shippingOption1 = createMockShippingOption({ id: 'opt1', price: 5.99 });
       const shippingOption2 = createMockShippingOption({ id: 'opt2', price: 12.99 });
+      const shippingOption3 = createMockShippingOption({ id: 'opt3', price: 3.99 });
       const cartItems: CartItem[] = [
         createMockCartItem({ id: '1', name: 'Product 1' }),
         createMockCartItem({ id: '2', name: 'Product 2' }),
         createMockCartItem({ id: '3', name: 'Product 3' }),
-        createMockCartItem({ id: '4', name: 'Product 4' }),
+        createMockCartItem({ id: '4', name: 'Product 4 (Free)' }),
         createMockCartItem({ id: '5', name: 'Digital', type: 'digital' })
       ];
       const productShippingMap = new Map<string, AvailableShippingOption[]>([
         ['1', [shippingOption1, shippingOption2]],
         ['2', [shippingOption1, shippingOption2]],
-        ['3', [shippingOption1]],
+        ['3', [shippingOption3]], // Cheapest shipping
         ['4', []]
       ]);
       const groups = groupCartItemsByShipping(cartItems, productShippingMap);
-      expect(groups).toHaveLength(3);
-      const sharedGroup = groups.find((g) => g.products.length === 2);
+      // Should create 2 groups: one for products 1&2, another for product 3
+      // Product 4 (free) should be merged into the group with cheapest shipping (product 3)
+      expect(groups).toHaveLength(2);
+
+      const sharedGroup = groups.find(
+        (g) => g.products.some((p) => p.id === '1') && g.products.some((p) => p.id === '2')
+      );
       expect(sharedGroup).toBeDefined();
       expect(sharedGroup!.shippingOptions).toHaveLength(2);
-      const singleGroup = groups.find((g) => g.products.length === 1 && g.products[0].id === '3');
-      expect(singleGroup).toBeDefined();
-      expect(singleGroup!.shippingOptions).toHaveLength(1);
-      const freeGroup = groups.find((g) => g.isFree);
-      expect(freeGroup).toBeDefined();
-      expect(freeGroup!.products[0].id).toBe('4');
+      expect(sharedGroup!.products).toHaveLength(2);
+
+      const cheapestGroup = groups.find((g) => g.products.some((p) => p.id === '3'));
+      expect(cheapestGroup).toBeDefined();
+      expect(cheapestGroup!.shippingOptions).toHaveLength(1);
+      expect(cheapestGroup!.shippingOptions[0].price).toBe(3.99);
+      // Product 4 should be merged into this group (has cheapest shipping)
+      expect(cheapestGroup!.products).toHaveLength(2);
+      expect(cheapestGroup!.products.some((p) => p.id === '4')).toBe(true);
     });
   });
 

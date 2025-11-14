@@ -506,3 +506,99 @@ export async function getAvailableShippingForCart(
     return a.price - b.price;
   });
 }
+
+/**
+ * Get shipping options for each product in the cart individually
+ * Returns a map of product ID to available shipping options
+ * Products with no shipping options will have an empty array (free shipping)
+ */
+export async function getShippingOptionsForProducts(
+  db: D1Database,
+  siteId: string,
+  cartItems: Array<{
+    id: string;
+    type: 'physical' | 'digital' | 'service';
+    category?: string;
+    price: number;
+    quantity: number;
+  }>,
+  cartTotal: number
+): Promise<Record<string, AvailableShippingOption[]>> {
+  const productOptionsMap: Record<string, AvailableShippingOption[]> = {};
+
+  // Filter to only physical products
+  const physicalProducts = cartItems.filter((item) => item.type === 'physical');
+
+  for (const product of physicalProducts) {
+    // First try to get product-specific shipping options
+    const productOptions = await getProductShippingOptions(db, siteId, product.id);
+
+    const shippingOptions: AvailableShippingOption[] = [];
+
+    if (productOptions.length > 0) {
+      // Product has specific shipping options
+      for (const productOption of productOptions) {
+        const option = await getShippingOptionById(db, siteId, productOption.shippingOptionId);
+        if (option && option.isActive) {
+          // Apply overrides
+          const finalPrice = productOption.priceOverride ?? option.price;
+          const finalThreshold = productOption.thresholdOverride ?? option.freeShippingThreshold;
+
+          // Apply free shipping threshold based on cart total
+          const isFreeShipping = finalThreshold !== null && cartTotal >= finalThreshold;
+
+          shippingOptions.push({
+            id: option.id,
+            name: option.name,
+            description: option.description,
+            price: isFreeShipping ? 0 : finalPrice,
+            estimatedDaysMin: option.estimatedDaysMin,
+            estimatedDaysMax: option.estimatedDaysMax,
+            carrier: option.carrier,
+            isDefault: productOption.isDefault,
+            isFreeShipping
+          });
+        }
+      }
+    } else if (product.category) {
+      // Fall back to category defaults if no product-specific options
+      const categoryOptions = await getCategoryShippingOptions(db, siteId, product.category);
+
+      for (const categoryOption of categoryOptions) {
+        const option = await getShippingOptionById(db, siteId, categoryOption.shippingOptionId);
+        if (option && option.isActive) {
+          // Category options don't have overrides - use base shipping option values
+          const finalPrice = option.price;
+          const finalThreshold = option.freeShippingThreshold;
+
+          // Apply free shipping threshold based on cart total
+          const isFreeShipping = finalThreshold !== null && cartTotal >= finalThreshold;
+
+          shippingOptions.push({
+            id: option.id,
+            name: option.name,
+            description: option.description,
+            price: isFreeShipping ? 0 : finalPrice,
+            estimatedDaysMin: option.estimatedDaysMin,
+            estimatedDaysMax: option.estimatedDaysMax,
+            carrier: option.carrier,
+            isDefault: categoryOption.isDefault,
+            isFreeShipping
+          });
+        }
+      }
+    }
+
+    // Sort by default first, then by price
+    shippingOptions.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return a.price - b.price;
+    });
+
+    // Store the options for this product (empty array if no options = free shipping)
+    productOptionsMap[product.id] = shippingOptions;
+  }
+
+  return productOptionsMap;
+}

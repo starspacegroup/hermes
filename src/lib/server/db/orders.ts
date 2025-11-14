@@ -23,6 +23,7 @@ export interface DBOrder {
   shipping_address: string; // JSON
   billing_address: string; // JSON
   payment_method: string; // JSON
+  shipping_details: string | null; // JSON - package groups and shipping options
   created_at: number;
   updated_at: number;
 }
@@ -54,6 +55,19 @@ export interface CreateOrderData {
   shipping_address: Record<string, unknown>;
   billing_address: Record<string, unknown>;
   payment_method: Record<string, unknown>;
+  shipping_details?: {
+    groups: Array<{
+      id: string;
+      shippingOptionId: string;
+      shippingOptionName: string;
+      shippingCost: number;
+      products: Array<{
+        id: string;
+        name: string;
+        quantity: number;
+      }>;
+    }>;
+  };
 }
 
 export interface UpdateOrderData {
@@ -130,8 +144,8 @@ export async function createOrder(
 
   // Insert order
   statements.push({
-    sql: `INSERT INTO orders (id, site_id, user_id, status, subtotal, shipping_cost, tax, total, shipping_address, billing_address, payment_method, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO orders (id, site_id, user_id, status, subtotal, shipping_cost, tax, total, shipping_address, billing_address, payment_method, shipping_details, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     params: [
       orderId,
       siteId,
@@ -144,6 +158,7 @@ export async function createOrder(
       JSON.stringify(data.shipping_address),
       JSON.stringify(data.billing_address),
       JSON.stringify(data.payment_method),
+      data.shipping_details ? JSON.stringify(data.shipping_details) : null,
       timestamp,
       timestamp
     ]
