@@ -17,6 +17,13 @@ export interface Product {
     stockQuantity: number;
     sortOrder: number;
   }>;
+  shippingOptions?: Array<{
+    shippingOptionId: string;
+    optionName: string;
+    isDefault: boolean;
+    priceOverride?: number | null;
+    thresholdOverride?: number | null;
+  }>;
 }
 
 export interface CartItem extends Product {
