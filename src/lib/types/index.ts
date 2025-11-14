@@ -87,3 +87,15 @@ export type {
   DBProductFulfillmentOption,
   CreateProductFulfillmentOptionData
 } from './fulfillment';
+
+// Re-export shipping types
+export type {
+  ShippingOption,
+  ProductShippingOption,
+  CategoryShippingOption,
+  CreateShippingOptionData,
+  UpdateShippingOptionData,
+  ProductShippingAssignment,
+  CategoryShippingAssignment,
+  AvailableShippingOption
+} from './shipping';
