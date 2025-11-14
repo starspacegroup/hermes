@@ -7,9 +7,14 @@
   import BillingAddressForm from '../../lib/components/BillingAddressForm.svelte';
   import PaymentMethodForm from '../../lib/components/PaymentMethodForm.svelte';
   import ShippingOptionsSelector from '../../lib/components/ShippingOptionsSelector.svelte';
+  import ShippingGroupsSelector from '../../lib/components/ShippingGroupsSelector.svelte';
   import Button from '../../lib/components/Button.svelte';
   import type { CheckoutValidationErrors } from '../../lib/types/checkout';
   import type { AvailableShippingOption } from '../../lib/types/shipping';
+  import {
+    validateShippingSelections,
+    calculateTotalShippingCost
+  } from '../../lib/utils/shippingGroups';
 
   let currentStep = 1;
   let isSubmitting = false;
@@ -24,6 +29,9 @@
   $: currentStep = checkoutState.currentStep;
   $: validationErrors = checkoutState.validationErrors;
   $: isSubmitting = checkoutState.isSubmitting;
+  $: shippingGroups = checkoutState.shippingGroups;
+  $: shippingGroupsLoaded = checkoutState.shippingGroupsLoaded;
+  $: selectedShippingOptions = checkoutState.formData.selectedShippingOptions;
 
   // Selected shipping option object from available options
   $: selectedShippingOption =
@@ -31,10 +39,20 @@
       (opt) => opt.id === checkoutState.formData.selectedShippingOptionId
     ) || null;
 
-  // Compute shipping cost from selected option, fall back to 0
-  $: shippingCost = hasPhysicalProducts ? (selectedShippingOption?.price ?? 0) : 0;
+  // Compute shipping cost - use groups if available, otherwise fall back to single option
+  // This is now reactive to changes in shippingGroups and selectedShippingOptions
+  $: shippingCost = hasPhysicalProducts
+    ? shippingGroupsLoaded && shippingGroups.length > 0
+      ? calculateTotalShippingCost(shippingGroups, selectedShippingOptions)
+      : (selectedShippingOption?.price ?? 0)
+    : 0;
   $: tax = subtotal * 0.08;
   $: total = subtotal + shippingCost + tax;
+
+  // Reload shipping groups when cart items change
+  $: if (cartItems.length > 0 && hasPhysicalProducts) {
+    checkoutStore.loadShippingGroups(cartItems);
+  }
 
   onMount(async () => {
     // Redirect to cart if empty
@@ -43,9 +61,9 @@
       return;
     }
 
-    // Load shipping options if cart has physical products
+    // Load shipping groups if cart has physical products
     if (hasPhysicalProducts) {
-      await checkoutStore.loadShippingOptions(cartItems);
+      await checkoutStore.loadShippingGroups(cartItems);
     }
   });
 
@@ -61,8 +79,16 @@
       }
     } else if (currentStep === 2) {
       // Shipping options selection step
-      // If cart contains physical products, require a selected shipping option
-      if (hasPhysicalProducts && !checkoutState.formData.selectedShippingOptionId) {
+      // If using shipping groups, validate all groups have selections
+      if (hasPhysicalProducts && shippingGroupsLoaded) {
+        const shippingErrors = validateShippingSelections(shippingGroups, selectedShippingOptions);
+        if (Object.keys(shippingErrors).length > 0) {
+          errorMessage = 'Please select a shipping option for all groups to continue';
+          setTimeout(() => (errorMessage = ''), 3000);
+          return;
+        }
+      } else if (hasPhysicalProducts && !checkoutState.formData.selectedShippingOptionId) {
+        // Fallback to single option validation
         errorMessage = 'Please select a shipping option to continue';
         setTimeout(() => (errorMessage = ''), 3000);
         return;
@@ -115,6 +141,12 @@
 
   function handleShippingSelection(event: CustomEvent<AvailableShippingOption>) {
     checkoutStore.setSelectedShippingOption(event.detail.id);
+  }
+
+  function handleGroupShippingSelection(
+    event: CustomEvent<{ groupId: string; option: AvailableShippingOption }>
+  ) {
+    checkoutStore.setShippingOptionForGroup(event.detail.groupId, event.detail.option.id);
   }
 </script>
 
@@ -172,13 +204,23 @@
           {#if currentStep === 1}
             <ShippingAddressForm errors={validationErrors.shippingAddress || {}} />
           {:else if currentStep === 2}
-            <ShippingOptionsSelector
-              shippingOptions={checkoutState.availableShippingOptions}
-              selectedOptionId={checkoutState.formData.selectedShippingOptionId}
-              loading={checkoutState.loadingShippingOptions}
-              error={validationErrors.shippingOption}
-              on:selectionChange={handleShippingSelection}
-            />
+            {#if shippingGroupsLoaded}
+              <ShippingGroupsSelector
+                {shippingGroups}
+                selectedOptions={selectedShippingOptions}
+                errors={validationErrors.shippingOptions || {}}
+                loading={checkoutState.loadingShippingOptions}
+                on:groupSelectionChange={handleGroupShippingSelection}
+              />
+            {:else}
+              <ShippingOptionsSelector
+                shippingOptions={checkoutState.availableShippingOptions}
+                selectedOptionId={checkoutState.formData.selectedShippingOptionId}
+                loading={checkoutState.loadingShippingOptions}
+                error={validationErrors.shippingOption}
+                on:selectionChange={handleShippingSelection}
+              />
+            {/if}
           {:else if currentStep === 3}
             <BillingAddressForm errors={validationErrors.billingAddress || {}} />
           {:else if currentStep === 4}
@@ -225,10 +267,45 @@
             <span>Subtotal:</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
-          <div class="total-row">
-            <span>Shipping:</span>
-            <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
-          </div>
+          {#if shippingGroupsLoaded && shippingGroups.length > 0}
+            <!-- Show shipping cost breakdown by group -->
+            {#each shippingGroups as group}
+              {@const selectedOptionId = selectedShippingOptions[group.id]}
+              {@const selectedOption = group.shippingOptions.find(
+                (opt) => opt.id === selectedOptionId
+              )}
+              <div class="total-row shipping-group-row">
+                <span>
+                  {#if group.isFree}
+                    Shipping (Free)
+                  {:else if group.products.length === 1}
+                    Shipping - {group.products[0].name}
+                  {:else}
+                    Shipping - {group.products.length} items
+                  {/if}
+                </span>
+                <span>
+                  {#if group.isFree || selectedOption?.isFreeShipping || selectedOption?.price === 0}
+                    FREE
+                  {:else if selectedOption}
+                    ${selectedOption.price.toFixed(2)}
+                  {:else}
+                    --
+                  {/if}
+                </span>
+              </div>
+            {/each}
+            <div class="total-row">
+              <span>Total Shipping:</span>
+              <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
+            </div>
+          {:else}
+            <!-- Single shipping cost display -->
+            <div class="total-row">
+              <span>Shipping:</span>
+              <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
+            </div>
+          {/if}
           <div class="total-row">
             <span>Tax:</span>
             <span>${tax.toFixed(2)}</span>
@@ -481,6 +558,12 @@
     margin-bottom: 0.5rem;
     color: var(--color-text-secondary);
     transition: color var(--transition-normal);
+  }
+
+  .total-row.shipping-group-row {
+    font-size: 0.875rem;
+    padding-left: 0.5rem;
+    color: var(--color-text-tertiary);
   }
 
   .total-row.final-total {
