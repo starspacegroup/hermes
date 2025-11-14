@@ -34,7 +34,9 @@
 
       // Load category shipping assignments
       for (const category of categories) {
-        const response = await fetch(`/api/admin/categories/${encodeURIComponent(category)}/shipping`);
+        const response = await fetch(
+          `/api/admin/categories/${encodeURIComponent(category)}/shipping`
+        );
         if (response.ok) {
           const data = (await response.json()) as Array<{
             shippingOptionId: string;
@@ -92,11 +94,14 @@
         isDefault: optionId === defaultShippingOption
       }));
 
-      const response = await fetch(`/api/admin/categories/${encodeURIComponent(selectedCategory)}/shipping`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignments })
-      });
+      const response = await fetch(
+        `/api/admin/categories/${encodeURIComponent(selectedCategory)}/shipping`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignments })
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to save shipping options');
@@ -151,7 +156,9 @@
           <div class="category-header">
             <h3>{category}</h3>
             <span class="shipping-count">
-              {shipping?.options.length || 0} shipping {shipping?.options.length === 1 ? 'option' : 'options'}
+              {shipping?.options.length || 0} shipping {shipping?.options.length === 1
+                ? 'option'
+                : 'options'}
             </span>
           </div>
 
@@ -167,7 +174,9 @@
               {/each}
             </div>
           {:else}
-            <p class="no-shipping">No shipping options assigned. Products will need individual assignments.</p>
+            <p class="no-shipping">
+              No shipping options assigned. Products will need individual assignments.
+            </p>
           {/if}
 
           <button class="btn-secondary" on:click={() => openEditModal(category)}>
@@ -196,7 +205,8 @@
 
     <div class="modal-content">
       <p class="helper-text">
-        Select shipping options that will be inherited by all products in this category (unless overridden at the product level).
+        Select shipping options that will be inherited by all products in this category (unless
+        overridden at the product level).
       </p>
 
       <div class="shipping-options">
