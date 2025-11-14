@@ -7,6 +7,12 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  updateUserLogin,
+  getUsersByStatus,
+  getUsersWithExpiration,
+  getExpiredUsers,
+  getUsersExpiringSoon,
+  deactivateExpiredUsers,
   type DBUser,
   type CreateUserData,
   type UpdateUserData
@@ -319,6 +325,162 @@ describe('Users Repository', () => {
       const result = await deleteUser(mockDB, siteId, 'nonexistent');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('updateUserLogin', () => {
+    it('should update user last login time and IP', async () => {
+      const mockRun = vi.fn().mockResolvedValue({ success: true });
+      const mockBind = vi.fn().mockReturnValue({ run: mockRun });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const ipAddress = '192.168.1.1';
+      await updateUserLogin(mockDB, siteId, 'user-1', ipAddress);
+
+      expect(mockPrepare).toHaveBeenCalled();
+      expect(mockBind).toHaveBeenCalled();
+    });
+  });
+
+  describe('getUsersByStatus', () => {
+    it('should get users by status scoped by site', async () => {
+      const activeUser = { ...mockUser, status: 'active' as const };
+      const mockResults = { results: [activeUser], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getUsersByStatus(mockDB, siteId, 'active');
+
+      expect(mockPrepare).toHaveBeenCalledWith(
+        'SELECT * FROM users WHERE site_id = ? AND status = ? ORDER BY created_at DESC'
+      );
+      expect(mockBind).toHaveBeenCalledWith(siteId, 'active');
+      expect(result).toEqual([activeUser]);
+    });
+
+    it('should return empty array when no users with status found', async () => {
+      const mockResults = { results: [], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getUsersByStatus(mockDB, siteId, 'suspended');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getUsersWithExpiration', () => {
+    it('should get users with expiration dates', async () => {
+      const userWithExpiration = { ...mockUser, expiration_date: 1234567890 };
+      const mockResults = { results: [userWithExpiration], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getUsersWithExpiration(mockDB, siteId);
+
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM users'));
+      expect(mockBind).toHaveBeenCalledWith(siteId);
+      expect(result).toEqual([userWithExpiration]);
+    });
+  });
+
+  describe('getExpiredUsers', () => {
+    it('should get expired users past grace period', async () => {
+      const now = 1000000;
+      const expiredUser = {
+        ...mockUser,
+        status: 'active' as const,
+        expiration_date: now - 10 * 86400,
+        grace_period_days: 7
+      };
+      const mockResults = { results: [expiredUser], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getExpiredUsers(mockDB, siteId, now);
+
+      expect(mockPrepare).toHaveBeenCalled();
+      expect(result).toEqual([expiredUser]);
+    });
+
+    it('should return empty array when no expired users', async () => {
+      const mockResults = { results: [], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getExpiredUsers(mockDB, siteId);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getUsersExpiringSoon', () => {
+    it('should get users expiring within threshold', async () => {
+      const now = 1000000;
+      const expiringUser = {
+        ...mockUser,
+        status: 'active' as const,
+        expiration_date: now + 5 * 86400
+      };
+      const mockResults = { results: [expiringUser], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getUsersExpiringSoon(mockDB, siteId, now, 7 * 86400);
+
+      expect(mockPrepare).toHaveBeenCalled();
+      expect(result).toEqual([expiringUser]);
+    });
+
+    it('should return empty array when no users expiring soon', async () => {
+      const mockResults = { results: [], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await getUsersExpiringSoon(mockDB, siteId, 7);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('deactivateExpiredUsers', () => {
+    it('should deactivate expired users', async () => {
+      const now = 1000000;
+      const mockRun = vi.fn().mockResolvedValue({ meta: { changes: 2 }, success: true });
+      const mockBind = vi.fn().mockReturnValue({ run: mockRun });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await deactivateExpiredUsers(mockDB, siteId, now);
+
+      expect(mockPrepare).toHaveBeenCalled();
+      expect(result).toBe(2);
+    });
+
+    it('should return 0 when no users to deactivate', async () => {
+      const mockRun = vi.fn().mockResolvedValue({ meta: { changes: 0 }, success: true });
+      const mockBind = vi.fn().mockReturnValue({ run: mockRun });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const result = await deactivateExpiredUsers(mockDB, siteId);
+
+      expect(result).toBe(0);
     });
   });
 });

@@ -5,7 +5,9 @@ import {
   userHasAnyPermission,
   userHasAllPermissions,
   isUserAccountActive,
-  canPerformAction
+  canPerformAction,
+  isSystemUser,
+  getUserAllPermissions
 } from './permissions';
 import type { DBUser } from './db/users';
 
@@ -207,6 +209,66 @@ describe('Permission Utilities', () => {
         permissions: '["orders:read"]'
       };
       expect(canPerformAction(user, 'orders:read', now)).toBe(false);
+    });
+  });
+
+  describe('isSystemUser', () => {
+    it('should return true for admin-1', () => {
+      expect(isSystemUser('admin-1')).toBe(true);
+    });
+
+    it('should return true for engineer-1', () => {
+      expect(isSystemUser('engineer-1')).toBe(true);
+    });
+
+    it('should return false for regular user IDs', () => {
+      expect(isSystemUser('user-123')).toBe(false);
+      expect(isSystemUser('customer-456')).toBe(false);
+      expect(isSystemUser('admin')).toBe(false);
+    });
+  });
+
+  describe('getUserAllPermissions', () => {
+    const mockDb = {} as D1Database;
+
+    it('should return custom permissions for regular user', async () => {
+      const user = { ...baseUser, permissions: '["orders:read","products:write"]' };
+      const result = await getUserAllPermissions(mockDb, user);
+      expect(result).toEqual(['orders:read', 'products:write']);
+    });
+
+    it('should return all permissions for platform engineer', async () => {
+      const user = { ...baseUser, role: 'platform_engineer' as const };
+      const result = await getUserAllPermissions(mockDb, user);
+      expect(result.length).toBeGreaterThan(20);
+      expect(result).toContain('users:delete');
+      expect(result).toContain('products:delete');
+      expect(result).toContain('orders:delete');
+    });
+
+    it('should return default admin permissions when admin has no custom permissions', async () => {
+      const user = { ...baseUser, role: 'admin' as const, permissions: '[]' };
+      const result = await getUserAllPermissions(mockDb, user);
+      expect(result).toContain('orders:read');
+      expect(result).toContain('products:write');
+      expect(result).toContain('users:write');
+      expect(result).not.toContain('users:delete');
+    });
+
+    it('should return custom permissions when admin has them set', async () => {
+      const user = {
+        ...baseUser,
+        role: 'admin' as const,
+        permissions: '["custom:permission"]'
+      };
+      const result = await getUserAllPermissions(mockDb, user);
+      expect(result).toEqual(['custom:permission']);
+    });
+
+    it('should return empty array for customer with no permissions', async () => {
+      const user = { ...baseUser, role: 'customer' as const, permissions: '[]' };
+      const result = await getUserAllPermissions(mockDb, user);
+      expect(result).toEqual([]);
     });
   });
 });
