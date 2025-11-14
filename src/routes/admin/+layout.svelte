@@ -291,6 +291,20 @@
                 </svg>
                 Shippers
               </a>
+              <a
+                href="/admin/categories"
+                class:active={currentPath.startsWith('/admin/categories')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M4 7h16M4 7v13a2 2 0 002 2h12a2 2 0 002-2V7M4 7l2-3h12l2 3M10 11v6M14 11v6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  ></path>
+                </svg>
+                Categories
+              </a>
             </div>
           {/if}
         </div>
