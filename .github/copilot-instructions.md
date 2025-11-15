@@ -717,11 +717,277 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
 
 ### Security
 
-- **Never commit secrets** - Use `.dev.vars` (gitignored)
+**CRITICAL SECURITY REQUIREMENTS - NEVER VIOLATE THESE:**
+
+#### Secrets and Sensitive Data
+
+- **NEVER store secrets in plaintext** - All sensitive data MUST be encrypted at rest
+- **NEVER commit secrets** - Use `.dev.vars` (gitignored) for local development
+- **Encryption required for:**
+  - API keys (OAuth client secrets, payment gateway keys, etc.)
+  - Authentication tokens and session secrets
+  - Database credentials
+  - Any PII (Personally Identifiable Information)
+  - User passwords (use bcrypt/argon2 with salt)
+
+#### Database Security
+
+- **Encrypt sensitive columns** - Use application-level encryption for:
+  - OAuth client secrets in `sso_providers.client_secret`
+  - Payment information
+  - Personal health information
+  - Financial data
+- **Use prepared statements** - NEVER use string concatenation for SQL
+- **Multi-tenant isolation** - Always filter by `site_id` in WHERE clauses
+- **Audit logging** - Log access to sensitive data
+
+#### Input Validation and Sanitization
+
 - **Sanitize user input** - Especially for HTML/SQL
-- **Use prepared statements** - Never string concatenation for SQL
-- **CSRF protection** - Enabled by default in SvelteKit
-- **Multi-tenant isolation** - Always filter by site_id
+- **Validate all inputs** - Check types, lengths, formats
+- **CSRF protection** - Enabled by default in SvelteKit (verify it's working)
+- **XSS prevention** - Escape output, use Content Security Policy
+- **SQL injection prevention** - Always use prepared statements
+
+#### Authentication and Authorization
+
+- **Secure session management** - Use httpOnly, secure, sameSite cookies
+- **Role-based access control** - Verify permissions before data access
+- **Rate limiting** - Implement for login, API endpoints
+- **Password requirements** - Enforce strong passwords (min 12 chars, complexity)
+- **MFA support** - Plan for multi-factor authentication
+
+#### API and Network Security
+
+- **HTTPS only** - Never transmit sensitive data over HTTP
+- **API authentication** - Require auth tokens for all sensitive endpoints
+- **CORS configuration** - Restrict to known domains only
+- **Request size limits** - Prevent DoS attacks
+
+#### Security Review Checklist
+
+Before implementing any feature that handles sensitive data:
+
+- [ ] **Encryption**: Are secrets encrypted at rest and in transit?
+- [ ] **Access control**: Is authorization properly enforced?
+- [ ] **Input validation**: Are all inputs validated and sanitized?
+- [ ] **Audit logging**: Are security events logged?
+- [ ] **Error handling**: Do errors reveal sensitive information?
+- [ ] **Dependencies**: Are all packages up-to-date and vulnerability-free?
+
+#### Security Testing
+
+- **Test for common vulnerabilities**:
+  - SQL injection
+  - XSS (Cross-Site Scripting)
+  - CSRF (Cross-Site Request Forgery)
+  - Authentication bypass
+  - Authorization bypass
+  - Sensitive data exposure
+
+#### Compliance Considerations
+
+- **GDPR**: Right to erasure, data portability, consent management
+- **PCI-DSS**: Never store full credit card numbers, CVV codes
+- **HIPAA**: If handling health data, ensure compliance
+- **SOC 2**: Implement security controls and audit trails
+
+**If you're unsure about security implications, ASK. Security is non-negotiable.**
+
+## Quality Gates & Completion Criteria
+
+### Before Considering ANY Task Complete
+
+**CRITICAL: You MUST verify all of these checks pass before declaring a task complete:**
+
+#### 1. Code Formatting & Linting (MUST PASS)
+
+```bash
+npm run format  # Auto-fix formatting issues
+npm run lint    # Check for linting errors
+npm run check   # TypeScript type checking
+```
+
+**If `npm run check` fails, the code is NOT complete.** Fix all type errors before finishing.
+
+**Common formatting rules that MUST be followed:**
+
+- **2 spaces indentation** (never tabs)
+- **Single quotes** for strings in TypeScript/JavaScript
+- **No trailing commas** in objects/arrays (trailingComma: 'none')
+- **100 character line length** (soft limit)
+- **Semicolons required** at end of statements
+- **Explicit return types** on all functions
+- **No `any` types** - use proper typing or `unknown`
+- **Import type** for type-only imports: `import type { ... }`
+
+#### 2. Test Coverage Requirements (MUST MEET)
+
+```bash
+npm run test:coverage  # Run with coverage report
+```
+
+**Coverage Thresholds (ENFORCED):**
+
+- **Lines: ≥80%** (target: 90%)
+- **Functions: ≥80%** (target: 90%)
+- **Branches: ≥75%** (target: 85%)
+- **Statements: ≥80%** (target: 90%)
+
+**Coverage applies to:**
+
+- `src/lib/server/**` (database, utilities, business logic)
+- `src/lib/stores/**` (all stores)
+- `src/lib/utils/**` (all utility functions)
+- `src/lib/components/**` (all components)
+
+**Coverage excludes:**
+
+- Routes in `src/routes/**`
+- Type definitions in `src/lib/types/**`
+- Test files themselves
+
+**If coverage drops below 80%, you MUST write additional tests before finishing and you should strive to reach 90%**
+
+#### 3. All Tests Must Pass
+
+```bash
+npm test  # All tests must pass
+```
+
+**No failing tests allowed.** If tests fail:
+
+1. Fix the implementation bug, OR
+2. Fix the test if it's incorrect, OR
+3. Update the test if requirements changed
+
+#### 4. Pre-Commit Verification
+
+```bash
+npm run prepare  # Runs format, lint, check, and test in sequence
+```
+
+**This is the gold standard.** If `npm run prepare` passes, code quality is verified.
+
+### Quality Checklist for Every Code Change
+
+Before submitting code, verify:
+
+- [ ] **Formatting**: Code follows Prettier config (2 spaces, single quotes, no trailing commas)
+- [ ] **Linting**: No ESLint errors or warnings
+- [ ] **Type Safety**: `npm run check` passes with no TypeScript errors
+- [ ] **Tests Pass**: `npm test` shows all tests passing
+- [ ] **Coverage**: `npm run test:coverage` shows ≥80% on new/modified code
+- [ ] **TDD Followed**: Tests written BEFORE implementation
+- [ ] **Documentation**: JSDoc comments on public APIs
+- [ ] **No Secrets**: No hardcoded secrets or sensitive data
+- [ ] **Multi-tenant Safe**: Database queries include `site_id` where applicable
+- [ ] **Error Handling**: Try/catch blocks on async operations
+
+### Automated Quality Enforcement
+
+This project uses **lint-staged** with **husky** for pre-commit hooks:
+
+```json
+{
+  "*.{js,ts,svelte}": ["prettier --write", "eslint --fix"]
+}
+```
+
+**Git commits will fail if:**
+
+- Formatting is incorrect
+- ESLint errors exist
+- Type checking fails
+
+**Always run `npm run prepare` before considering work complete.**
+
+### Coverage Improvement Strategies
+
+If coverage is below target:
+
+1. **Identify uncovered lines**: Check `coverage/lcov-report/index.html`
+2. **Write targeted tests**: Focus on uncovered branches and edge cases
+3. **Test error paths**: Ensure try/catch blocks are tested
+4. **Mock external dependencies**: Database, APIs, file system
+5. **Test async operations**: Both success and failure scenarios
+
+Example coverage improvement workflow:
+
+```bash
+npm run test:coverage        # Identify gaps
+open coverage/index.html     # Visual coverage report
+npm run test:watch           # Write tests interactively
+npm run test:coverage        # Verify improvement
+```
+
+### Common Quality Issues to Avoid
+
+#### TypeScript Errors
+
+```typescript
+// ❌ BAD: Using 'any'
+function process(data: any) {}
+
+// ✅ GOOD: Proper typing
+function process(data: Product) {}
+
+// ❌ BAD: No return type
+function getTotal() {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+
+// ✅ GOOD: Explicit return type
+function getTotal(): number {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+```
+
+#### Formatting Errors
+
+```typescript
+// ❌ BAD: Double quotes, trailing comma, tabs
+{
+	"name": "test",
+	"value": 123,
+}
+
+// ✅ GOOD: Single quotes, no trailing comma, 2 spaces
+{
+  name: 'test',
+  value: 123
+}
+```
+
+#### Missing Tests
+
+```typescript
+// ❌ BAD: No tests for new function
+export function calculateDiscount(price: number, percent: number): number {
+  return price * (percent / 100);
+}
+
+// ✅ GOOD: Comprehensive tests
+describe('calculateDiscount', () => {
+  it('calculates discount correctly', () => {
+    expect(calculateDiscount(100, 10)).toBe(10);
+  });
+
+  it('handles zero discount', () => {
+    expect(calculateDiscount(100, 0)).toBe(0);
+  });
+
+  it('handles 100% discount', () => {
+    expect(calculateDiscount(100, 100)).toBe(100);
+  });
+});
+```
+
+### When to Skip Quality Gates
+
+**NEVER.** Quality gates are mandatory for all code changes.
+
+**Exception**: When explicitly prototyping/spiking (must refactor with tests after).
 
 ## References
 

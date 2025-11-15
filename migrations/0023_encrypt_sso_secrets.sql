@@ -1,0 +1,10 @@
+-- Migration: 0023_encrypt_sso_secrets
+-- Description: Add note that existing client_secret values need to be re-entered through the admin UI
+--              They will be automatically encrypted when saved through the new API
+-- Rollback: No action needed - encryption is backward compatible
+-- 
+-- IMPORTANT: After this migration, all SSO provider configurations must be re-entered
+-- through the admin UI to ensure client_secret values are properly encrypted.
+-- The application will now encrypt all client_secret values before storing them.
+--
+-- To re-encrypt existing secrets, run: node scripts/encrypt-sso-secrets.js

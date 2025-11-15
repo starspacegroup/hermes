@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vite dev",
+    "dev": "vite dev --host 0.0.0.0",
     "build": "vite build",
     "build:pages": "node scripts/preview-build.js",
-    "preview": "npm run db:setup:preview && vite preview",
+    "preview": "npm run db:setup:preview && vite preview --host 0.0.0.0",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
@@ -61,5 +61,8 @@
     "vitest": "^2.0.0",
     "wrangler": "^4.45.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "lucide-svelte": "^0.553.0"
+  }
 }

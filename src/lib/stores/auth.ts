@@ -1,11 +1,13 @@
 import { writable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
+export type UserRole = 'admin' | 'user' | 'customer' | 'platform_engineer';
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user' | 'platform_engineer';
+  role: UserRole;
 }
 
 export interface AuthState {
