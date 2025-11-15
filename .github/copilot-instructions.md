@@ -723,6 +723,201 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
 - **CSRF protection** - Enabled by default in SvelteKit
 - **Multi-tenant isolation** - Always filter by site_id
 
+## Quality Gates & Completion Criteria
+
+### Before Considering ANY Task Complete
+
+**CRITICAL: You MUST verify all of these checks pass before declaring a task complete:**
+
+#### 1. Code Formatting & Linting (MUST PASS)
+
+```bash
+npm run format  # Auto-fix formatting issues
+npm run lint    # Check for linting errors
+npm run check   # TypeScript type checking
+```
+
+**If `npm run check` fails, the code is NOT complete.** Fix all type errors before finishing.
+
+**Common formatting rules that MUST be followed:**
+
+- **2 spaces indentation** (never tabs)
+- **Single quotes** for strings in TypeScript/JavaScript
+- **No trailing commas** in objects/arrays (trailingComma: 'none')
+- **100 character line length** (soft limit)
+- **Semicolons required** at end of statements
+- **Explicit return types** on all functions
+- **No `any` types** - use proper typing or `unknown`
+- **Import type** for type-only imports: `import type { ... }`
+
+#### 2. Test Coverage Requirements (MUST MEET)
+
+```bash
+npm run test:coverage  # Run with coverage report
+```
+
+**Coverage Thresholds (ENFORCED):**
+
+- **Lines: ≥80%** (target: 90%)
+- **Functions: ≥80%** (target: 90%)
+- **Branches: ≥75%** (target: 85%)
+- **Statements: ≥80%** (target: 90%)
+
+**Coverage applies to:**
+
+- `src/lib/server/**` (database, utilities, business logic)
+- `src/lib/stores/**` (all stores)
+- `src/lib/utils/**` (all utility functions)
+- `src/lib/components/**` (all components)
+
+**Coverage excludes:**
+
+- Routes in `src/routes/**`
+- Type definitions in `src/lib/types/**`
+- Test files themselves
+
+**If coverage drops below 80%, you MUST write additional tests before finishing and you should strive to reach 90%**
+
+#### 3. All Tests Must Pass
+
+```bash
+npm test  # All tests must pass
+```
+
+**No failing tests allowed.** If tests fail:
+
+1. Fix the implementation bug, OR
+2. Fix the test if it's incorrect, OR
+3. Update the test if requirements changed
+
+#### 4. Pre-Commit Verification
+
+```bash
+npm run prepare  # Runs format, lint, check, and test in sequence
+```
+
+**This is the gold standard.** If `npm run prepare` passes, code quality is verified.
+
+### Quality Checklist for Every Code Change
+
+Before submitting code, verify:
+
+- [ ] **Formatting**: Code follows Prettier config (2 spaces, single quotes, no trailing commas)
+- [ ] **Linting**: No ESLint errors or warnings
+- [ ] **Type Safety**: `npm run check` passes with no TypeScript errors
+- [ ] **Tests Pass**: `npm test` shows all tests passing
+- [ ] **Coverage**: `npm run test:coverage` shows ≥80% on new/modified code
+- [ ] **TDD Followed**: Tests written BEFORE implementation
+- [ ] **Documentation**: JSDoc comments on public APIs
+- [ ] **No Secrets**: No hardcoded secrets or sensitive data
+- [ ] **Multi-tenant Safe**: Database queries include `site_id` where applicable
+- [ ] **Error Handling**: Try/catch blocks on async operations
+
+### Automated Quality Enforcement
+
+This project uses **lint-staged** with **husky** for pre-commit hooks:
+
+```json
+{
+  "*.{js,ts,svelte}": ["prettier --write", "eslint --fix"]
+}
+```
+
+**Git commits will fail if:**
+
+- Formatting is incorrect
+- ESLint errors exist
+- Type checking fails
+
+**Always run `npm run prepare` before considering work complete.**
+
+### Coverage Improvement Strategies
+
+If coverage is below target:
+
+1. **Identify uncovered lines**: Check `coverage/lcov-report/index.html`
+2. **Write targeted tests**: Focus on uncovered branches and edge cases
+3. **Test error paths**: Ensure try/catch blocks are tested
+4. **Mock external dependencies**: Database, APIs, file system
+5. **Test async operations**: Both success and failure scenarios
+
+Example coverage improvement workflow:
+
+```bash
+npm run test:coverage        # Identify gaps
+open coverage/index.html     # Visual coverage report
+npm run test:watch           # Write tests interactively
+npm run test:coverage        # Verify improvement
+```
+
+### Common Quality Issues to Avoid
+
+#### TypeScript Errors
+
+```typescript
+// ❌ BAD: Using 'any'
+function process(data: any) {}
+
+// ✅ GOOD: Proper typing
+function process(data: Product) {}
+
+// ❌ BAD: No return type
+function getTotal() {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+
+// ✅ GOOD: Explicit return type
+function getTotal(): number {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+```
+
+#### Formatting Errors
+
+```typescript
+// ❌ BAD: Double quotes, trailing comma, tabs
+{
+	"name": "test",
+	"value": 123,
+}
+
+// ✅ GOOD: Single quotes, no trailing comma, 2 spaces
+{
+  name: 'test',
+  value: 123
+}
+```
+
+#### Missing Tests
+
+```typescript
+// ❌ BAD: No tests for new function
+export function calculateDiscount(price: number, percent: number): number {
+  return price * (percent / 100);
+}
+
+// ✅ GOOD: Comprehensive tests
+describe('calculateDiscount', () => {
+  it('calculates discount correctly', () => {
+    expect(calculateDiscount(100, 10)).toBe(10);
+  });
+
+  it('handles zero discount', () => {
+    expect(calculateDiscount(100, 0)).toBe(0);
+  });
+
+  it('handles 100% discount', () => {
+    expect(calculateDiscount(100, 100)).toBe(100);
+  });
+});
+```
+
+### When to Skip Quality Gates
+
+**NEVER.** Quality gates are mandatory for all code changes.
+
+**Exception**: When explicitly prototyping/spiking (must refactor with tests after).
+
 ## References
 
 - [SvelteKit Documentation](https://kit.svelte.dev/docs)

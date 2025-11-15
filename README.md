@@ -23,7 +23,8 @@ and customer support. It will comply with relevant data protection regulations.
 - **Cloudflare D1** - Serverless SQL database with multi-tenant support
 - **TypeScript** - Type-safe development
 - **Multi-Tenant Architecture** - Support for multiple stores/sites
-- **Multi-Provider SSO** - OAuth 2.0 authentication with Google, LinkedIn, Apple, Facebook, GitHub, X (Twitter), and Microsoft
+- **Multi-Provider SSO** - OAuth 2.0 authentication with Google, LinkedIn,
+  Apple, Facebook, GitHub, X (Twitter), and Microsoft
 - **PKCE Security** - Enhanced OAuth security with Proof Key for Code Exchange
 - **Account Linking** - Automatic linking of provider accounts with same email
 - **Responsive Design** - Mobile-first approach
@@ -190,10 +191,43 @@ This foundation includes:
 - Inventory management
 - Analytics and reporting
 
+## 🤖 GitHub Copilot Configuration
+
+This project is configured with comprehensive GitHub Copilot instructions to
+ensure:
+
+- ✅ **Consistent Code Quality**: Automatic adherence to project standards
+- ✅ **Test Coverage**: Enforced 80%+ coverage (target: 90%)
+- ✅ **Type Safety**: Strict TypeScript with explicit return types
+- ✅ **Formatting**: Automatic Prettier formatting (2 spaces, single quotes, no
+  trailing commas)
+- ✅ **TDD Approach**: Tests written before implementation
+
+### Quality Gates
+
+Before ANY code is considered complete:
+
+```bash
+npm run prepare  # Runs format, lint, check, and test
+```
+
+All code must pass:
+
+- `npm run format` - Prettier formatting
+- `npm run lint` - ESLint checks
+- `npm run check` - TypeScript type checking
+- `npm run test:coverage` - Test coverage ≥80%
+
+### For Developers
+
+See [docs/GITHUB_COPILOT_SETUP.md](docs/GITHUB_COPILOT_SETUP.md) for complete
+Copilot configuration details.
+
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
+3. Make your changes following
+   [GitHub Copilot Guidelines](docs/GITHUB_COPILOT_SETUP.md)
+4. Run `npm run prepare` to verify quality gates
 5. Submit a pull request
