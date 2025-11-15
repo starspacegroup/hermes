@@ -106,3 +106,6 @@ export type {
   CategoryShippingAssignment,
   AvailableShippingOption
 } from './shipping';
+
+// Re-export OAuth types
+export type { OAuthProvider, OAuthProviderConfig, OAuthUserProfile } from './oauth';

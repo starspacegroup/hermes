@@ -7,7 +7,8 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
   if (!platform?.env?.DB) {
     return {
       themeColorsLight: null,
-      themeColorsDark: null
+      themeColorsDark: null,
+      currentUser: locals.currentUser || null
     };
   }
 
@@ -23,13 +24,15 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
 
     return {
       themeColorsLight: lightColors,
-      themeColorsDark: darkColors
+      themeColorsDark: darkColors,
+      currentUser: locals.currentUser || null
     };
   } catch (error) {
     console.error('Error loading theme colors:', error);
     return {
       themeColorsLight: null,
-      themeColorsDark: null
+      themeColorsDark: null,
+      currentUser: locals.currentUser || null
     };
   }
 };

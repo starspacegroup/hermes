@@ -8,6 +8,7 @@ import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db';
 import { createOAuthProvider } from '$lib/server/oauth/providers/index.js';
 import { createOAuthSession, createAuthAuditLog } from '$lib/server/db/oauth.js';
+import { getSSOProvider } from '$lib/server/db/sso-providers.js';
 import type { OAuthProvider } from '$lib/types/oauth.js';
 
 const VALID_PROVIDERS: OAuthProvider[] = [
@@ -35,25 +36,24 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
   const db = getDB(platform);
   const siteId = locals.siteId;
 
-  // Get OAuth credentials from environment
-  // In production, these should be stored securely per site
-  const clientIdValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
-  const clientSecretValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+  // Get OAuth credentials from database
+  const ssoProvider = await getSSOProvider(db, siteId, provider);
 
-  if (!clientIdValue || !clientSecretValue) {
-    throw new Error(`OAuth credentials not configured for ${provider}`);
+  if (!ssoProvider) {
+    throw new Error(`OAuth provider ${provider} not configured for this site`);
   }
 
-  const clientId = typeof clientIdValue === 'string' ? clientIdValue : '';
-  const clientSecret = typeof clientSecretValue === 'string' ? clientSecretValue : '';
-
-  if (!clientId || !clientSecret) {
-    throw new Error(`OAuth credentials must be strings for ${provider}`);
+  if (!ssoProvider.enabled) {
+    throw new Error(`OAuth provider ${provider} is disabled`);
   }
+
+  const clientId = ssoProvider.client_id;
+  const clientSecret = ssoProvider.client_secret;
+  const tenant = ssoProvider.tenant || undefined;
 
   try {
     // Create provider instance
-    const oauthProvider = createOAuthProvider(provider, { clientId, clientSecret });
+    const oauthProvider = createOAuthProvider(provider, { clientId, clientSecret, tenant });
 
     // Generate authorization URL with PKCE
     const baseUrl = url.origin;
@@ -79,9 +79,14 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
       details: { redirect_uri: redirectUri }
     });
 
-    // Redirect to OAuth provider
-    redirect(302, authParams.authUrl);
+    // Redirect to OAuth provider (this throws to perform the redirect)
+    throw redirect(302, authParams.authUrl);
   } catch (error) {
+    // Re-throw redirects (SvelteKit uses throw for control flow)
+    if (error instanceof Response || (error && typeof error === 'object' && 'status' in error)) {
+      throw error;
+    }
+
     console.error(`OAuth initiation error for ${provider}:`, error);
 
     // Log failure
@@ -95,6 +100,6 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, reque
     });
 
     // Redirect to login with error
-    redirect(302, `/auth/login?error=oauth_init_failed&provider=${provider}`);
+    throw redirect(302, `/auth/login?error=oauth_init_failed&provider=${provider}`);
   }
 };

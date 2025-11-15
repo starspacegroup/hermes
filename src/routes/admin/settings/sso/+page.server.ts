@@ -1,0 +1,272 @@
+import { error, fail } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
+import { getDB } from '$lib/server/db/connection';
+import {
+  getSSOProviders,
+  createSSOProvider,
+  updateSSOProvider,
+  disableSSOProvider,
+  reorderSSOProviders,
+  type CreateSSOProviderData,
+  type UpdateSSOProviderData
+} from '$lib/server/db/sso-providers';
+import type { OAuthProvider } from '$lib/types/oauth';
+
+const VALID_PROVIDERS: OAuthProvider[] = [
+  'google',
+  'linkedin',
+  'apple',
+  'facebook',
+  'github',
+  'twitter',
+  'microsoft'
+];
+
+const PROVIDER_DEFAULTS = {
+  google: { name: 'Google', icon: 'Chrome' },
+  linkedin: { name: 'LinkedIn', icon: 'Linkedin' },
+  apple: { name: 'Apple', icon: 'Apple' },
+  facebook: { name: 'Facebook', icon: 'Facebook' },
+  github: { name: 'GitHub', icon: 'Github' },
+  twitter: { name: 'X (Twitter)', icon: 'Twitter' },
+  microsoft: { name: 'Microsoft', icon: 'Building' }
+};
+
+export const load: PageServerLoad = async ({ platform, locals }) => {
+  // Check authentication
+  if (!locals.currentUser) {
+    throw error(401, 'Unauthorized');
+  }
+
+  // Only admins can manage SSO providers
+  if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+    throw error(403, 'Access denied. Admin role required.');
+  }
+
+  const db = getDB(platform);
+  const siteId = locals.siteId;
+
+  try {
+    const providers = await getSSOProviders(db, siteId);
+
+    // Map providers to include default display info if not set
+    const providersWithDefaults = providers.map((p) => ({
+      ...p,
+      display_name: p.display_name || PROVIDER_DEFAULTS[p.provider].name,
+      icon: p.icon || PROVIDER_DEFAULTS[p.provider].icon
+    }));
+
+    return {
+      providers: providersWithDefaults,
+      availableProviders: VALID_PROVIDERS,
+      providerDefaults: PROVIDER_DEFAULTS
+    };
+  } catch (err) {
+    console.error('Failed to load SSO providers:', err);
+    throw error(500, 'Failed to load SSO providers');
+  }
+};
+
+export const actions: Actions = {
+  create: async ({ request, platform, locals }) => {
+    // Check authentication
+    if (!locals.currentUser) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+      return fail(403, { error: 'Access denied. Admin role required.' });
+    }
+
+    const formData = await request.formData();
+    const provider = formData.get('provider')?.toString() as OAuthProvider;
+    const enabled = formData.get('enabled') === 'true';
+    const clientId = formData.get('client_id')?.toString();
+    const clientSecret = formData.get('client_secret')?.toString();
+    const tenant = formData.get('tenant')?.toString();
+    const displayName = formData.get('display_name')?.toString();
+    const icon = formData.get('icon')?.toString();
+    const sortOrder = parseInt(formData.get('sort_order')?.toString() || '0');
+
+    // Validate required fields
+    if (!provider || !VALID_PROVIDERS.includes(provider)) {
+      return fail(400, { error: 'Invalid provider' });
+    }
+
+    if (!clientId || clientId.trim() === '') {
+      return fail(400, { error: 'Client ID is required', field: 'client_id' });
+    }
+
+    if (!clientSecret || clientSecret.trim() === '') {
+      return fail(400, { error: 'Client Secret is required', field: 'client_secret' });
+    }
+
+    const db = getDB(platform);
+    const siteId = locals.siteId;
+
+    try {
+      const providerData: CreateSSOProviderData = {
+        provider,
+        enabled,
+        client_id: clientId,
+        client_secret: clientSecret,
+        tenant: tenant || undefined,
+        display_name: displayName || undefined,
+        icon: icon || undefined,
+        sort_order: sortOrder
+      };
+
+      await createSSOProvider(db, siteId, providerData);
+
+      return { success: true, message: 'SSO provider created successfully' };
+    } catch (err) {
+      console.error('Failed to create SSO provider:', err);
+      const errorMessage = String(err);
+      if (errorMessage.includes('UNIQUE constraint failed')) {
+        return fail(409, { error: 'Provider already exists for this site' });
+      }
+      return fail(500, { error: 'Failed to create SSO provider' });
+    }
+  },
+
+  update: async ({ request, platform, locals }) => {
+    // Check authentication
+    if (!locals.currentUser) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+      return fail(403, { error: 'Access denied. Admin role required.' });
+    }
+
+    const formData = await request.formData();
+    const provider = formData.get('provider')?.toString() as OAuthProvider;
+    const enabled = formData.get('enabled') === 'true';
+    const clientId = formData.get('client_id')?.toString();
+    const clientSecret = formData.get('client_secret')?.toString();
+    const tenant = formData.get('tenant')?.toString();
+    const displayName = formData.get('display_name')?.toString();
+    const icon = formData.get('icon')?.toString();
+    const sortOrder = formData.get('sort_order')?.toString();
+
+    if (!provider || !VALID_PROVIDERS.includes(provider)) {
+      return fail(400, { error: 'Invalid provider' });
+    }
+
+    const db = getDB(platform);
+    const siteId = locals.siteId;
+
+    try {
+      const updateData: UpdateSSOProviderData = {
+        enabled
+      };
+
+      if (clientId && clientId.trim() !== '') {
+        updateData.client_id = clientId;
+      }
+
+      if (clientSecret && clientSecret.trim() !== '') {
+        updateData.client_secret = clientSecret;
+      }
+
+      if (tenant !== undefined) {
+        updateData.tenant = tenant || undefined;
+      }
+
+      if (displayName !== undefined) {
+        updateData.display_name = displayName || undefined;
+      }
+
+      if (icon !== undefined) {
+        updateData.icon = icon || undefined;
+      }
+
+      if (sortOrder !== undefined) {
+        updateData.sort_order = parseInt(sortOrder);
+      }
+
+      const result = await updateSSOProvider(db, siteId, provider, updateData);
+
+      if (!result) {
+        return fail(404, { error: 'Provider not found' });
+      }
+
+      return { success: true, message: 'SSO provider updated successfully' };
+    } catch (err) {
+      console.error('Failed to update SSO provider:', err);
+      return fail(500, { error: 'Failed to update SSO provider' });
+    }
+  },
+
+  disable: async ({ request, platform, locals }) => {
+    // Check authentication
+    if (!locals.currentUser) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+      return fail(403, { error: 'Access denied. Admin role required.' });
+    }
+
+    const formData = await request.formData();
+    const provider = formData.get('provider')?.toString() as OAuthProvider;
+
+    if (!provider || !VALID_PROVIDERS.includes(provider)) {
+      return fail(400, { error: 'Invalid provider' });
+    }
+
+    const db = getDB(platform);
+    const siteId = locals.siteId;
+
+    try {
+      await disableSSOProvider(db, siteId, provider);
+      return { success: true, message: 'SSO provider disabled successfully' };
+    } catch (err) {
+      console.error('Failed to disable SSO provider:', err);
+      return fail(500, { error: 'Failed to disable SSO provider' });
+    }
+  },
+
+  reorder: async ({ request, platform, locals }) => {
+    // Check authentication
+    if (!locals.currentUser) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+      return fail(403, { error: 'Access denied. Admin role required.' });
+    }
+
+    const formData = await request.formData();
+    const ordersJson = formData.get('orders')?.toString();
+
+    if (!ordersJson) {
+      return fail(400, { error: 'Orders data is required' });
+    }
+
+    let providerOrders: Array<{ provider: OAuthProvider; sort_order: number }>;
+    try {
+      providerOrders = JSON.parse(ordersJson);
+    } catch {
+      return fail(400, { error: 'Invalid orders data format' });
+    }
+
+    // Validate all providers
+    for (const item of providerOrders) {
+      if (!VALID_PROVIDERS.includes(item.provider)) {
+        return fail(400, { error: `Invalid provider: ${item.provider}` });
+      }
+    }
+
+    const db = getDB(platform);
+    const siteId = locals.siteId;
+
+    try {
+      await reorderSSOProviders(db, siteId, providerOrders);
+      return { success: true, message: 'Provider order updated successfully' };
+    } catch (err) {
+      console.error('Failed to reorder SSO providers:', err);
+      return fail(500, { error: 'Failed to reorder SSO providers' });
+    }
+  }
+};

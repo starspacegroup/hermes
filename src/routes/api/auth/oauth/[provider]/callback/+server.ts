@@ -14,6 +14,7 @@ import {
   getProviderAccountByProviderId,
   createAuthAuditLog
 } from '$lib/server/db/oauth.js';
+import { getSSOProvider } from '$lib/server/db/sso-providers.js';
 import { createOAuthProvider } from '$lib/server/oauth/providers/index.js';
 import type { OAuthProvider } from '$lib/types/oauth.js';
 
@@ -41,38 +42,38 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       user_agent: request.headers.get('user-agent') || undefined,
       details: { error, description: url.searchParams.get('error_description') }
     });
-    redirect(302, `/auth/login?error=oauth_denied&provider=${provider}`);
+    throw redirect(302, `/auth/login?error=oauth_denied&provider=${provider}`);
   }
 
   // Validate required parameters
   if (!code || !state) {
-    redirect(302, `/auth/login?error=invalid_callback`);
+    throw redirect(302, `/auth/login?error=invalid_callback`);
   }
 
   try {
     // Retrieve and validate OAuth session
     const oauthSession = await getOAuthSession(db, state);
     if (!oauthSession || oauthSession.provider !== provider) {
-      redirect(302, `/auth/login?error=invalid_state`);
+      throw redirect(302, `/auth/login?error=invalid_state`);
     }
 
-    // Get OAuth credentials
-    const clientIdValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_ID`];
-    const clientSecretValue = platform?.env?.[`${provider.toUpperCase()}_CLIENT_SECRET`];
+    // Get OAuth credentials from database
+    const ssoProvider = await getSSOProvider(db, siteId, provider);
 
-    if (!clientIdValue || !clientSecretValue) {
-      throw new Error(`OAuth credentials not configured for ${provider}`);
+    if (!ssoProvider) {
+      throw new Error(`OAuth provider ${provider} not configured for this site`);
     }
 
-    const clientId = typeof clientIdValue === 'string' ? clientIdValue : '';
-    const clientSecret = typeof clientSecretValue === 'string' ? clientSecretValue : '';
-
-    if (!clientId || !clientSecret) {
-      throw new Error(`OAuth credentials must be strings for ${provider}`);
+    if (!ssoProvider.enabled) {
+      throw new Error(`OAuth provider ${provider} is disabled`);
     }
+
+    const clientId = ssoProvider.client_id;
+    const clientSecret = ssoProvider.client_secret;
+    const tenant = ssoProvider.tenant || undefined;
 
     // Create provider instance and exchange code for tokens
-    const oauthProvider = createOAuthProvider(provider, { clientId, clientSecret });
+    const oauthProvider = createOAuthProvider(provider, { clientId, clientSecret, tenant });
     const tokens = await oauthProvider.exchangeCodeForTokens(
       code,
       oauthSession.redirect_uri,
@@ -233,8 +234,12 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
     });
 
     // Redirect to dashboard
-    redirect(302, '/admin/dashboard');
+    throw redirect(302, '/admin/dashboard');
   } catch (error) {
+    // Re-throw redirects (SvelteKit uses throw for control flow)
+    if (error instanceof Response || (error && typeof error === 'object' && 'status' in error)) {
+      throw error;
+    }
     console.error(`OAuth callback error for ${provider}:`, error);
 
     await createAuthAuditLog(db, siteId, {
@@ -246,6 +251,6 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       details: { error: String(error) }
     });
 
-    redirect(302, `/auth/login?error=oauth_failed&provider=${provider}`);
+    throw redirect(302, `/auth/login?error=oauth_failed&provider=${provider}`);
   }
 };

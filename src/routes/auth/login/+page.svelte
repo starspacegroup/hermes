@@ -4,6 +4,10 @@
   import { toastStore } from '$lib/stores/toast';
   import Button from '$lib/components/Button.svelte';
   import { page } from '$app/stores';
+  import type { PageData } from './$types';
+  import IconDisplay from '$lib/components/admin/IconDisplay.svelte';
+
+  export let data: PageData;
 
   let email = '';
   let password = '';
@@ -33,22 +37,8 @@
     }
   }
 
-  type OAuthProvider = {
-    id: string;
-    name: string;
-    icon: string;
-    enabled: boolean;
-  };
-
-  const oauthProviders: OAuthProvider[] = [
-    { id: 'google', name: 'Google', icon: '🔍', enabled: true },
-    { id: 'linkedin', name: 'LinkedIn', icon: '💼', enabled: true },
-    { id: 'apple', name: 'Apple', icon: '🍎', enabled: true },
-    { id: 'facebook', name: 'Facebook', icon: '📘', enabled: true },
-    { id: 'github', name: 'GitHub', icon: '🐙', enabled: true },
-    { id: 'twitter', name: 'X (Twitter)', icon: '𝕏', enabled: true },
-    { id: 'microsoft', name: 'Microsoft', icon: '🪟', enabled: true }
-  ];
+  // Get SSO providers from server data
+  $: oauthProviders = data.ssoProviders || [];
 
   async function handleLogin() {
     error = '';
@@ -108,29 +98,33 @@
     </div>
 
     <!-- SSO Provider Buttons -->
-    <div class="sso-section">
-      <p class="sso-title">Sign in with</p>
-      <div class="sso-providers">
-        {#each oauthProviders as provider}
-          {#if provider.enabled}
-            <button
-              type="button"
-              class="sso-button"
-              on:click={() => handleOAuthLogin(provider.id)}
-              disabled={isLoading}
-              title={`Sign in with ${provider.name}`}
-            >
-              <span class="sso-icon">{provider.icon}</span>
-              <span class="sso-name">{provider.name}</span>
-            </button>
-          {/if}
-        {/each}
+    {#if oauthProviders.length > 0}
+      <div class="sso-section">
+        <p class="sso-title">Sign in with</p>
+        <div class="sso-providers">
+          {#each oauthProviders as provider}
+            {#if provider.enabled}
+              <button
+                type="button"
+                class="sso-button"
+                on:click={() => handleOAuthLogin(provider.id)}
+                disabled={isLoading}
+                title={`Sign in with ${provider.name}`}
+              >
+                <span class="sso-icon">
+                  <IconDisplay iconName={provider.icon} size={20} fallbackEmoji={provider.icon} />
+                </span>
+                <span class="sso-name">{provider.name}</span>
+              </button>
+            {/if}
+          {/each}
+        </div>
       </div>
-    </div>
 
-    <div class="divider">
-      <span>or continue with email</span>
-    </div>
+      <div class="divider">
+        <span>or continue with email</span>
+      </div>
+    {/if}
 
     <form on:submit|preventDefault={handleLogin}>
       <div class="form-group">

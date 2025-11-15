@@ -58,6 +58,20 @@
 
   onMount(() => {
     themeStore.initTheme();
+
+    // Initialize auth store with server-provided user data
+    if (data.currentUser && !$authState.isAuthenticated) {
+      authState.set({
+        user: {
+          id: data.currentUser.id,
+          email: data.currentUser.email,
+          name: data.currentUser.name,
+          role: data.currentUser.role
+        },
+        isAuthenticated: true,
+        isLoading: false
+      });
+    }
   });
 
   onDestroy(() => {
