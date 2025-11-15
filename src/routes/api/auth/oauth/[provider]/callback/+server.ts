@@ -57,8 +57,14 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
       throw redirect(302, `/auth/login?error=invalid_state`);
     }
 
-    // Get OAuth credentials from database
-    const ssoProvider = await getSSOProvider(db, siteId, provider);
+    const encryptionKey = platform?.env.ENCRYPTION_KEY;
+
+    if (!encryptionKey) {
+      throw new Error('ENCRYPTION_KEY not configured');
+    }
+
+    // Get OAuth credentials from database (decrypts client_secret)
+    const ssoProvider = await getSSOProvider(db, siteId, provider, encryptionKey);
 
     if (!ssoProvider) {
       throw new Error(`OAuth provider ${provider} not configured for this site`);

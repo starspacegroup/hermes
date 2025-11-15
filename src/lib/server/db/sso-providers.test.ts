@@ -11,17 +11,22 @@ import {
   type CreateSSOProviderData,
   type UpdateSSOProviderData
 } from './sso-providers';
+import { generateEncryptionKey, encrypt } from '../crypto';
 import type { D1Database } from '@cloudflare/workers-types';
 
 describe('SSO Providers Database Functions', () => {
   let mockDb: D1Database;
+  let testEncryptionKey: string;
   const siteId = 'site-1';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockDb = {
       prepare: vi.fn(),
       batch: vi.fn()
     } as unknown as D1Database;
+
+    // Generate a fresh encryption key for each test
+    testEncryptionKey = await generateEncryptionKey();
   });
 
   describe('getSSOProviders', () => {
@@ -83,13 +88,17 @@ describe('SSO Providers Database Functions', () => {
 
   describe('getSSOProvider', () => {
     it('should retrieve a specific SSO provider by provider name', async () => {
+      // Encrypt a test secret
+      const plainSecret = 'google-secret';
+      const encryptedSecret = await encrypt(plainSecret, testEncryptionKey);
+
       const mockProvider: SSOProvider = {
         id: 'sso-1',
         site_id: siteId,
         provider: 'google',
         enabled: 1,
         client_id: 'google-client-id',
-        client_secret: 'google-secret',
+        client_secret: encryptedSecret,
         tenant: null,
         display_name: 'Google',
         icon: '🔍',
@@ -102,13 +111,14 @@ describe('SSO Providers Database Functions', () => {
       const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
       (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ bind: mockBind });
 
-      const result = await getSSOProvider(mockDb, siteId, 'google');
+      const result = await getSSOProvider(mockDb, siteId, 'google', testEncryptionKey);
 
       expect(mockDb.prepare).toHaveBeenCalledWith(
         expect.stringContaining('WHERE site_id = ? AND provider = ?')
       );
       expect(mockBind).toHaveBeenCalledWith(siteId, 'google');
-      expect(result).toEqual(mockProvider);
+      expect(result).toBeTruthy();
+      expect(result?.client_secret).toBe(plainSecret); // Should be decrypted
     });
 
     it('should return null when provider not found', async () => {
@@ -116,7 +126,7 @@ describe('SSO Providers Database Functions', () => {
       const mockBind = vi.fn().mockReturnValue({ first: mockFirst });
       (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ bind: mockBind });
 
-      const result = await getSSOProvider(mockDb, siteId, 'twitter');
+      const result = await getSSOProvider(mockDb, siteId, 'twitter', testEncryptionKey);
 
       expect(result).toBeNull();
     });
@@ -124,6 +134,9 @@ describe('SSO Providers Database Functions', () => {
 
   describe('getEnabledSSOProviders', () => {
     it('should retrieve only enabled SSO providers', async () => {
+      const plainSecret = 'google-secret';
+      const encryptedSecret = await encrypt(plainSecret, testEncryptionKey);
+
       const mockProviders: SSOProvider[] = [
         {
           id: 'sso-1',
@@ -131,7 +144,7 @@ describe('SSO Providers Database Functions', () => {
           provider: 'google',
           enabled: 1,
           client_id: 'google-client-id',
-          client_secret: 'google-secret',
+          client_secret: encryptedSecret,
           tenant: null,
           display_name: 'Google',
           icon: '🔍',
@@ -145,35 +158,40 @@ describe('SSO Providers Database Functions', () => {
       const mockBind = vi.fn().mockReturnValue({ all: mockAll });
       (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue({ bind: mockBind });
 
-      const result = await getEnabledSSOProviders(mockDb, siteId);
+      const result = await getEnabledSSOProviders(mockDb, siteId, testEncryptionKey);
 
       expect(mockDb.prepare).toHaveBeenCalledWith(
         expect.stringContaining('WHERE site_id = ? AND enabled = 1')
       );
       expect(mockBind).toHaveBeenCalledWith(siteId);
-      expect(result).toEqual(mockProviders);
+      expect(result).toHaveLength(1);
+      expect(result[0].client_secret).toBe(plainSecret); // Should be decrypted
     });
   });
 
   describe('createSSOProvider', () => {
     it('should create a new SSO provider', async () => {
+      const plainSecret = 'google-secret';
+      const encryptedSecret = await encrypt(plainSecret, testEncryptionKey);
+
       const providerData: CreateSSOProviderData = {
         provider: 'google',
         enabled: true,
         client_id: 'google-client-id',
-        client_secret: 'google-secret',
+        client_secret: plainSecret,
         display_name: 'Google',
         icon: '🔍',
         sort_order: 0
       };
 
+      // Mock the encrypted version returned from database
       const mockProvider: SSOProvider = {
         id: 'sso-1',
         site_id: siteId,
         provider: 'google',
         enabled: 1,
         client_id: 'google-client-id',
-        client_secret: 'google-secret',
+        client_secret: encryptedSecret,
         tenant: null,
         display_name: 'Google',
         icon: '🔍',
@@ -191,20 +209,24 @@ describe('SSO Providers Database Functions', () => {
         .mockReturnValueOnce({ bind: mockBindInsert })
         .mockReturnValueOnce({ bind: mockBindSelect });
 
-      const result = await createSSOProvider(mockDb, siteId, providerData);
+      const result = await createSSOProvider(mockDb, siteId, providerData, testEncryptionKey);
 
       expect(mockDb.prepare).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO sso_providers')
       );
-      expect(result).toEqual(mockProvider);
+      expect(result).toBeTruthy();
+      expect(result.client_secret).toBe(plainSecret); // Should return decrypted
     });
 
     it('should create SSO provider with optional fields', async () => {
+      const plainSecret = 'ms-secret';
+      const encryptedSecret = await encrypt(plainSecret, testEncryptionKey);
+
       const providerData: CreateSSOProviderData = {
         provider: 'microsoft',
         enabled: true,
         client_id: 'ms-client-id',
-        client_secret: 'ms-secret',
+        client_secret: plainSecret,
         tenant: 'common'
       };
 
@@ -214,7 +236,7 @@ describe('SSO Providers Database Functions', () => {
         provider: 'microsoft',
         enabled: 1,
         client_id: 'ms-client-id',
-        client_secret: 'ms-secret',
+        client_secret: encryptedSecret,
         tenant: 'common',
         display_name: null,
         icon: null,
@@ -232,14 +254,18 @@ describe('SSO Providers Database Functions', () => {
         .mockReturnValueOnce({ bind: mockBindInsert })
         .mockReturnValueOnce({ bind: mockBindSelect });
 
-      const result = await createSSOProvider(mockDb, siteId, providerData);
+      const result = await createSSOProvider(mockDb, siteId, providerData, testEncryptionKey);
 
       expect(result.tenant).toBe('common');
+      expect(result.client_secret).toBe(plainSecret); // Should return decrypted
     });
   });
 
   describe('updateSSOProvider', () => {
     it('should update an existing SSO provider', async () => {
+      const plainSecret = 'google-secret';
+      const encryptedSecret = await encrypt(plainSecret, testEncryptionKey);
+
       const updateData: UpdateSSOProviderData = {
         enabled: false,
         client_id: 'new-client-id',
@@ -252,7 +278,7 @@ describe('SSO Providers Database Functions', () => {
         provider: 'google',
         enabled: 0,
         client_id: 'new-client-id',
-        client_secret: 'google-secret',
+        client_secret: encryptedSecret,
         tenant: null,
         display_name: 'Updated Google',
         icon: '🔍',
@@ -270,10 +296,17 @@ describe('SSO Providers Database Functions', () => {
         .mockReturnValueOnce({ bind: mockBindUpdate })
         .mockReturnValueOnce({ bind: mockBindSelect });
 
-      const result = await updateSSOProvider(mockDb, siteId, 'google', updateData);
+      const result = await updateSSOProvider(
+        mockDb,
+        siteId,
+        'google',
+        updateData,
+        testEncryptionKey
+      );
 
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE sso_providers'));
-      expect(result).toEqual(mockProvider);
+      expect(result).toBeTruthy();
+      expect(result?.client_secret).toBe(plainSecret); // Should return decrypted
     });
 
     it('should return null if provider not found', async () => {
@@ -290,7 +323,13 @@ describe('SSO Providers Database Functions', () => {
         .mockReturnValueOnce({ bind: mockBindUpdate })
         .mockReturnValueOnce({ bind: mockBindSelect });
 
-      const result = await updateSSOProvider(mockDb, siteId, 'linkedin', updateData);
+      const result = await updateSSOProvider(
+        mockDb,
+        siteId,
+        'linkedin',
+        updateData,
+        testEncryptionKey
+      );
 
       expect(result).toBeNull();
     });

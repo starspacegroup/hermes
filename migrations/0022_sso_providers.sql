@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS sso_providers (
   provider TEXT NOT NULL CHECK (provider IN ('google', 'linkedin', 'apple', 'facebook', 'github', 'twitter', 'microsoft')),
   enabled INTEGER NOT NULL DEFAULT 0, -- 0 = disabled, 1 = enabled
   client_id TEXT NOT NULL, -- OAuth client ID
-  client_secret TEXT NOT NULL, -- OAuth client secret (should be encrypted in production)
+  client_secret TEXT NOT NULL, -- OAuth client secret (ENCRYPTED - see src/lib/server/crypto.ts)
   tenant TEXT, -- For Microsoft OAuth (e.g., 'common', 'organizations', or tenant ID)
   display_name TEXT, -- Custom display name (optional)
   icon TEXT, -- Custom icon (optional)

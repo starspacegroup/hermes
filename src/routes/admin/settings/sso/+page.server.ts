@@ -103,6 +103,13 @@ export const actions: Actions = {
 
     const db = getDB(platform);
     const siteId = locals.siteId;
+    const encryptionKey = platform?.env.ENCRYPTION_KEY;
+
+    if (!encryptionKey) {
+      return fail(500, {
+        error: 'Server encryption not configured. Contact system administrator.'
+      });
+    }
 
     try {
       const providerData: CreateSSOProviderData = {
@@ -116,7 +123,8 @@ export const actions: Actions = {
         sort_order: sortOrder
       };
 
-      await createSSOProvider(db, siteId, providerData);
+      // Client secret will be automatically encrypted before storage
+      await createSSOProvider(db, siteId, providerData, encryptionKey);
 
       return { success: true, message: 'SSO provider created successfully' };
     } catch (err) {
@@ -155,6 +163,13 @@ export const actions: Actions = {
 
     const db = getDB(platform);
     const siteId = locals.siteId;
+    const encryptionKey = platform?.env.ENCRYPTION_KEY;
+
+    if (!encryptionKey) {
+      return fail(500, {
+        error: 'Server encryption not configured. Contact system administrator.'
+      });
+    }
 
     try {
       const updateData: UpdateSSOProviderData = {
@@ -185,7 +200,8 @@ export const actions: Actions = {
         updateData.sort_order = parseInt(sortOrder);
       }
 
-      const result = await updateSSOProvider(db, siteId, provider, updateData);
+      // Client secret will be automatically encrypted if provided
+      const result = await updateSSOProvider(db, siteId, provider, updateData, encryptionKey);
 
       if (!result) {
         return fail(404, { error: 'Provider not found' });

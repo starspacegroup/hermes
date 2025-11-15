@@ -1,10 +1,13 @@
 /**
  * SSO Provider repository for managing OAuth provider configurations per site
+ *
+ * SECURITY: Client secrets are encrypted at rest using AES-GCM encryption
  */
 
 import type { D1Database } from '@cloudflare/workers-types';
 import { generateId, getCurrentTimestamp } from './connection.js';
 import type { OAuthProvider } from '$lib/types/oauth.js';
+import { encrypt, decrypt } from '../crypto.js';
 
 export interface SSOProvider {
   id: string;
@@ -64,26 +67,44 @@ export async function getSSOProviders(db: D1Database, siteId: string): Promise<S
 
 /**
  * Get a specific SSO provider by provider name
+ * @param encryptionKey Required for decrypting client_secret
  */
 export async function getSSOProvider(
   db: D1Database,
   siteId: string,
-  provider: OAuthProvider
+  provider: OAuthProvider,
+  encryptionKey?: string
 ): Promise<SSOProvider | null> {
   const result = await db
     .prepare('SELECT * FROM sso_providers WHERE site_id = ? AND provider = ?')
     .bind(siteId, provider)
     .first<SSOProvider>();
 
+  if (!result) {
+    return null;
+  }
+
+  // Decrypt client_secret if encryption key provided
+  if (encryptionKey && result.client_secret) {
+    try {
+      result.client_secret = await decrypt(result.client_secret, encryptionKey);
+    } catch (error) {
+      console.error('Failed to decrypt client_secret:', error);
+      throw new Error('Failed to decrypt SSO provider credentials');
+    }
+  }
+
   return result;
 }
 
 /**
  * Get only enabled SSO providers for a site
+ * @param encryptionKey Required for decrypting client_secret
  */
 export async function getEnabledSSOProviders(
   db: D1Database,
-  siteId: string
+  siteId: string,
+  encryptionKey?: string
 ): Promise<SSOProvider[]> {
   const result = await db
     .prepare(
@@ -92,19 +113,40 @@ export async function getEnabledSSOProviders(
     .bind(siteId)
     .all<SSOProvider>();
 
-  return result.results || [];
+  const providers = result.results || [];
+
+  // Decrypt client_secret for all providers if encryption key provided
+  if (encryptionKey) {
+    for (const provider of providers) {
+      if (provider.client_secret) {
+        try {
+          provider.client_secret = await decrypt(provider.client_secret, encryptionKey);
+        } catch (error) {
+          console.error(`Failed to decrypt client_secret for ${provider.provider}:`, error);
+          throw new Error('Failed to decrypt SSO provider credentials');
+        }
+      }
+    }
+  }
+
+  return providers;
 }
 
 /**
  * Create a new SSO provider configuration
+ * @param encryptionKey Required for encrypting client_secret
  */
 export async function createSSOProvider(
   db: D1Database,
   siteId: string,
-  data: CreateSSOProviderData
+  data: CreateSSOProviderData,
+  encryptionKey: string
 ): Promise<SSOProvider> {
   const id = generateId();
   const timestamp = getCurrentTimestamp();
+
+  // Encrypt the client_secret before storing
+  const encryptedSecret = await encrypt(data.client_secret, encryptionKey);
 
   await db
     .prepare(
@@ -119,7 +161,7 @@ export async function createSSOProvider(
       data.provider,
       data.enabled ? 1 : 0,
       data.client_id,
-      data.client_secret,
+      encryptedSecret,
       data.tenant || null,
       data.display_name || null,
       data.icon || null,
@@ -129,7 +171,7 @@ export async function createSSOProvider(
     )
     .run();
 
-  const provider = await getSSOProvider(db, siteId, data.provider);
+  const provider = await getSSOProvider(db, siteId, data.provider, encryptionKey);
   if (!provider) {
     throw new Error('Failed to create SSO provider');
   }
@@ -139,12 +181,14 @@ export async function createSSOProvider(
 
 /**
  * Update an existing SSO provider
+ * @param encryptionKey Required if updating client_secret
  */
 export async function updateSSOProvider(
   db: D1Database,
   siteId: string,
   provider: OAuthProvider,
-  data: UpdateSSOProviderData
+  data: UpdateSSOProviderData,
+  encryptionKey?: string
 ): Promise<SSOProvider | null> {
   const timestamp = getCurrentTimestamp();
   const updates: string[] = [];
@@ -159,8 +203,13 @@ export async function updateSSOProvider(
     params.push(data.client_id);
   }
   if (data.client_secret !== undefined) {
+    if (!encryptionKey) {
+      throw new Error('Encryption key required to update client_secret');
+    }
+    // Encrypt the new client_secret before storing
+    const encryptedSecret = await encrypt(data.client_secret, encryptionKey);
     updates.push('client_secret = ?');
-    params.push(data.client_secret);
+    params.push(encryptedSecret);
   }
   if (data.tenant !== undefined) {
     updates.push('tenant = ?');
@@ -180,7 +229,7 @@ export async function updateSSOProvider(
   }
 
   if (updates.length === 0) {
-    return await getSSOProvider(db, siteId, provider);
+    return await getSSOProvider(db, siteId, provider, encryptionKey);
   }
 
   updates.push('updated_at = ?');
@@ -194,7 +243,7 @@ export async function updateSSOProvider(
     .bind(...params)
     .run();
 
-  return await getSSOProvider(db, siteId, provider);
+  return await getSSOProvider(db, siteId, provider, encryptionKey);
 }
 
 /**

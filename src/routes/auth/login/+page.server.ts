@@ -8,6 +8,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 
   try {
     // Fetch enabled SSO providers from database
+    // Note: We don't pass encryption key here since we don't need client_secret for the login page
     const ssoProviders = await getEnabledSSOProviders(db, siteId);
 
     // Map to simpler structure for client

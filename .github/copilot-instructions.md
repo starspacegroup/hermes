@@ -717,11 +717,82 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
 
 ### Security
 
-- **Never commit secrets** - Use `.dev.vars` (gitignored)
+**CRITICAL SECURITY REQUIREMENTS - NEVER VIOLATE THESE:**
+
+#### Secrets and Sensitive Data
+
+- **NEVER store secrets in plaintext** - All sensitive data MUST be encrypted at rest
+- **NEVER commit secrets** - Use `.dev.vars` (gitignored) for local development
+- **Encryption required for:**
+  - API keys (OAuth client secrets, payment gateway keys, etc.)
+  - Authentication tokens and session secrets
+  - Database credentials
+  - Any PII (Personally Identifiable Information)
+  - User passwords (use bcrypt/argon2 with salt)
+
+#### Database Security
+
+- **Encrypt sensitive columns** - Use application-level encryption for:
+  - OAuth client secrets in `sso_providers.client_secret`
+  - Payment information
+  - Personal health information
+  - Financial data
+- **Use prepared statements** - NEVER use string concatenation for SQL
+- **Multi-tenant isolation** - Always filter by `site_id` in WHERE clauses
+- **Audit logging** - Log access to sensitive data
+
+#### Input Validation and Sanitization
+
 - **Sanitize user input** - Especially for HTML/SQL
-- **Use prepared statements** - Never string concatenation for SQL
-- **CSRF protection** - Enabled by default in SvelteKit
-- **Multi-tenant isolation** - Always filter by site_id
+- **Validate all inputs** - Check types, lengths, formats
+- **CSRF protection** - Enabled by default in SvelteKit (verify it's working)
+- **XSS prevention** - Escape output, use Content Security Policy
+- **SQL injection prevention** - Always use prepared statements
+
+#### Authentication and Authorization
+
+- **Secure session management** - Use httpOnly, secure, sameSite cookies
+- **Role-based access control** - Verify permissions before data access
+- **Rate limiting** - Implement for login, API endpoints
+- **Password requirements** - Enforce strong passwords (min 12 chars, complexity)
+- **MFA support** - Plan for multi-factor authentication
+
+#### API and Network Security
+
+- **HTTPS only** - Never transmit sensitive data over HTTP
+- **API authentication** - Require auth tokens for all sensitive endpoints
+- **CORS configuration** - Restrict to known domains only
+- **Request size limits** - Prevent DoS attacks
+
+#### Security Review Checklist
+
+Before implementing any feature that handles sensitive data:
+
+- [ ] **Encryption**: Are secrets encrypted at rest and in transit?
+- [ ] **Access control**: Is authorization properly enforced?
+- [ ] **Input validation**: Are all inputs validated and sanitized?
+- [ ] **Audit logging**: Are security events logged?
+- [ ] **Error handling**: Do errors reveal sensitive information?
+- [ ] **Dependencies**: Are all packages up-to-date and vulnerability-free?
+
+#### Security Testing
+
+- **Test for common vulnerabilities**:
+  - SQL injection
+  - XSS (Cross-Site Scripting)
+  - CSRF (Cross-Site Request Forgery)
+  - Authentication bypass
+  - Authorization bypass
+  - Sensitive data exposure
+
+#### Compliance Considerations
+
+- **GDPR**: Right to erasure, data portability, consent management
+- **PCI-DSS**: Never store full credit card numbers, CVV codes
+- **HIPAA**: If handling health data, ensure compliance
+- **SOC 2**: Implement security controls and audit trails
+
+**If you're unsure about security implications, ASK. Security is non-negotiable.**
 
 ## Quality Gates & Completion Criteria
 
