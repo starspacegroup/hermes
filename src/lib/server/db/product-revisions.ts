@@ -4,7 +4,6 @@
  */
 
 import type { D1Database } from '@cloudflare/workers-types';
-import type { DBProduct } from './products';
 import type { ParsedRevision } from '$lib/types/revisions';
 import {
   createRevision as createGenericRevision,
@@ -17,8 +16,31 @@ import {
   getHeadRevisions
 } from './revisions-service';
 import { getProductById, updateProduct } from './products';
+import { getProductFulfillmentOptions, setProductFulfillmentOptions } from './index';
+import { getProductShippingOptions, setProductShippingOptions } from './shipping-options';
 
-export type ProductRevisionData = Omit<DBProduct, 'id' | 'site_id' | 'created_at' | 'updated_at'>;
+export interface ProductRevisionData {
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+  stock: number;
+  type: 'physical' | 'digital' | 'service';
+  tags: string;
+  fulfillmentOptions: Array<{
+    providerId: string;
+    cost: number;
+    stockQuantity: number;
+    sortOrder: number;
+  }>;
+  shippingOptions: Array<{
+    shippingOptionId: string;
+    isDefault: boolean;
+    priceOverride?: number;
+    thresholdOverride?: number;
+  }>;
+}
 
 /**
  * Create a new revision for a product
@@ -37,6 +59,24 @@ export async function createProductRevision(
     throw new Error('Product not found');
   }
 
+  // Get fulfillment options
+  const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, productId);
+  const fulfillmentData = fulfillmentOptions.map((opt) => ({
+    providerId: opt.providerId,
+    cost: opt.cost,
+    stockQuantity: opt.stockQuantity,
+    sortOrder: opt.sortOrder
+  }));
+
+  // Get shipping options
+  const shippingOptions = await getProductShippingOptions(db, siteId, productId);
+  const shippingData = shippingOptions.map((opt) => ({
+    shippingOptionId: opt.shippingOptionId,
+    isDefault: opt.isDefault,
+    priceOverride: opt.priceOverride ?? undefined,
+    thresholdOverride: opt.thresholdOverride ?? undefined
+  }));
+
   // Get current revision to use as parent
   const currentRevision = await getCurrentRevision<ProductRevisionData>(
     db,
@@ -54,7 +94,9 @@ export async function createProductRevision(
     category: product.category,
     stock: product.stock,
     type: product.type,
-    tags: product.tags
+    tags: product.tags,
+    fulfillmentOptions: fulfillmentData,
+    shippingOptions: shippingData
   };
 
   // Create the revision
@@ -126,17 +168,27 @@ export async function restoreProductRevision(
     userId
   );
 
-  // Apply the revision data back to the product
+  // Apply the revision data back to the product (excluding stock - it's a live value)
   await updateProduct(db, siteId, productId, {
     name: restoredRevision.data.name,
     description: restoredRevision.data.description,
     price: restoredRevision.data.price,
     image: restoredRevision.data.image,
     category: restoredRevision.data.category,
-    stock: restoredRevision.data.stock,
     type: restoredRevision.data.type,
     tags: JSON.parse(restoredRevision.data.tags)
   });
+
+  // Restore fulfillment options
+  await setProductFulfillmentOptions(
+    db,
+    siteId,
+    productId,
+    restoredRevision.data.fulfillmentOptions
+  );
+
+  // Restore shipping options
+  await setProductShippingOptions(db, siteId, productId, restoredRevision.data.shippingOptions);
 
   return restoredRevision;
 }

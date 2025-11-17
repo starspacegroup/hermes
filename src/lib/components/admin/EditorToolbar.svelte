@@ -18,7 +18,7 @@
   export let canUndo: boolean;
   export let canRedo: boolean;
   export let pageId: string | null = null;
-  export let revisions: RevisionNode<any>[] = [];
+  export let revisions: RevisionNode<unknown>[] = [];
   export let currentRevisionId: string | null = null;
   export let showWidgetLibrary = true;
   export let showPropertiesPanel = true;

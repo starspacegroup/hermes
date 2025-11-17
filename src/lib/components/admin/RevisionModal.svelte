@@ -3,7 +3,7 @@
   import RevisionHistoryGraph from './RevisionHistoryGraph.svelte';
 
   export let isOpen = false;
-  export let revisions: RevisionNode<any>[] = [];
+  export let revisions: RevisionNode<unknown>[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelect: (revisionId: string) => void;
   export let onPublish: (revisionId: string) => void;

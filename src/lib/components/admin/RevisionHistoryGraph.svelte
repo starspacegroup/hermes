@@ -2,7 +2,7 @@
   import type { RevisionNode } from '$lib/types/revisions';
   import { calculateTreeLayout, calculateConnections } from '$lib/utils/revisionGraphLayout';
 
-  export let revisions: RevisionNode<any>[] = [];
+  export let revisions: RevisionNode<unknown>[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelectRevision: (revisionId: string) => void = () => {};
 

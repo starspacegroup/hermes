@@ -69,7 +69,7 @@
   let hasUnsavedChanges = false;
 
   // Revision state
-  let revisions: RevisionNode<any>[] = [];
+  let revisions: RevisionNode<unknown>[] = [];
   let currentRevisionId: string | null = null;
   let currentRevisionIsPublished: boolean = initialStatus === 'published';
 

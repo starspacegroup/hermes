@@ -4,7 +4,7 @@ import RevisionModal from './RevisionModal.svelte';
 import type { RevisionNode } from '$lib/types/revisions';
 
 describe('RevisionModal - published revision styling', () => {
-  const mockRevisions: RevisionNode<any>[] = [
+  const mockRevisions: RevisionNode<unknown>[] = [
     {
       id: 'rev-1',
       site_id: 'site-1',

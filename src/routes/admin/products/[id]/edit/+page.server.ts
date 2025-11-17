@@ -1,7 +1,9 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getProductFulfillmentOptions, getProductShippingOptions } from '$lib/server/db';
-import { buildRevisionTree } from '$lib/server/db/revisions-service';
+import { calculateProductStock } from '$lib/server/db/products';
+import { buildRevisionTree, getCurrentRevision } from '$lib/server/db/revisions-service';
 import { error } from '@sveltejs/kit';
+import type { ProductRevisionData } from '$lib/server/db/product-revisions';
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
   // If platform is not available (development without D1), return error
@@ -37,6 +39,9 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       thresholdOverride: opt.thresholdOverride
     }));
 
+    // Calculate stock from fulfillment options
+    const stock = await calculateProductStock(db, siteId, productId);
+
     // Transform database product to match the Product type
     const product = {
       id: dbProduct.id as string,
@@ -45,7 +50,7 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       price: dbProduct.price as number,
       image: dbProduct.image as string,
       category: dbProduct.category as string,
-      stock: dbProduct.stock as number,
+      stock,
       type: dbProduct.type as 'physical' | 'digital' | 'service',
       tags: JSON.parse((dbProduct.tags as string) || '[]') as string[],
       fulfillmentOptions,
@@ -53,20 +58,26 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     };
 
     // Load revision history as a tree structure (compatible with RevisionModal)
-    const revisions = await buildRevisionTree<{
-      name: string;
-      description: string;
-      price: number;
-      image: string;
-      category: string;
-      stock: number;
-      type: 'physical' | 'digital' | 'service';
-      tags: string;
-    }>(db, siteId, 'product', productId);
+    const revisions = await buildRevisionTree<ProductRevisionData>(
+      db,
+      siteId,
+      'product',
+      productId
+    );
+
+    // Get current revision to determine if we're viewing a published version
+    const currentRevision = await getCurrentRevision<ProductRevisionData>(
+      db,
+      siteId,
+      'product',
+      productId
+    );
 
     return {
       product,
-      revisions
+      revisions,
+      currentRevisionId: currentRevision?.id || null,
+      currentRevisionIsPublished: currentRevision?.is_current || false
     };
   } catch (err) {
     console.error('Error loading product:', err);

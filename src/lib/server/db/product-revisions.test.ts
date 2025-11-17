@@ -67,8 +67,20 @@ describe('Product Revisions', () => {
         bind: vi.fn().mockReturnThis()
       };
 
+      const mockFulfillmentStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockShippingStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockGetProductStatement) // getProductById
+        .mockReturnValueOnce(mockFulfillmentStatement) // getProductFulfillmentOptions
+        .mockReturnValueOnce(mockShippingStatement) // getProductShippingOptions
         .mockReturnValueOnce(mockGetCurrentStatement) // getCurrentRevision
         .mockReturnValueOnce(mockHashesStatement) // createRevision - get hashes
         .mockReturnValueOnce(mockInsertStatement) // createRevision - insert
@@ -139,8 +151,20 @@ describe('Product Revisions', () => {
         bind: vi.fn().mockReturnThis()
       };
 
+      const mockFulfillmentStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockShippingStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockGetProductStatement)
+        .mockReturnValueOnce(mockFulfillmentStatement)
+        .mockReturnValueOnce(mockShippingStatement)
         .mockReturnValueOnce(mockGetCurrentStatement)
         .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement)
@@ -255,76 +279,77 @@ describe('Product Revisions', () => {
 
   describe('restoreProductRevision', () => {
     it('should restore a product revision', async () => {
+      const mockRevisionData = {
+        name: 'Old Product',
+        description: 'Old Description',
+        price: 75,
+        image: '/old.jpg',
+        category: 'old-cat',
+        stock: 5,
+        type: 'physical' as const,
+        tags: '["old"]',
+        fulfillmentOptions: [],
+        shippingOptions: []
+      };
+
       const mockRevision = {
         id: 'rev-1',
         site_id: siteId,
-        entity_type: 'product',
+        entity_type: 'product' as const,
         entity_id: productId,
         revision_hash: 'abc123',
-        data: JSON.stringify({
-          name: 'Old Product',
-          description: 'Old Description',
-          price: 75,
-          image: '/old.jpg',
-          category: 'old-cat',
-          stock: 5,
-          type: 'physical',
-          tags: '["old"]'
-        }),
+        data: JSON.stringify(mockRevisionData),
         created_at: 1234567880,
         is_current: false
       };
 
-      const mockGetRevisionStatement = {
-        bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue(mockRevision)
-      };
+      const mockFirstRevision = vi.fn().mockResolvedValue(mockRevision);
+      const mockBindGetRevision = vi.fn().mockReturnValue({ first: mockFirstRevision });
 
-      const mockGetCurrentStatement = {
-        bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue(null)
-      };
+      const mockFirstCurrent = vi.fn().mockResolvedValue(null);
+      const mockBindGetCurrent = vi.fn().mockReturnValue({ first: mockFirstCurrent });
 
-      const mockHashesStatement = {
-        bind: vi.fn().mockReturnThis(),
-        all: vi.fn().mockResolvedValue({ results: [] })
-      };
+      const mockAllHashes = vi.fn().mockResolvedValue({ results: [] });
+      const mockBindHashes = vi.fn().mockReturnValue({ all: mockAllHashes });
 
-      const mockInsertStatement = {
-        bind: vi.fn().mockReturnThis(),
-        run: vi.fn().mockResolvedValue({})
-      };
+      const mockRunInsert = vi.fn().mockResolvedValue({});
+      const mockBindInsert = vi.fn().mockReturnValue({ run: mockRunInsert });
 
-      const mockUpdateStatement = {
-        bind: vi.fn().mockReturnThis(),
-        run: vi.fn().mockResolvedValue({})
-      };
+      const mockBindBatch1 = vi.fn().mockReturnThis();
+      const mockBindBatch2 = vi.fn().mockReturnThis();
 
-      const mockGetProductStatement = {
-        bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ ...mockProduct, name: 'Old Product' })
-      };
+      const mockFirstProduct = vi.fn().mockResolvedValue(mockProduct);
+      const mockBindGetProduct1 = vi.fn().mockReturnValue({ first: mockFirstProduct });
+      const mockBindGetProduct2 = vi.fn().mockReturnValue({ first: mockFirstProduct });
 
-      const mockBatchStatement = {
-        bind: vi.fn().mockReturnThis()
-      };
+      const mockRunUpdate = vi.fn().mockResolvedValue({});
+      const mockBindUpdate = vi.fn().mockReturnValue({ run: mockRunUpdate });
+
+      const mockRunDelete1 = vi.fn().mockResolvedValue({});
+      const mockBindDelete1 = vi.fn().mockReturnValue({ run: mockRunDelete1 });
+
+      const mockRunDelete2 = vi.fn().mockResolvedValue({});
+      const mockBindDelete2 = vi.fn().mockReturnValue({ run: mockRunDelete2 });
 
       (mockDb.prepare as ReturnType<typeof vi.fn>)
-        .mockReturnValueOnce(mockGetRevisionStatement) // getRevisionById (in restore)
-        .mockReturnValueOnce(mockGetCurrentStatement) // getCurrentRevision (in restore)
-        .mockReturnValueOnce(mockHashesStatement) // createRevision - get hashes
-        .mockReturnValueOnce(mockInsertStatement) // createRevision - insert
-        .mockReturnValueOnce(mockBatchStatement) // setCurrentRevision batch 1
-        .mockReturnValueOnce(mockBatchStatement) // setCurrentRevision batch 2
-        .mockReturnValueOnce(mockGetProductStatement) // getProductById (in updateProduct)
-        .mockReturnValueOnce(mockUpdateStatement) // updateProduct
-        .mockReturnValue(mockGetProductStatement); // getProductById after update
+        .mockReturnValueOnce({ bind: mockBindGetRevision }) // 1. getRevisionById
+        .mockReturnValueOnce({ bind: mockBindGetCurrent }) // 2. getCurrentRevision
+        .mockReturnValueOnce({ bind: mockBindHashes }) // 3. createRevision - check hashes
+        .mockReturnValueOnce({ bind: mockBindInsert }) // 4. createRevision - insert
+        .mockReturnValueOnce({ bind: mockBindBatch1 }) // 5. setCurrentRevision batch 1
+        .mockReturnValueOnce({ bind: mockBindBatch2 }) // 6. setCurrentRevision batch 2
+        .mockReturnValueOnce({ bind: mockBindGetProduct1 }) // 7. updateProduct - getProductById (check exists)
+        .mockReturnValueOnce({ bind: mockBindUpdate }) // 8. updateProduct - UPDATE statement
+        .mockReturnValueOnce({ bind: mockBindGetProduct2 }) // 9. updateProduct - getProductById (return value)
+        .mockReturnValueOnce({ bind: mockBindDelete1 }) // 10. setProductFulfillmentOptions - DELETE
+        .mockReturnValueOnce({ bind: mockBindDelete2 }); // 11. setProductShippingOptions - DELETE
 
       (mockDb.batch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const result = await restoreProductRevision(mockDb, siteId, productId, 'rev-1', 'user-1');
 
       expect(result.data.name).toBe('Old Product');
+      expect(result.data.price).toBe(75);
       expect(result.message).toContain('Restored from revision');
     });
   });
