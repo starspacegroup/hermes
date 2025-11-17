@@ -1,51 +1,48 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import RevisionModal from './RevisionModal.svelte';
-import type { RevisionNode } from '$lib/types/pages';
+import type { RevisionNode } from '$lib/types/revisions';
 
 describe('RevisionModal - published revision styling', () => {
-  const mockRevisions: RevisionNode[] = [
+  const mockRevisions: RevisionNode<any>[] = [
     {
       id: 'rev-1',
-      page_id: 'page-1',
+      site_id: 'site-1',
+      entity_type: 'page',
+      entity_id: 'page-1',
       revision_hash: 'abc12345',
       parent_revision_id: undefined,
-      title: 'Test Page',
-      slug: 'test-page',
-      status: 'published',
-      widgets: [],
+      data: { title: 'Test Page', slug: 'test-page', status: 'published', widgets: [] },
       created_at: Math.floor(Date.now() / 1000) - 3600,
-      is_published: true,
+      is_current: true,
       children: [],
       depth: 0,
       branch: 0
     },
     {
       id: 'rev-2',
-      page_id: 'page-1',
+      site_id: 'site-1',
+      entity_type: 'page',
+      entity_id: 'page-1',
       revision_hash: 'def67890',
       parent_revision_id: 'rev-1',
-      title: 'Test Page',
-      slug: 'test-page',
-      status: 'draft',
-      widgets: [],
+      data: { title: 'Test Page', slug: 'test-page', status: 'draft', widgets: [] },
       created_at: Math.floor(Date.now() / 1000) - 1800,
-      is_published: false,
+      is_current: false,
       children: [],
       depth: 1,
       branch: 0
     },
     {
       id: 'rev-3',
-      page_id: 'page-1',
+      site_id: 'site-1',
+      entity_type: 'page',
+      entity_id: 'page-1',
       revision_hash: 'ghi11111',
       parent_revision_id: 'rev-2',
-      title: 'Test Page',
-      slug: 'test-page',
-      status: 'draft',
-      widgets: [],
+      data: { title: 'Test Page', slug: 'test-page', status: 'draft', widgets: [] },
       created_at: Math.floor(Date.now() / 1000),
-      is_published: false,
+      is_current: false,
       children: [],
       depth: 2,
       branch: 0
@@ -147,7 +144,7 @@ describe('RevisionModal - published revision styling', () => {
     await listViewButton.click();
 
     // Check for publish buttons (should only appear on drafts)
-    const publishButtons = screen.getAllByTitle('Publish this revision');
+    const publishButtons = screen.getAllByTitle('Make this revision current');
     expect(publishButtons.length).toBe(2); // rev-2 and rev-3 are drafts
   });
 
@@ -171,7 +168,7 @@ describe('RevisionModal - published revision styling', () => {
     await listViewButton.click();
 
     // Get publish button for rev-2
-    const publishButtons = screen.getAllByTitle('Publish this revision');
+    const publishButtons = screen.getAllByTitle('Make this revision current');
     const firstPublishButton = publishButtons[0];
 
     // Click publish

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { RevisionNode } from '$lib/types/pages';
+  import type { RevisionNode } from '$lib/types/revisions';
   import RevisionHistoryGraph from './RevisionHistoryGraph.svelte';
 
   export let isOpen = false;
-  export let revisions: RevisionNode[] = [];
+  export let revisions: RevisionNode<any>[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelect: (revisionId: string) => void;
   export let onPublish: (revisionId: string) => void;
@@ -119,7 +119,7 @@
               <div
                 class="revision-item"
                 class:current={revision.id === currentRevisionId}
-                class:published={revision.is_published}
+                class:published={revision.is_current}
               >
                 <button
                   type="button"
@@ -131,20 +131,20 @@
                     <span class="revision-date">
                       {new Date(revision.created_at * 1000).toLocaleString()}
                     </span>
-                    {#if revision.is_published}
-                      <span class="badge published-badge">Published</span>
+                    {#if revision.is_current}
+                      <span class="badge published-badge">Current</span>
                     {/if}
-                    {#if revision.notes}
-                      <span class="revision-notes">{revision.notes}</span>
+                    {#if revision.message}
+                      <span class="revision-notes">{revision.message}</span>
                     {/if}
                   </div>
                 </button>
-                {#if !revision.is_published}
+                {#if !revision.is_current}
                   <button
                     type="button"
                     class="revision-publish-btn"
                     on:click={(e) => handleRevisionPublish(e, revision.id)}
-                    title="Publish this revision"
+                    title="Make this revision current"
                   >
                     <svg
                       width="14"

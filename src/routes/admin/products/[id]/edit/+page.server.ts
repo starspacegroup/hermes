@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getProductFulfillmentOptions, getProductShippingOptions } from '$lib/server/db';
+import { buildRevisionTree } from '$lib/server/db/revisions-service';
 import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
@@ -51,8 +52,21 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       shippingOptions
     };
 
+    // Load revision history as a tree structure (compatible with RevisionModal)
+    const revisions = await buildRevisionTree<{
+      name: string;
+      description: string;
+      price: number;
+      image: string;
+      category: string;
+      stock: number;
+      type: 'physical' | 'digital' | 'service';
+      tags: string;
+    }>(db, siteId, 'product', productId);
+
     return {
-      product
+      product,
+      revisions
     };
   } catch (err) {
     console.error('Error loading product:', err);

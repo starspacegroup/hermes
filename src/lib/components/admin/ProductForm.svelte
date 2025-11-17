@@ -2,11 +2,15 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import ProductMediaManager from '$lib/components/admin/ProductMediaManager.svelte';
+  import RevisionModal from './RevisionModal.svelte';
   import type { Product, ProductType, FulfillmentProvider } from '$lib/types';
+  import type { RevisionNode } from '$lib/types/revisions';
+  import type { ProductRevisionData } from '$lib/server/db/product-revisions';
   import { onMount } from 'svelte';
 
   export let product: Product | null = null;
   export let isEditing = false;
+  export let revisions: RevisionNode<ProductRevisionData>[] = [];
 
   const DEFAULT_PRODUCT_IMAGE =
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
@@ -23,6 +27,8 @@
   let formTags = product?.tags.join(', ') || '';
 
   let isSubmitting = false;
+  let showRevisionModal = false;
+  let currentRevisionId: string | null = null;
 
   // Reference to ProductMediaManager component
   let productMediaManager: ProductMediaManager | undefined;
@@ -206,6 +212,76 @@
     }
   }
 
+  function toggleRevisionModal() {
+    showRevisionModal = !showRevisionModal;
+  }
+
+  async function handleRevisionSelect(revisionId: string) {
+    try {
+      const response = await fetch(`/api/products/${product?.id}/revisions/${revisionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load revision');
+      }
+
+      const data = (await response.json()) as { revision: RevisionNode<ProductRevisionData> };
+      const revision = data.revision;
+
+      // Update form fields with revision data
+      formName = revision.data.name;
+      formDescription = revision.data.description;
+      formPrice = revision.data.price;
+      formImage = revision.data.image;
+      formCategory = revision.data.category;
+      formStock = revision.data.stock;
+      formType = revision.data.type;
+      formTags = JSON.parse(revision.data.tags).join(', ');
+
+      currentRevisionId = revisionId;
+      toastStore.info(
+        `Loaded revision from ${new Date(revision.created_at * 1000).toLocaleString()}`
+      );
+    } catch (error) {
+      console.error('Error loading revision:', error);
+      toastStore.error('Failed to load revision');
+    }
+  }
+
+  async function handleRevisionRestore(revisionId: string) {
+    if (!product?.id) return;
+
+    try {
+      const response = await fetch(`/api/products/${product.id}/revisions/${revisionId}/restore`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to restore revision');
+      }
+
+      toastStore.success('Revision restored successfully');
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error restoring revision:', error);
+      toastStore.error('Failed to restore revision');
+    }
+  }
+
+  async function createProductRevision(productId: string, message?: string) {
+    try {
+      const response = await fetch(`/api/products/${productId}/revisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message || 'Product updated' })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to create revision');
+      }
+    } catch (error) {
+      console.error('Error creating revision:', error);
+    }
+  }
+
   async function handleSubmit() {
     if (isSubmitting) return;
 
@@ -273,6 +349,9 @@
         if (!response.ok) {
           throw new Error('Failed to update product');
         }
+
+        // Create a revision after successful update
+        await createProductRevision(product.id, 'Product updated');
 
         toastStore.success(`Product "${formName}" updated successfully`);
 
@@ -557,6 +636,23 @@
       </div>
     {/if}
 
+    <!-- Revision History Button -->
+    {#if isEditing && product?.id && revisions.length > 0}
+      <div class="form-group">
+        <button type="button" class="revision-history-btn" on:click={toggleRevisionModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          View Revision History ({revisions.length})
+        </button>
+      </div>
+    {/if}
+
     <div class="form-actions">
       <button type="button" class="cancel-btn" on:click={handleCancel}>Cancel</button>
       <button type="submit" class="submit-btn" disabled={isSubmitting}>
@@ -565,6 +661,16 @@
     </div>
   </form>
 </div>
+
+<!-- Revision Modal -->
+<RevisionModal
+  isOpen={showRevisionModal}
+  {revisions}
+  {currentRevisionId}
+  onSelect={handleRevisionSelect}
+  onPublish={handleRevisionRestore}
+  onClose={() => (showRevisionModal = false)}
+/>
 
 <style>
   .product-form {
@@ -951,6 +1057,45 @@
 
     .detail-input input {
       width: 100%;
+    }
+  }
+
+  .revision-history-btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .revision-history-btn:hover {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  .revision-history-btn svg {
+    transition: transform 0.2s ease;
+  }
+
+  .revision-history-btn:hover svg {
+    transform: rotate(15deg);
+  }
+
+  @media (max-width: 640px) {
+    .revision-history-btn {
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
     }
   }
 </style>

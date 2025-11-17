@@ -19,7 +19,8 @@
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
   import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
-  import type { ParsedPageRevision, RevisionNode } from '$lib/types/pages';
+  import type { ParsedPageRevision } from '$lib/types/pages';
+  import type { RevisionNode } from '$lib/types/revisions';
 
   export let pageId: string | null = null;
   export let initialTitle = '';
@@ -68,7 +69,7 @@
   let hasUnsavedChanges = false;
 
   // Revision state
-  let revisions: RevisionNode[] = [];
+  let revisions: RevisionNode<any>[] = [];
   let currentRevisionId: string | null = null;
   let currentRevisionIsPublished: boolean = initialStatus === 'published';
 
@@ -488,7 +489,7 @@
 
         // Find the revision in the list to get its published status
         const revisionInfo = revisions.find((r) => r.id === revisionId);
-        currentRevisionIsPublished = revisionInfo?.is_published || false;
+        currentRevisionIsPublished = revisionInfo?.is_current || false;
 
         // Update initial values to match loaded revision
         initialTitle = title;
