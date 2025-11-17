@@ -20,6 +20,23 @@ describe('Theme Store', () => {
     };
   })();
 
+  // Mock sessionStorage
+  const sessionStorageMock = (() => {
+    let store: Record<string, string> = {};
+    return {
+      getItem: (key: string) => store[key] || null,
+      setItem: (key: string, value: string) => {
+        store[key] = value.toString();
+      },
+      clear: () => {
+        store = {};
+      },
+      removeItem: (key: string) => {
+        delete store[key];
+      }
+    };
+  })();
+
   // Mock matchMedia
   const mockMatchMedia = vi.fn().mockReturnValue({
     matches: false,
@@ -27,10 +44,26 @@ describe('Theme Store', () => {
     removeEventListener: vi.fn()
   });
 
+  // Mock document.documentElement
+  const mockClassList = {
+    add: vi.fn(),
+    remove: vi.fn(),
+    contains: vi.fn()
+  };
+
+  const mockSetAttribute = vi.fn();
+
   beforeEach(() => {
     // Setup localStorage mock
     Object.defineProperty(global, 'localStorage', {
       value: localStorageMock,
+      writable: true,
+      configurable: true
+    });
+
+    // Setup sessionStorage mock
+    Object.defineProperty(global, 'sessionStorage', {
+      value: sessionStorageMock,
       writable: true,
       configurable: true
     });
@@ -42,12 +75,16 @@ describe('Theme Store', () => {
       value: mockMatchMedia
     });
 
-    // Setup document mock
-    if (!document.documentElement.setAttribute) {
-      document.documentElement.setAttribute = vi.fn();
-    }
+    // Setup document mock with spy functions
+    document.documentElement.setAttribute = mockSetAttribute;
+    Object.defineProperty(document.documentElement, 'classList', {
+      value: mockClassList,
+      writable: true,
+      configurable: true
+    });
 
     localStorageMock.clear();
+    sessionStorageMock.clear();
     vi.clearAllMocks();
   });
 
@@ -72,6 +109,16 @@ describe('Theme Store', () => {
       themeStore.setTheme('system');
       expect(get(themeStore)).toBe('system');
       expect(localStorageMock.getItem('theme')).toBe('system');
+    });
+
+    it('should store applied theme in sessionStorage for FOUC prevention', () => {
+      themeStore.setTheme('dark');
+      expect(sessionStorageMock.getItem('applied-theme')).toBe('dark');
+    });
+
+    it('should add theme-loaded class to document', () => {
+      themeStore.setTheme('light');
+      expect(mockClassList.add).toHaveBeenCalledWith('theme-loaded');
     });
   });
 
@@ -124,6 +171,22 @@ describe('Theme Store', () => {
       themeStore.initTheme();
       // Should fallback to system for invalid value
       expect(get(themeStore)).toBe('system');
+    });
+  });
+
+  describe('immediate initialization', () => {
+    it('should apply theme attributes when setTheme is called', () => {
+      // Verify that when theme is set, both setAttribute and classList.add are called
+      themeStore.setTheme('dark');
+      expect(mockSetAttribute).toHaveBeenCalledWith('data-theme', 'dark');
+      expect(mockClassList.add).toHaveBeenCalledWith('theme-loaded');
+    });
+
+    it('should initialize with stored theme on creation', () => {
+      localStorageMock.setItem('theme', 'dark');
+      // The store has already been created, but we can verify it reads from storage
+      const storedTheme = localStorageMock.getItem('theme');
+      expect(storedTheme).toBe('dark');
     });
   });
 

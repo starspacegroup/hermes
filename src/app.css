@@ -1,46 +1,47 @@
 /* Global styles for Hermes eCommerce platform */
 
 /* CSS Custom Properties - Theme System */
+/* NOTE: Theme colors (primary, secondary, backgrounds, text, borders) are now */
+/* dynamically loaded from the database via +layout.server.ts */
+/* Do NOT hardcode color values here as they will override system theme settings */
+
 :root {
-  /* Light Theme – Default Light (matches admin default-light theme) */
-  --color-primary: #3b82f6; /* blue */
-  --color-primary-hover: #2563eb;
-  --color-primary-light: #60a5fa;
-
-  --color-secondary: #64748b; /* slate */
-  --color-secondary-hover: #475569;
-
+  /* Danger/Error colors (not part of theme system) */
   --color-danger: #ef4444;
   --color-danger-hover: #dc2626;
 
+  /* Success colors (not part of theme system) */
   --color-success: #10b981;
   --color-success-hover: #059669;
 
+  /* Warning colors (not part of theme system) */
   --color-warning: #f59e0b;
   --color-warning-hover: #d97706;
 
-  /* Backgrounds – clean white and light slate */
-  --color-bg-primary: #f8fafc;
-  --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f1f5f9;
-  --color-bg-accent: #e2e8f0;
+  /* Info color (for informational states) */
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
 
-  /* Text – dark slate */
-  --color-text-primary: #1e293b;
-  --color-text-secondary: #64748b;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #cbd5e1;
-  --color-text-inverse: #ffffff;
-
-  /* Borders */
-  --color-border-primary: #cbd5e1;
-  --color-border-secondary: #e2e8f0;
+  /* Border focus (uses theme primary) */
   --color-border-focus: var(--color-primary);
 
-  /* Shadows */
-  --color-shadow-light: rgba(59, 130, 246, 0.1);
-  --color-shadow-medium: rgba(59, 130, 246, 0.15);
-  --color-shadow-dark: rgba(59, 130, 246, 0.25);
+  /* Light backgrounds for status colors */
+  --color-bg-danger-light: rgba(239, 68, 68, 0.1);
+  --color-bg-success-light: rgba(16, 185, 129, 0.1);
+  --color-bg-warning-light: rgba(245, 158, 11, 0.1);
+  --color-bg-info-light: rgba(59, 130, 246, 0.1);
+
+  /* Overlay colors */
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-overlay-light: rgba(0, 0, 0, 0.4);
+
+  /* Shadow definitions */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  /* Text inverse (for text on colored backgrounds) */
+  --color-text-inverse: #ffffff;
 
   /* Data Type Colors */
   --color-type-text: #2563eb; /* blue for TEXT types */
@@ -81,15 +82,9 @@
   --font-mono: 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
 }
 
-/* Dark Theme – Default Dark (matches admin default-dark theme) */
+/* Dark Theme - Colors dynamically loaded from database */
 [data-theme='dark'] {
-  --color-primary: #60a5fa; /* blue */
-  --color-primary-hover: #3b82f6;
-  --color-primary-light: #93c5fd;
-
-  --color-secondary: #94a3b8; /* gray-blue */
-  --color-secondary-hover: #64748b;
-
+  /* Status colors (not part of theme system) */
   --color-danger: #f87171;
   --color-danger-hover: #ef4444;
 
@@ -99,28 +94,30 @@
   --color-warning: #fbbf24;
   --color-warning-hover: #f59e0b;
 
-  /* Backgrounds – dark slate */
-  --color-bg-primary: #1e293b;
-  --color-bg-secondary: #0f172a;
-  --color-bg-tertiary: #334155;
-  --color-bg-accent: #475569;
+  /* Info color (for informational states) */
+  --color-info: #60a5fa;
+  --color-info-hover: #3b82f6;
 
-  /* Text – light slate */
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-text-inverse: #0f172a;
-
-  /* Borders */
-  --color-border-primary: #475569;
-  --color-border-secondary: #334155;
+  /* Border focus (uses theme primary) */
   --color-border-focus: var(--color-primary);
 
-  /* Shadows – subtle blue glow */
-  --color-shadow-light: rgba(96, 165, 250, 0.1);
-  --color-shadow-medium: rgba(96, 165, 250, 0.2);
-  --color-shadow-dark: rgba(96, 165, 250, 0.3);
+  /* Light backgrounds for status colors - Dark theme */
+  --color-bg-danger-light: rgba(248, 113, 113, 0.15);
+  --color-bg-success-light: rgba(52, 211, 153, 0.15);
+  --color-bg-warning-light: rgba(251, 191, 36, 0.15);
+  --color-bg-info-light: rgba(96, 165, 250, 0.15);
+
+  /* Overlay colors - Dark theme */
+  --color-overlay: rgba(0, 0, 0, 0.8);
+  --color-overlay-light: rgba(0, 0, 0, 0.6);
+
+  /* Shadow definitions - Dark theme */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* Text inverse (for text on colored backgrounds) */
+  --color-text-inverse: #0f172a;
 
   /* Data Type Colors - Dark Theme */
   --color-type-text: #60a5fa; /* brighter blue for TEXT types */
@@ -145,6 +142,15 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Prevent flash during theme loading */
+html:not(.theme-loaded) {
+  visibility: hidden;
+}
+
+html.theme-loaded {
+  visibility: visible;
 }
 
 html {

@@ -27,7 +27,9 @@
   };
 
   // If no colorTheme is specified, use the site's current theme
-  $: colorTheme = data.colorTheme || (browser ? `default-${getCurrentTheme()}` : 'default-light');
+  $: colorTheme =
+    data.colorTheme ||
+    (browser ? (getCurrentTheme() === 'dark' ? 'midnight' : 'vibrant') : 'vibrant');
 </script>
 
 <svelte:head>

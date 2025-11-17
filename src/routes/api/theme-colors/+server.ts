@@ -1,15 +1,14 @@
+import { json, type RequestEvent } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as colorThemes from '$lib/server/db/color-themes';
-import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ platform, locals }) => {
-  // If platform is not available (development without D1), return defaults
+export async function GET({ platform, locals }: RequestEvent): Promise<Response> {
+  // If platform is not available, return defaults
   if (!platform?.env?.DB) {
-    return {
+    return json({
       themeColorsLight: null,
-      themeColorsDark: null,
-      currentUser: locals.currentUser || null
-    };
+      themeColorsDark: null
+    });
   }
 
   try {
@@ -30,12 +29,12 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
     const darkTheme = allThemes.find((t) => t.id === (systemDarkThemeId || 'midnight'));
 
     // Map color_themes colors to the old SiteThemeColors format for compatibility
-    const mapThemeColors = (theme: { colors: Record<string, string> } | null | undefined) => {
+    const mapThemeColors = (theme: { colors: { [key: string]: string } } | null | undefined) => {
       if (!theme) return null;
       const colors = theme.colors;
       return {
         primary: colors.primary,
-        primaryHover: colors.primary, // Use same as primary
+        primaryHover: colors.primary,
         primaryLight: colors.accent,
         secondary: colors.secondary,
         secondaryHover: colors.secondary,
@@ -49,17 +48,18 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
       };
     };
 
-    return {
+    return json({
       themeColorsLight: mapThemeColors(lightTheme as never),
-      themeColorsDark: mapThemeColors(darkTheme as never),
-      currentUser: locals.currentUser || null
-    };
+      themeColorsDark: mapThemeColors(darkTheme as never)
+    });
   } catch (error) {
     console.error('Error loading theme colors:', error);
-    return {
-      themeColorsLight: null,
-      themeColorsDark: null,
-      currentUser: locals.currentUser || null
-    };
+    return json(
+      {
+        themeColorsLight: null,
+        themeColorsDark: null
+      },
+      { status: 500 }
+    );
   }
-};
+}

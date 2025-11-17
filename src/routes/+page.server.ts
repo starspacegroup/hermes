@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getAllProducts, getProductFulfillmentOptions } from '$lib/server/db';
 import * as pagesDb from '$lib/server/db/pages';
+import * as colorThemes from '$lib/server/db/color-themes';
 import type { WidgetConfig } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
@@ -10,13 +11,21 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       products: [],
       page: null,
       widgets: [],
-      isAdmin: false
+      isAdmin: false,
+      systemLightTheme: 'default-light',
+      systemDarkTheme: 'default-dark'
     };
   }
 
   try {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
+
+    // Get system default theme IDs
+    const [systemLightThemeId, systemDarkThemeId] = await Promise.all([
+      colorThemes.getThemePreference(db, siteId, 'system-light-theme'),
+      colorThemes.getThemePreference(db, siteId, 'system-dark-theme')
+    ]);
 
     // Check if a page exists for the home route '/'
     const page = await pagesDb.getPageBySlug(db, siteId, '/');
@@ -66,7 +75,9 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       page,
       widgets,
       colorTheme: page?.colorTheme || null,
-      isAdmin: locals.isAdmin || false
+      isAdmin: locals.isAdmin || false,
+      systemLightTheme: systemLightThemeId || 'vibrant',
+      systemDarkTheme: systemDarkThemeId || 'midnight'
     };
   } catch (error) {
     console.error('Error loading home page:', error);
@@ -75,7 +86,9 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       products: [],
       page: null,
       widgets: [],
-      isAdmin: false
+      isAdmin: false,
+      systemLightTheme: 'default-light',
+      systemDarkTheme: 'default-dark'
     };
   }
 };

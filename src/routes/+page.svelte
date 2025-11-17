@@ -22,8 +22,11 @@
   const page = data.page ?? null;
   const widgets = data.widgets ?? [];
   const isAdmin = data.isAdmin ?? false;
+  const systemLightTheme = data.systemLightTheme ?? 'vibrant';
+  const systemDarkTheme = data.systemDarkTheme ?? 'midnight';
 
   let heroVisible = false;
+  let colorTheme = data.colorTheme || systemLightTheme;
 
   // Get the current applied theme (light or dark) from the document
   const getCurrentTheme = (): 'light' | 'dark' => {
@@ -32,10 +35,13 @@
     return theme === 'dark' ? 'dark' : 'light';
   };
 
-  // If no colorTheme is specified, use the site's current theme
-  $: colorTheme = data.colorTheme ?? (browser ? `default-${getCurrentTheme()}` : 'default-light');
-
   onMount(() => {
+    // Set colorTheme based on current mode after theme is initialized
+    if (!data.colorTheme) {
+      const currentMode = getCurrentTheme();
+      colorTheme = currentMode === 'dark' ? systemDarkTheme : systemLightTheme;
+    }
+
     setTimeout(() => {
       heroVisible = true;
     }, 100);

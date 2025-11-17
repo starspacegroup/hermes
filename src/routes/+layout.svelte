@@ -6,14 +6,20 @@
   import ThemeToggle from '../lib/components/ThemeToggle.svelte';
   import ToastContainer from '../lib/components/ToastContainer.svelte';
   import BuildInfo from '../lib/components/BuildInfo.svelte';
+  import ThemePreviewIndicator from '../lib/components/ThemePreviewIndicator.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
+  import { goto, beforeNavigate } from '$app/navigation';
   import type { LayoutData } from './$types';
 
   export let data: LayoutData;
 
   let showAccountMenu = false;
+
+  // Close account menu on navigation to prevent overlay from blocking clicks
+  beforeNavigate(() => {
+    showAccountMenu = false;
+  });
 
   $: totalItems = cartStore.getTotalItems($cartStore);
   $: isAdminPage = $page.url.pathname.startsWith('/admin');
@@ -410,6 +416,7 @@
 {/if}
 
 <ToastContainer />
+<ThemePreviewIndicator />
 <BuildInfo userRole={$authState.user?.role} />
 
 <style>

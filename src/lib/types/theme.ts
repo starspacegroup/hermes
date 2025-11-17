@@ -40,6 +40,11 @@ export interface ThemeStore {
   initTheme: () => void;
 
   /**
+   * Reload theme colors from the server
+   */
+  reloadThemeColors: () => Promise<void>;
+
+  /**
    * Clean up event listeners and resources
    */
   cleanup: () => void;

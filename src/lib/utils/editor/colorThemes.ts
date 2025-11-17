@@ -1,54 +1,14 @@
 import type { ColorTheme, ThemeColors, ColorThemeDefinition } from '$lib/types/pages';
 
 /**
- * System default themes (light and dark)
+ * System default themes (light and dark) - fallback themes used in code
  */
 export const SYSTEM_THEMES: ColorThemeDefinition[] = [
   {
     id: 'default-light',
-    name: 'Default Light',
-    mode: 'light',
-    isDefault: true,
-    isSystem: true,
-    colors: {
-      primary: '#3b82f6',
-      secondary: '#64748b',
-      accent: '#8b5cf6',
-      background: '#ffffff',
-      surface: '#f8fafc',
-      text: '#1e293b',
-      textSecondary: '#64748b',
-      border: '#e2e8f0',
-      success: '#10b981',
-      warning: '#f59e0b',
-      error: '#ef4444'
-    }
-  },
-  {
-    id: 'default-dark',
-    name: 'Default Dark',
-    mode: 'dark',
-    isDefault: true,
-    isSystem: true,
-    colors: {
-      primary: '#60a5fa',
-      secondary: '#94a3b8',
-      accent: '#a78bfa',
-      background: '#0f172a',
-      surface: '#1e293b',
-      text: '#f1f5f9',
-      textSecondary: '#cbd5e1',
-      border: '#334155',
-      success: '#34d399',
-      warning: '#fbbf24',
-      error: '#f87171'
-    }
-  },
-  {
-    id: 'vibrant',
     name: 'Vibrant Pink',
     mode: 'light',
-    isDefault: false,
+    isDefault: true,
     isSystem: true,
     colors: {
       primary: '#ec4899',
@@ -62,6 +22,26 @@ export const SYSTEM_THEMES: ColorThemeDefinition[] = [
       success: '#22c55e',
       warning: '#fb923c',
       error: '#f43f5e'
+    }
+  },
+  {
+    id: 'default-dark',
+    name: 'Midnight Purple',
+    mode: 'dark',
+    isDefault: true,
+    isSystem: true,
+    colors: {
+      primary: '#a78bfa',
+      secondary: '#94a3b8',
+      accent: '#c084fc',
+      background: '#0f172a',
+      surface: '#1e293b',
+      text: '#f1f5f9',
+      textSecondary: '#cbd5e1',
+      border: '#334155',
+      success: '#34d399',
+      warning: '#fbbf24',
+      error: '#f87171'
     }
   },
   {
@@ -189,11 +169,139 @@ export const SYSTEM_THEMES: ColorThemeDefinition[] = [
 // In-memory storage for custom themes (in production, this would be in a database)
 let customThemes: ColorThemeDefinition[] = [];
 
+// Storage keys for theme preferences
+const SYSTEM_LIGHT_THEME_KEY = 'system-light-theme';
+const SYSTEM_DARK_THEME_KEY = 'system-dark-theme';
+const CURRENTLY_VIEWING_THEME_KEY = 'currently-viewing-theme';
+const THEME_ORDER_KEY = 'theme-order';
+
+// Browser check
+const isBrowser = typeof window !== 'undefined';
+
 /**
- * Get all themes (system + custom)
+ * Get the system default theme ID for a specific mode
+ * These are used when user selects system theme or hasn't chosen a preference
+ */
+export function getSystemTheme(mode: 'light' | 'dark'): string {
+  if (!isBrowser) return mode === 'light' ? 'default-light' : 'default-dark';
+
+  try {
+    const key = mode === 'light' ? SYSTEM_LIGHT_THEME_KEY : SYSTEM_DARK_THEME_KEY;
+    const stored = localStorage.getItem(key);
+    return stored || (mode === 'light' ? 'default-light' : 'default-dark');
+  } catch {
+    return mode === 'light' ? 'default-light' : 'default-dark';
+  }
+}
+
+/**
+ * Get the active theme ID for a specific mode (backwards compatibility)
+ * @deprecated Use getSystemTheme instead
+ */
+export function getActiveTheme(mode: 'light' | 'dark'): string {
+  return getSystemTheme(mode);
+}
+
+/**
+ * Set the system default theme for a specific mode
+ */
+export function setSystemTheme(themeId: string, mode: 'light' | 'dark'): boolean {
+  if (!isBrowser) return false;
+
+  const theme = getThemeById(themeId);
+  if (!theme || theme.mode !== mode) return false;
+
+  try {
+    const key = mode === 'light' ? SYSTEM_LIGHT_THEME_KEY : SYSTEM_DARK_THEME_KEY;
+    localStorage.setItem(key, themeId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Set the active theme for a specific mode (backwards compatibility)
+ * @deprecated Use setSystemTheme instead
+ */
+export function setActiveTheme(themeId: string, mode: 'light' | 'dark'): boolean {
+  return setSystemTheme(themeId, mode);
+}
+
+/**
+ * Get the currently viewing theme for admin preview
+ */
+export function getCurrentlyViewingTheme(): string | null {
+  if (!isBrowser) return null;
+
+  try {
+    return localStorage.getItem(CURRENTLY_VIEWING_THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set the currently viewing theme for admin preview
+ */
+export function setCurrentlyViewingTheme(themeId: string | null): void {
+  if (!isBrowser) return;
+
+  try {
+    if (themeId === null) {
+      localStorage.removeItem(CURRENTLY_VIEWING_THEME_KEY);
+    } else {
+      localStorage.setItem(CURRENTLY_VIEWING_THEME_KEY, themeId);
+    }
+  } catch {
+    // Ignore errors
+  }
+}
+
+/**
+ * Get saved theme order
+ */
+function getThemeOrder(): string[] {
+  if (!isBrowser) return [];
+
+  try {
+    const stored = localStorage.getItem(THEME_ORDER_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save theme order
+ */
+export function saveThemeOrder(order: string[]): void {
+  if (!isBrowser) return;
+
+  try {
+    localStorage.setItem(THEME_ORDER_KEY, JSON.stringify(order));
+  } catch (error) {
+    console.error('Failed to save theme order:', error);
+  }
+}
+
+/**
+ * Get all themes (system + custom) in saved order
  */
 export function getAllThemes(): ColorThemeDefinition[] {
-  return [...SYSTEM_THEMES, ...customThemes];
+  const allThemes = [...SYSTEM_THEMES, ...customThemes];
+  const savedOrder = getThemeOrder();
+
+  if (savedOrder.length === 0) return allThemes;
+
+  // Sort by saved order, with unordered themes at the end
+  const ordered = savedOrder
+    .map((id) => allThemes.find((t) => t.id === id))
+    .filter((t): t is ColorThemeDefinition => t !== undefined);
+
+  const unordered = allThemes.filter((t) => !savedOrder.includes(t.id));
+
+  return [...ordered, ...unordered];
 }
 
 /**

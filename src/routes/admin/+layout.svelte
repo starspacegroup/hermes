@@ -1,8 +1,10 @@
 <script lang="ts">
   import { authStore } from '$lib/stores/auth';
+  import { themeStore } from '$lib/stores/theme';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { beforeNavigate } from '$app/navigation';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
   import type { Notification } from '$lib/types/notifications';
@@ -14,10 +16,19 @@
   let unreadCount = 0;
 
   $: currentPath = $page.url.pathname;
+
+  // Close sidebar on navigation
+  beforeNavigate(() => {
+    isSidebarOpen = false;
+  });
   $: isLoginPage = currentPath === '/auth/login';
   $: {
     // Auto-expand settings submenu if on a settings page
-    if (currentPath.startsWith('/admin/settings') || currentPath.startsWith('/admin/providers')) {
+    if (
+      currentPath.startsWith('/admin/settings') ||
+      currentPath.startsWith('/admin/providers') ||
+      currentPath.startsWith('/admin/themes')
+    ) {
       isSettingsSubmenuOpen = true;
     }
   }
@@ -39,6 +50,9 @@
   }
 
   onMount(() => {
+    // Initialize theme from localStorage
+    themeStore.initTheme();
+
     // Check authentication and role on mount, but allow login page
     if (!isLoginPage) {
       if (!$authStore.isAuthenticated) {
@@ -57,6 +71,10 @@
         return () => clearInterval(interval);
       }
     }
+  });
+
+  onDestroy(() => {
+    themeStore.cleanup();
   });
 
   function handleLogout() {
@@ -205,28 +223,13 @@
           Pages
         </a>
 
-        <a
-          href="/admin/themes"
-          class:active={currentPath.startsWith('/admin/themes')}
-          on:click={closeSidebar}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          Themes
-        </a>
-
         <!-- Settings with submenu -->
         <div class="menu-item-with-submenu">
           <button
             class="menu-item-button"
             class:active={currentPath.startsWith('/admin/settings') ||
-              currentPath.startsWith('/admin/providers')}
+              currentPath.startsWith('/admin/providers') ||
+              currentPath.startsWith('/admin/themes')}
             on:click={toggleSettingsSubmenu}
           >
             <div class="menu-item-content">
@@ -310,6 +313,21 @@
                   ></path>
                 </svg>
                 Categories
+              </a>
+              <a
+                href="/admin/themes"
+                class:active={currentPath.startsWith('/admin/themes')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Themes
               </a>
               <a
                 href="/admin/settings/sso"

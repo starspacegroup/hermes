@@ -46,7 +46,7 @@
   <!-- Metrics Grid -->
   <div class="metrics-grid">
     <a href="/admin/products" class="metric-card metric-card-link">
-      <div class="metric-icon" style="background: rgba(239, 68, 68, 0.1);">
+      <div class="metric-icon" style="background: var(--color-bg-danger-light);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)">
           <path
             d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
@@ -61,7 +61,7 @@
     </a>
 
     <div class="metric-card">
-      <div class="metric-icon" style="background: rgba(22, 163, 74, 0.1);">
+      <div class="metric-icon" style="background: var(--color-bg-success-light);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)">
           <path
             d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
@@ -76,7 +76,7 @@
     </div>
 
     <div class="metric-card">
-      <div class="metric-icon" style="background: rgba(245, 158, 11, 0.1);">
+      <div class="metric-icon" style="background: var(--color-bg-warning-light);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)">
           <path
             d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
@@ -92,7 +92,7 @@
     </div>
 
     <div class="metric-card">
-      <div class="metric-icon" style="background: rgba(139, 92, 246, 0.1);">
+      <div class="metric-icon" style="background: var(--color-bg-info-light);">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-secondary)">
           <path
             d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M13 7a4 4 0 11-8 0 4 4 0 018 0z"

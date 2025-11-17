@@ -11,6 +11,14 @@
         try {
           const THEME_KEY = 'theme';
           const stored = localStorage.getItem(THEME_KEY);
+          const sessionTheme = sessionStorage.getItem('applied-theme');
+
+          // Use session theme if available for fastest retrieval
+          if (sessionTheme && ['light', 'dark'].includes(sessionTheme)) {
+            document.documentElement.setAttribute('data-theme', sessionTheme);
+            document.documentElement.classList.add('theme-loaded');
+            return;
+          }
 
           // Validate stored value
           const validThemes = ['light', 'dark', 'system'];
@@ -29,10 +37,17 @@
             }
           }
 
+          // Apply theme immediately
           document.documentElement.setAttribute('data-theme', actualTheme);
+          document.documentElement.classList.add('theme-loaded');
+
+          // Store in sessionStorage for faster retrieval on subsequent page loads
+          sessionStorage.setItem('applied-theme', actualTheme);
         } catch (e) {
           // Fail silently and let CSS defaults handle theme
           console.warn('Failed to initialize theme:', e);
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.add('theme-loaded');
         }
       })();
     </script>

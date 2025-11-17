@@ -27,6 +27,7 @@ const getSystemTheme = (): AppliedTheme => {
 
 /**
  * Apply the theme to the document
+ * The theme colors are loaded via the layout server and don't need to be re-fetched
  */
 const applyTheme = (theme: Theme): void => {
   if (!browser) return;
@@ -34,6 +35,13 @@ const applyTheme = (theme: Theme): void => {
   try {
     const actualTheme = theme === 'system' ? getSystemTheme() : theme;
     document.documentElement.setAttribute('data-theme', actualTheme);
+    document.documentElement.classList.add('theme-loaded');
+
+    // Store applied theme in sessionStorage for faster retrieval
+    sessionStorage.setItem('applied-theme', actualTheme);
+
+    // Theme colors are already loaded via layout server SSR
+    // No need to re-apply them here
   } catch (error) {
     console.error('Failed to apply theme:', error);
   }
@@ -58,7 +66,21 @@ const cleanupMediaQueryListener = (): void => {
  * Create the theme store with proper lifecycle management
  */
 const createThemeStore = (): ThemeStore => {
-  const { subscribe, set, update } = writable<Theme>(defaultTheme);
+  // Initialize with stored theme immediately (SSR-safe)
+  let initialTheme: Theme = defaultTheme;
+  if (browser) {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      const validThemes: Theme[] = ['light', 'dark', 'system'];
+      initialTheme = stored && validThemes.includes(stored as Theme) ? (stored as Theme) : 'system';
+      // Don't apply theme here - let initTheme() handle it to avoid double application
+      // The layout server has already set the initial theme colors via SSR
+    } catch (error) {
+      console.warn('Failed to get initial theme:', error);
+    }
+  }
+
+  const { subscribe, set, update } = writable<Theme>(initialTheme);
 
   return {
     subscribe,
@@ -143,6 +165,70 @@ const createThemeStore = (): ThemeStore => {
         mediaQuery.addEventListener('change', mediaQueryListener);
       } catch (error) {
         console.error('Failed to initialize theme:', error);
+      }
+    },
+
+    /**
+     * Reload theme colors from the server
+     * Used when admin changes default theme colors
+     */
+    reloadThemeColors: async (): Promise<void> => {
+      if (!browser) return;
+
+      try {
+        // Fetch updated theme colors from the server
+        const response = await fetch('/api/theme-colors');
+        if (!response.ok) {
+          console.warn('Failed to reload theme colors');
+          return;
+        }
+
+        const data = (await response.json()) as {
+          themeColorsLight: Record<string, string> | null;
+          themeColorsDark: Record<string, string> | null;
+        };
+
+        // Update light theme colors
+        if (data.themeColorsLight) {
+          const lightStyles = Object.entries(data.themeColorsLight)
+            .map(([key, value]) => {
+              // Convert camelCase to kebab-case
+              const cssVar = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+              return `--color-${cssVar}: ${value}`;
+            })
+            .join('; ');
+
+          // Update or create light theme style element
+          let lightStyleEl = document.getElementById('theme-colors-light');
+          if (!lightStyleEl) {
+            lightStyleEl = document.createElement('style');
+            lightStyleEl.id = 'theme-colors-light';
+            document.head.appendChild(lightStyleEl);
+          }
+          lightStyleEl.textContent = `:root { ${lightStyles} }`;
+        }
+
+        // Update dark theme colors
+        if (data.themeColorsDark) {
+          const darkStyles = Object.entries(data.themeColorsDark)
+            .map(([key, value]) => {
+              // Convert camelCase to kebab-case
+              const cssVar = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+              return `--color-${cssVar}: ${value}`;
+            })
+            .join('; ');
+
+          // Update or create dark theme style element
+          let darkStyleEl = document.getElementById('theme-colors-dark');
+          if (!darkStyleEl) {
+            darkStyleEl = document.createElement('style');
+            darkStyleEl.id = 'theme-colors-dark';
+            document.head.appendChild(darkStyleEl);
+          }
+          darkStyleEl.textContent = `[data-theme='dark'] { ${darkStyles} }`;
+        }
+      } catch (error) {
+        console.error('Failed to reload theme colors:', error);
       }
     },
 
