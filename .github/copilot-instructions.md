@@ -769,9 +769,10 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
   - **Context**: Include relevant details (old value → new value for updates)
 
 - **Implementation pattern:**
+
   ```typescript
   import { logActivity } from '$lib/server/db/activityLogs';
-  
+
   // After successful action
   await logActivity(
     db,
