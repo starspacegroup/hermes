@@ -7,6 +7,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { restoreProductRevision } from '$lib/server/db/product-revisions';
 import { getProductById } from '$lib/server/db/products';
+import { logRevisionAction } from '$lib/server/activity-logger';
 
 /**
  * POST /api/products/[id]/revisions/[revisionId]/restore
@@ -30,6 +31,17 @@ export const POST: RequestHandler = async ({ params, locals, platform }) => {
 
   // Restore the revision
   const revision = await restoreProductRevision(db, siteId, id, revisionId, userId);
+
+  // Log activity
+  await logRevisionAction(db, {
+    siteId,
+    userId: userId || null,
+    action: 'restored',
+    entityType: 'product',
+    entityId: id,
+    entityName: product.name,
+    revisionId
+  });
 
   return json({ revision, product: id }, { status: 200 });
 };

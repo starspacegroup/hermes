@@ -8,6 +8,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getProductRevisions, createProductRevision } from '$lib/server/db/product-revisions';
 import { getProductById } from '$lib/server/db/products';
+import { logRevisionAction } from '$lib/server/activity-logger';
 
 /**
  * GET /api/products/[id]/revisions
@@ -64,6 +65,19 @@ export const POST: RequestHandler = async ({ params, locals, platform, request }
 
   // Create revision
   const revision = await createProductRevision(db, siteId, id, userId, message);
+
+  // Log activity
+  await logRevisionAction(db, {
+    siteId,
+    userId: userId || null,
+    action: 'created',
+    entityType: 'product',
+    entityId: id,
+    entityName: product.name,
+    revisionId: revision.id,
+    revisionMessage: message,
+    parentRevisionId: revision.parent_revision_id
+  });
 
   return json({ revision }, { status: 201 });
 };

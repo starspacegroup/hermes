@@ -3,6 +3,8 @@ import { getDB } from '$lib/server/db/connection';
 import * as revisionsDb from '$lib/server/db/revisions';
 import type { RequestHandler } from './$types';
 import type { CreateRevisionData } from '$lib/types/pages';
+import { logRevisionAction } from '$lib/server/activity-logger';
+import { getPageById } from '$lib/server/db/pages';
 
 /**
  * GET /api/pages/[id]/revisions
@@ -46,6 +48,22 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
     const revision = await revisionsDb.createRevision(db, siteId, pageId, {
       ...data,
       created_by: userId
+    });
+
+    // Get page name for logging
+    const page = await getPageById(db, siteId, pageId);
+
+    // Log activity
+    await logRevisionAction(db, {
+      siteId,
+      userId: userId || null,
+      action: 'created',
+      entityType: 'page',
+      entityId: pageId,
+      entityName: page?.title,
+      revisionId: revision.id,
+      revisionMessage: data.notes,
+      parentRevisionId: revision.parent_revision_id || undefined
     });
 
     return json(revision);

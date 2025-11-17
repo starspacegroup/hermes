@@ -54,6 +54,16 @@ export interface PageActionParams extends BaseActivityLogParams {
   pageUrl?: string;
 }
 
+export interface RevisionActionParams extends BaseActivityLogParams {
+  action: 'created' | 'published' | 'restored' | 'viewed';
+  entityType: 'product' | 'page';
+  entityId: string;
+  entityName?: string;
+  revisionId: string;
+  revisionMessage?: string;
+  parentRevisionId?: string;
+}
+
 /**
  * Generic activity logger - can be used for any action
  */
@@ -227,5 +237,47 @@ export async function logPageAction(db: D1Database, params: PageActionParams): P
     ipAddress: params.ipAddress,
     userAgent: params.userAgent,
     severity: params.action === 'deleted' ? 'warning' : 'info'
+  });
+}
+
+/**
+ * Log revision-related actions
+ */
+export async function logRevisionAction(
+  db: D1Database,
+  params: RevisionActionParams
+): Promise<void> {
+  const actionMap = {
+    created: 'revision.created',
+    published: 'revision.published',
+    restored: 'revision.restored',
+    viewed: 'revision.viewed'
+  };
+
+  const entityLabel = params.entityType === 'product' ? 'product' : 'page';
+  const descriptionMap = {
+    created: `Created ${entityLabel} revision${params.revisionMessage ? `: ${params.revisionMessage}` : ''}`,
+    published: `Published ${entityLabel} revision (ID: ${params.revisionId})`,
+    restored: `Restored ${entityLabel} to revision (ID: ${params.revisionId})`,
+    viewed: `Viewed ${entityLabel} revision (ID: ${params.revisionId})`
+  };
+
+  await logActivity(db, {
+    siteId: params.siteId,
+    userId: params.userId,
+    action: actionMap[params.action],
+    entityType: params.entityType,
+    entityId: params.entityId,
+    entityName: params.entityName,
+    description: descriptionMap[params.action],
+    metadata: {
+      ...params.metadata,
+      revisionId: params.revisionId,
+      revisionMessage: params.revisionMessage,
+      parentRevisionId: params.parentRevisionId
+    },
+    ipAddress: params.ipAddress,
+    userAgent: params.userAgent,
+    severity: params.action === 'restored' ? 'warning' : 'info'
   });
 }

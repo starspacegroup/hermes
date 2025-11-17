@@ -9,6 +9,7 @@ import { getProductRevisionById } from '$lib/server/db/product-revisions';
 import { getProductById, updateProduct } from '$lib/server/db/products';
 import { setCurrentRevision } from '$lib/server/db/revisions-service';
 import { setProductFulfillmentOptions, setProductShippingOptions } from '$lib/server/db';
+import { logRevisionAction } from '$lib/server/activity-logger';
 
 /**
  * POST /api/products/[id]/revisions/[revisionId]/publish
@@ -55,6 +56,17 @@ export const POST: RequestHandler = async ({ params, locals, platform }) => {
 
   // Mark this revision as current
   await setCurrentRevision(db, siteId, 'product', id, revisionId);
+
+  // Log activity
+  await logRevisionAction(db, {
+    siteId,
+    userId: locals.user?.id || null,
+    action: 'published',
+    entityType: 'product',
+    entityId: id,
+    entityName: product.name,
+    revisionId
+  });
 
   return json({ success: true, revision }, { status: 200 });
 };

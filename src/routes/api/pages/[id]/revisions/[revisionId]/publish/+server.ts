@@ -2,6 +2,8 @@ import { json, error } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as revisionsDb from '$lib/server/db/revisions';
 import type { RequestHandler } from './$types';
+import { logRevisionAction } from '$lib/server/activity-logger';
+import { getPageById } from '$lib/server/db/pages';
 
 /**
  * POST /api/pages/[id]/revisions/[revisionId]/publish
@@ -16,6 +18,21 @@ export const POST: RequestHandler = async ({ params, platform, locals }) => {
 
   try {
     const newRevision = await revisionsDb.publishRevision(db, siteId, pageId, revisionId, userId);
+
+    // Get page name for logging
+    const page = await getPageById(db, siteId, pageId);
+
+    // Log activity
+    await logRevisionAction(db, {
+      siteId,
+      userId: userId || null,
+      action: 'published',
+      entityType: 'page',
+      entityId: pageId,
+      entityName: page?.title,
+      revisionId
+    });
+
     return json({ success: true, revision: newRevision });
   } catch (err) {
     console.error('Error publishing revision:', err);

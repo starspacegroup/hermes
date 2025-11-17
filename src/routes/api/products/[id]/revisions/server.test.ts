@@ -12,8 +12,13 @@ vi.mock('$lib/server/db/products', () => ({
   getProductById: vi.fn()
 }));
 
+vi.mock('$lib/server/activity-logger', () => ({
+  logRevisionAction: vi.fn()
+}));
+
 import { getProductRevisions, createProductRevision } from '$lib/server/db/product-revisions';
 import { getProductById } from '$lib/server/db/products';
+import { logRevisionAction } from '$lib/server/activity-logger';
 
 describe('Product Revisions API', () => {
   const mockDb = {} as D1Database;
@@ -92,11 +97,13 @@ describe('Product Revisions API', () => {
         id: 'rev-1',
         entity_type: 'product' as const,
         entity_id: productId,
+        parent_revision_id: null,
         data: { name: 'Test Product' }
       };
 
       (getProductById as ReturnType<typeof vi.fn>).mockResolvedValue(mockProduct);
       (createProductRevision as ReturnType<typeof vi.fn>).mockResolvedValue(mockRevision);
+      (logRevisionAction as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const event = {
         params: { id: productId },
@@ -117,16 +124,32 @@ describe('Product Revisions API', () => {
         'user-1',
         'Test revision'
       );
+      expect(logRevisionAction).toHaveBeenCalledWith(mockDb, {
+        siteId,
+        userId: 'user-1',
+        action: 'created',
+        entityType: 'product',
+        entityId: productId,
+        entityName: mockProduct.name,
+        revisionId: mockRevision.id,
+        revisionMessage: 'Test revision',
+        parentRevisionId: mockRevision.parent_revision_id
+      });
       expect(data.revision).toEqual(mockRevision);
       expect(response.status).toBe(201);
     });
 
     it('should handle missing request body', async () => {
-      const mockProduct = { id: productId };
-      const mockRevision = { id: 'rev-1', entity_type: 'product' as const };
+      const mockProduct = { id: productId, name: 'Test Product' };
+      const mockRevision = {
+        id: 'rev-1',
+        entity_type: 'product' as const,
+        parent_revision_id: null
+      };
 
       (getProductById as ReturnType<typeof vi.fn>).mockResolvedValue(mockProduct);
       (createProductRevision as ReturnType<typeof vi.fn>).mockResolvedValue(mockRevision);
+      (logRevisionAction as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const event = {
         params: { id: productId },
@@ -146,6 +169,7 @@ describe('Product Revisions API', () => {
         'user-1',
         undefined
       );
+      expect(logRevisionAction).toHaveBeenCalled();
       expect(response.status).toBe(201);
     });
 
