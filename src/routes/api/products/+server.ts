@@ -13,6 +13,7 @@ import {
   getProductShippingOptions,
   setProductShippingOptions
 } from '$lib/server/db';
+import { createProductRevision } from '$lib/server/db/product-revisions';
 
 // GET all products
 export const GET: RequestHandler = async ({ platform, locals }) => {
@@ -110,6 +111,15 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     if (data.shippingOptions && data.shippingOptions.length > 0) {
       await setProductShippingOptions(db, siteId, dbProduct.id, data.shippingOptions);
     }
+
+    // Create initial revision for the product
+    await createProductRevision(
+      db,
+      siteId,
+      dbProduct.id,
+      locals.user?.id,
+      'Initial product creation'
+    );
 
     const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, dbProduct.id);
     const shippingOptionsRaw = await getProductShippingOptions(db, siteId, dbProduct.id);

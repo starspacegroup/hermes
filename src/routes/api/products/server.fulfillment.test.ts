@@ -2,6 +2,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { POST, PUT } from './+server';
 
+// Mock createProductRevision to avoid issues with revision creation
+vi.mock('$lib/server/db/product-revisions', () => ({
+  createProductRevision: vi.fn()
+}));
+
 interface MockDB {
   prepare: ReturnType<typeof vi.fn>;
 }

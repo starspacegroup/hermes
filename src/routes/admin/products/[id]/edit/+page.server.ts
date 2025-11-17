@@ -73,11 +73,23 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
       productId
     );
 
+    // Check if this is truly published: if it's the initial revision that hasn't been explicitly published,
+    // treat it as a draft. We identify this by checking if it's the only revision with the "Initial product creation" message.
+    let currentRevisionIsPublished = currentRevision?.is_current || false;
+    if (
+      currentRevision &&
+      currentRevision.message === 'Initial product creation' &&
+      revisions.length === 1
+    ) {
+      // This is the initial draft revision that hasn't been published yet
+      currentRevisionIsPublished = false;
+    }
+
     return {
       product,
       revisions,
       currentRevisionId: currentRevision?.id || null,
-      currentRevisionIsPublished: currentRevision?.is_current || false
+      currentRevisionIsPublished
     };
   } catch (err) {
     console.error('Error loading product:', err);

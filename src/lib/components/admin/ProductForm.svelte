@@ -146,9 +146,12 @@
       shippingChanged;
   }
 
+  // Form validation
+  $: isFormValid = formName.trim() !== '' && formDescription.trim() !== '' && formPrice >= 0;
+
   // Determine button states
-  $: canSaveDraft = hasUnsavedChanges && isEditing;
-  $: canPublish = (hasUnsavedChanges && isEditing) || (!currentRevisionIsPublished && isEditing);
+  $: canSaveDraft = isEditing ? hasUnsavedChanges : isFormValid;
+  $: canPublish = isEditing ? hasUnsavedChanges || !currentRevisionIsPublished : isFormValid;
 
   // Load fulfillment providers and shipping options on mount
   onMount(async () => {
@@ -684,7 +687,7 @@
     };
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(status: 'draft' | 'published' = 'published') {
     if (isSubmitting) return;
 
     // Validate form - allow price of 0 for free products
@@ -703,15 +706,21 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(productData)
+        body: JSON.stringify({ ...productData, status })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create product');
+        throw new Error(`Failed to ${status === 'draft' ? 'save draft' : 'create product'}`);
       }
 
       const newProduct = (await response.json()) as Product;
-      toastStore.success(`Product "${formName}" created successfully`);
+      const successMessage =
+        status === 'draft'
+          ? 'Draft saved successfully'
+          : isEditing
+            ? 'Product published successfully'
+            : `Product "${formName}" created successfully`;
+      toastStore.success(successMessage);
 
       // Save any temporary media to the newly created product
       if (productMediaManager && newProduct.id) {
@@ -726,11 +735,19 @@
       // Navigate back to products list
       await goto('/admin/products');
     } catch (error) {
-      console.error('Error creating product:', error);
-      toastStore.error('Failed to create product');
+      console.error(`Error ${status === 'draft' ? 'saving draft' : 'creating product'}:`, error);
+      toastStore.error(`Failed to ${status === 'draft' ? 'save draft' : 'create product'}`);
     } finally {
       isSubmitting = false;
     }
+  }
+
+  function handleSaveDraftNew() {
+    handleSubmit('draft');
+  }
+
+  function handlePublishNew() {
+    handleSubmit('published');
   }
 
   function handleCancel() {
@@ -739,7 +756,7 @@
 </script>
 
 <div class="product-form">
-  <form on:submit|preventDefault={handleSubmit}>
+  <form on:submit|preventDefault={() => handleSubmit('published')}>
     <!-- Product Media Manager -->
     <div class="form-group">
       <ProductMediaManager bind:this={productMediaManager} productId={product?.id || ''} />
@@ -1025,8 +1042,23 @@
           {publishing ? 'Publishing...' : 'Publish'}
         </button>
       {:else}
-        <button type="submit" class="submit-btn" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating...' : 'Create Product'}
+        <button
+          type="button"
+          class="draft-btn"
+          on:click={handleSaveDraftNew}
+          disabled={isSubmitting || !canSaveDraft}
+          title={!canSaveDraft ? 'Please fill in all required fields' : ''}
+        >
+          {isSubmitting ? 'Saving...' : 'Save Draft'}
+        </button>
+        <button
+          type="button"
+          class="submit-btn"
+          on:click={handlePublishNew}
+          disabled={isSubmitting || !canPublish}
+          title={!canPublish ? 'Please fill in all required fields' : ''}
+        >
+          {isSubmitting ? 'Publishing...' : 'Publish'}
         </button>
       {/if}
     </div>

@@ -85,7 +85,11 @@
     </div>
   {:else}
     <div class="graph-wrapper">
-      <svg width={svgWidth} height={svgHeight} class="revision-graph">
+      <svg
+        viewBox="0 0 {svgWidth} {svgHeight}"
+        preserveAspectRatio="xMinYMin meet"
+        class="revision-graph"
+      >
         <!-- Define arrow markers for connection lines with colors -->
         <defs>
           {#each Array.from(new Set(connections.map((c) => c.color))) as color, i}
@@ -210,7 +214,7 @@
                 type="button"
               >
                 <div class="node-header">
-                  <span class="hash" style="color: {color}">
+                  <span class="hash">
                     {formatHash(revision.revision_hash)}
                   </span>
                   {#if revision.is_current}
@@ -243,10 +247,12 @@
     position: relative;
     width: 100%;
     max-width: 100%;
+    max-height: 600px;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     padding: 0.75rem;
-    background: var(--color-bg-secondary, #ffffff);
+    background: var(--color-bg-primary, #ffffff);
+    border: 1px solid var(--color-border-primary, #e5e7eb);
     border-radius: 8px;
   }
 
@@ -273,12 +279,17 @@
 
   .graph-wrapper {
     min-width: min-content;
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-start;
   }
 
   .revision-graph {
     display: block;
+    width: 100%;
+    height: auto;
     max-width: 100%;
   }
 
@@ -339,8 +350,8 @@
     width: 100%;
     height: 100%;
     padding: 0.5rem;
-    background: var(--color-bg-secondary, #ffffff);
-    border: 1px solid var(--color-border-secondary, #e2e8f0);
+    background: var(--color-bg-primary, #ffffff);
+    border: 2px solid var(--color-border-primary, #d1d5db);
     border-radius: 6px;
     cursor: pointer;
     text-align: left;
@@ -349,21 +360,36 @@
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.875rem;
-    color: var(--color-text-primary, #1e293b);
+    color: var(--color-text-primary, #111827);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   .node-button:hover {
     border-color: var(--color-primary, #3b82f6);
-    box-shadow: 0 2px 6px var(--color-shadow-light, rgba(59, 130, 246, 0.1));
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
     transform: translateX(2px);
-    background: var(--color-bg-primary, #f8fafc);
+    background: var(--color-bg-secondary, #f9fafb);
   }
 
   .node-card.selected .node-button {
     border-color: var(--color-primary, #3b82f6);
-    border-width: 2px;
-    background: var(--color-bg-accent, #dbeafe);
-    box-shadow: 0 2px 8px var(--color-shadow-medium, rgba(59, 130, 246, 0.15));
+    border-width: 3px;
+    background: var(--color-primary-light, #dbeafe);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  }
+
+  .node-card.selected .node-title {
+    color: var(--color-text-primary, #111827);
+    font-weight: 700;
+  }
+
+  .node-card.selected .node-meta {
+    color: var(--color-text-primary, #374151);
+    font-weight: 500;
+  }
+
+  .node-card.selected .author {
+    color: var(--color-text-secondary, #4b5563);
   }
 
   .node-header {
@@ -376,7 +402,8 @@
   .hash {
     font-family: var(--font-mono, 'Monaco', 'Courier New', monospace);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--color-text-primary, #111827);
   }
 
   .badge {
@@ -411,8 +438,8 @@
 
   .node-title {
     font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-text-primary, #1e293b);
+    font-weight: 600;
+    color: var(--color-text-primary, #111827);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -425,24 +452,25 @@
     align-items: center;
     gap: 0.375rem;
     font-size: 0.6875rem;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-secondary, #4b5563);
     line-height: 1.3;
     flex-wrap: wrap;
   }
 
   .time {
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--color-text-secondary, #4b5563);
   }
 
   .author {
     font-style: italic;
-    color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-secondary, #6b7280);
   }
 
   .author::before {
     content: '·';
     margin-right: 0.375rem;
-    color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-secondary, #6b7280);
   }
 
   /* Mobile optimizations */
