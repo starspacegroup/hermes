@@ -741,6 +741,56 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
 - **Multi-tenant isolation** - Always filter by `site_id` in WHERE clauses
 - **Audit logging** - Log access to sensitive data
 
+#### Activity Logging
+
+**ALWAYS log significant actions to the activity logs for audit trails and user transparency:**
+
+- **What to log:**
+  - Settings changes (site settings, theme settings, user preferences, etc.)
+  - Content modifications (creating, updating, deleting products, pages, orders)
+  - User actions (login, logout, password changes, role changes)
+  - Administrative actions (user management, permissions changes)
+  - Payment and order operations (order placement, fulfillment, refunds)
+  - SSO configuration changes (provider setup, client secret updates)
+  - Data imports/exports
+  - System configuration changes
+
+- **What NOT to log:**
+  - Simple page views (unless specifically required for analytics)
+  - Read-only operations (viewing lists, reading data)
+  - Automated system tasks (unless they modify data)
+  - High-frequency operations (search queries, auto-save drafts - unless final save)
+
+- **Log entry requirements:**
+  - **User identification**: Always include `user_id` and `site_id`
+  - **Action description**: Clear, human-readable description of what was done
+  - **Entity information**: Include entity type and ID (e.g., `product_id`, `page_id`)
+  - **Timestamp**: Automatically captured by `created_at`
+  - **Context**: Include relevant details (old value → new value for updates)
+
+- **Implementation pattern:**
+  ```typescript
+  import { logActivity } from '$lib/server/db/activityLogs';
+  
+  // After successful action
+  await logActivity(
+    db,
+    siteId,
+    userId,
+    'Updated product pricing',
+    `Changed price from $${oldPrice} to $${newPrice} for product "${productName}"`,
+    'product',
+    productId
+  );
+  ```
+
+- **Best practices:**
+  - Log AFTER successful operations (not before)
+  - Include meaningful context for future reference
+  - Use consistent action verbs (Created, Updated, Deleted, Changed, etc.)
+  - Don't log sensitive data (passwords, tokens, full credit cards)
+  - Keep descriptions concise but informative
+
 #### Input Validation and Sanitization
 
 - **Sanitize user input** - Especially for HTML/SQL
