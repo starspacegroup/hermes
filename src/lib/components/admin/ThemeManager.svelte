@@ -22,8 +22,24 @@
 
   let draggedIndex: number | null = null;
   let dragOverIndex: number | null = null;
-  let colorHarmonyMode: 'none' | 'complementary' | 'triadic' | 'analogous' | 'split' = 'none';
+  let colorHarmonyMode:
+    | 'none'
+    | 'complementary'
+    | 'triadic'
+    | 'tetradic'
+    | 'analogous'
+    | 'split'
+    | 'monochromatic'
+    | 'double-split' = 'none';
   let originalThemeSnapshot: ColorThemeDefinition | null = null;
+  let colorWheelCanvas: HTMLCanvasElement | undefined;
+
+  // Drag state for color wheel
+  let isDraggingColor = false;
+  let draggedColorKey: 'primary' | 'secondary' | 'accent' | null = null;
+  let hoveredColorKey: 'primary' | 'secondary' | 'accent' | null = null;
+  let isHarmonyExpanded = false;
+  let wheelBrightness = 60; // Brightness/lightness for color wheel (0-100)
 
   $: filteredThemes = themes.filter((t) => (filterMode === 'all' ? true : t.mode === filterMode));
   $: lightThemes = themes.filter((t) => t.mode === 'light');
@@ -215,6 +231,603 @@
         editingTheme.colors.secondary = HSLToHex((hsl.h + 150) % 360, hsl.s, hsl.l);
         editingTheme.colors.accent = HSLToHex((hsl.h + 210) % 360, hsl.s, hsl.l);
         break;
+    }
+
+    // Redraw color wheel after harmony changes
+    if (colorWheelCanvas) {
+      drawColorWheel();
+    }
+  }
+
+  function drawColorWheel(): void {
+    if (!colorWheelCanvas || !editingTheme) return;
+
+    const ctx = colorWheelCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = 280;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const radius = size / 2 - 20;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, size, size);
+
+    // Draw color wheel with saturation gradient using pixel-perfect approach
+    const imageData = ctx.createImageData(size, size);
+    const data = imageData.data;
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance <= radius) {
+          // Calculate hue from angle
+          let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+          if (angle < 0) angle += 360;
+
+          // Calculate saturation from distance (0% at center, 100% at edge)
+          const saturation = (distance / radius) * 100;
+
+          // Use wheelBrightness as the base lightness for the entire wheel
+          // This creates a proper color picker where:
+          // - Center (0% saturation) = desaturated brightness color (gray/white depending on brightness)
+          // - Edge (100% saturation) = fully saturated color at current brightness
+          const lightness = wheelBrightness;
+
+          // Convert HSL to RGB
+          const h = angle / 60;
+          const s = saturation / 100;
+          const l = lightness / 100;
+
+          const c = (1 - Math.abs(2 * l - 1)) * s;
+          const x1 = c * (1 - Math.abs((h % 2) - 1));
+          const m = l - c / 2;
+
+          let r = 0,
+            g = 0,
+            b = 0;
+          if (h >= 0 && h < 1) {
+            r = c;
+            g = x1;
+            b = 0;
+          } else if (h >= 1 && h < 2) {
+            r = x1;
+            g = c;
+            b = 0;
+          } else if (h >= 2 && h < 3) {
+            r = 0;
+            g = c;
+            b = x1;
+          } else if (h >= 3 && h < 4) {
+            r = 0;
+            g = x1;
+            b = c;
+          } else if (h >= 4 && h < 5) {
+            r = x1;
+            g = 0;
+            b = c;
+          } else if (h >= 5 && h < 6) {
+            r = c;
+            g = 0;
+            b = x1;
+          }
+
+          const index = (y * size + x) * 4;
+          data[index] = Math.round((r + m) * 255);
+          data[index + 1] = Math.round((g + m) * 255);
+          data[index + 2] = Math.round((b + m) * 255);
+          data[index + 3] = 255; // Alpha
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    // Define which colors to show on the wheel (focal colors only)
+    const wheelColors: Array<{ key: string; color: string; label: string }> = [
+      { key: 'primary', color: editingTheme.colors.primary, label: 'Primary' },
+      { key: 'secondary', color: editingTheme.colors.secondary, label: 'Secondary' },
+      { key: 'accent', color: editingTheme.colors.accent, label: 'Accent' }
+    ];
+
+    // Draw harmony lines if mode is active
+    if (colorHarmonyMode !== 'none') {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+
+      wheelColors.forEach((colorInfo) => {
+        const hsl = hexToHSL(colorInfo.color);
+        const angle = hsl.h;
+        const saturation = hsl.s / 100;
+        const lineRadius = radius * saturation;
+        const x = centerX + Math.cos(((angle - 90) * Math.PI) / 180) * lineRadius;
+        const y = centerY + Math.sin(((angle - 90) * Math.PI) / 180) * lineRadius;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      });
+
+      ctx.setLineDash([]);
+    }
+
+    // Draw color dots on the wheel
+    wheelColors.forEach((colorInfo) => {
+      const hsl = hexToHSL(colorInfo.color);
+      const angle = hsl.h;
+      const saturation = hsl.s / 100; // Convert to 0-1 range
+      const dotRadius = radius * saturation; // Position based on saturation
+      const x = centerX + Math.cos(((angle - 90) * Math.PI) / 180) * dotRadius;
+      const y = centerY + Math.sin(((angle - 90) * Math.PI) / 180) * dotRadius;
+
+      const isHovered = hoveredColorKey === colorInfo.key;
+      const isDragged = draggedColorKey === colorInfo.key;
+      const dotSize = isHovered || isDragged ? 18 : 16;
+
+      // Draw dot
+      ctx.beginPath();
+      ctx.arc(x, y, dotSize, 0, 2 * Math.PI);
+      ctx.fillStyle = colorInfo.color;
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = isDragged ? 4 : 3;
+      ctx.stroke();
+      ctx.strokeStyle = isDragged ? '#000' : '#333';
+      ctx.lineWidth = isDragged ? 2 : 1;
+      ctx.stroke();
+
+      // Draw hover ring
+      if (isHovered && !isDragged) {
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize + 4, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+  }
+
+  // Track previous brightness to detect changes
+  let previousBrightness = wheelBrightness;
+
+  // Reactive statement to redraw wheel when colors change
+  $: if (editingTheme && colorWheelCanvas) {
+    drawColorWheel();
+  }
+
+  // Update all color lightness when brightness slider changes (not when dragging colors)
+  $: if (editingTheme && !isDraggingColor && wheelBrightness !== previousBrightness) {
+    const primaryHSL = hexToHSL(editingTheme.colors.primary);
+    const secondaryHSL = hexToHSL(editingTheme.colors.secondary);
+    const accentHSL = hexToHSL(editingTheme.colors.accent);
+
+    // Only update if the lightness actually differs from wheelBrightness
+    if (Math.abs(primaryHSL.l - wheelBrightness) > 0.5) {
+      editingTheme.colors.primary = HSLToHex(primaryHSL.h, primaryHSL.s, wheelBrightness);
+      editingTheme.colors.secondary = HSLToHex(secondaryHSL.h, secondaryHSL.s, wheelBrightness);
+      editingTheme.colors.accent = HSLToHex(accentHSL.h, accentHSL.s, wheelBrightness);
+      editingTheme = editingTheme;
+    }
+
+    previousBrightness = wheelBrightness;
+  }
+
+  // Color wheel drag handlers
+  function getColorAtPosition(
+    x: number,
+    y: number
+  ): {
+    colorKey: 'primary' | 'secondary' | 'accent';
+    distance: number;
+  } | null {
+    if (!editingTheme || !colorWheelCanvas) return null;
+
+    const rect = colorWheelCanvas.getBoundingClientRect();
+
+    // Convert mouse coordinates to canvas coordinates
+    const scaleX = colorWheelCanvas.width / rect.width;
+    const scaleY = colorWheelCanvas.height / rect.height;
+    const canvasX = (x - rect.left) * scaleX;
+    const canvasY = (y - rect.top) * scaleY;
+
+    const size = 280;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const radius = size / 2 - 20;
+
+    const wheelColors = [
+      { key: 'primary' as const, color: editingTheme.colors.primary },
+      { key: 'secondary' as const, color: editingTheme.colors.secondary },
+      { key: 'accent' as const, color: editingTheme.colors.accent }
+    ];
+
+    // Check if click is near any color dot (within 20px)
+    for (const colorInfo of wheelColors) {
+      const hsl = hexToHSL(colorInfo.color);
+      const angle = hsl.h;
+
+      // Position dot based on saturation (distance from center)
+      const saturation = hsl.s / 100;
+      const dotRadius = radius * saturation;
+      const dotX = centerX + Math.cos(((angle - 90) * Math.PI) / 180) * dotRadius;
+      const dotY = centerY + Math.sin(((angle - 90) * Math.PI) / 180) * dotRadius;
+
+      const distance = Math.sqrt((canvasX - dotX) ** 2 + (canvasY - dotY) ** 2);
+
+      if (distance <= 20) {
+        return { colorKey: colorInfo.key, distance };
+      }
+    }
+
+    return null;
+  }
+
+  function updateColorFromAngle(
+    colorKey: 'primary' | 'secondary' | 'accent',
+    angle: number,
+    saturation: number
+  ): void {
+    if (!editingTheme) return;
+
+    // Update with new hue angle and saturation, using wheelBrightness for lightness
+    const newColor = HSLToHex(angle, saturation, wheelBrightness);
+    editingTheme.colors[colorKey] = newColor;
+
+    // If harmony mode is active, update all colors based on the dragged color
+    if (colorHarmonyMode !== 'none') {
+      const hsl = hexToHSL(newColor);
+
+      // Get current saturation for each color (to preserve individual saturation)
+      const primaryHSL = hexToHSL(editingTheme.colors.primary);
+      const secondaryHSL = hexToHSL(editingTheme.colors.secondary);
+      const accentHSL = hexToHSL(editingTheme.colors.accent);
+
+      switch (colorHarmonyMode) {
+        case 'complementary':
+          // Primary: dominant color, Secondary: complement (180°), Accent: slight variation of complement
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 180) % 360,
+              Math.min(secondaryHSL.s, 85),
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 165) % 360,
+              Math.min(accentHSL.s, 70),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 180) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h - 15 + 360) % 360,
+              Math.min(accentHSL.s, 70),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 195) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 15) % 360,
+              Math.min(secondaryHSL.s, 85),
+              wheelBrightness
+            );
+          }
+          break;
+        case 'triadic':
+          // True triadic: three colors exactly 120° apart for balanced vibrancy
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 120) % 360,
+              secondaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 240) % 360,
+              accentHSL.s,
+              wheelBrightness
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 240) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 120) % 360,
+              accentHSL.s,
+              wheelBrightness
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 120) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 240) % 360,
+              secondaryHSL.s,
+              wheelBrightness
+            );
+          }
+          break;
+        case 'tetradic':
+          // Square/rectangular: primary and accent as complements, secondary bridges them
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 90) % 360,
+              Math.min(secondaryHSL.s, 75),
+              Math.max(wheelBrightness * 0.92, 0)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 180) % 360,
+              Math.min(accentHSL.s, 85),
+              wheelBrightness
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 90 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 90) % 360,
+              Math.min(accentHSL.s, 85),
+              wheelBrightness
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 180) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h - 90 + 360) % 360,
+              Math.min(secondaryHSL.s, 75),
+              Math.max(wheelBrightness * 0.92, 0)
+            );
+          }
+          break;
+        case 'analogous':
+          // Harmonious neighbors: primary in center, secondary and accent flanking closely
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 25) % 360,
+              Math.max(secondaryHSL.s, hsl.s * 0.85),
+              Math.max(wheelBrightness * 0.92, 0)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h - 25 + 360) % 360,
+              Math.max(accentHSL.s, hsl.s * 0.85),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 25 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 50) % 360,
+              Math.max(accentHSL.s, hsl.s * 0.85),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h + 25) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h - 50 + 360) % 360,
+              Math.max(secondaryHSL.s, hsl.s * 0.85),
+              Math.max(wheelBrightness * 0.92, 0)
+            );
+          }
+          break;
+        case 'split':
+          // Split complementary: primary dominant, secondary and accent split the complement
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 150) % 360,
+              Math.min(secondaryHSL.s, 80),
+              Math.max(wheelBrightness * 0.88, 0)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 210) % 360,
+              Math.min(accentHSL.s, 80),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 150 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 60) % 360,
+              Math.min(accentHSL.s, 80),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 210 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h - 60 + 360) % 360,
+              Math.min(secondaryHSL.s, 80),
+              Math.max(wheelBrightness * 0.88, 0)
+            );
+          }
+          break;
+        case 'monochromatic':
+          // Same hue, varied saturation and subtle lightness shifts for depth
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              hsl.h,
+              Math.max(secondaryHSL.s * 0.7, 40),
+              Math.min(wheelBrightness * 1.12, 100)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              hsl.h,
+              Math.min(accentHSL.s * 1.2, 95),
+              Math.max(wheelBrightness * 0.8, 0)
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              hsl.h,
+              Math.min(primaryHSL.s * 1.43, 100),
+              Math.max(wheelBrightness * 0.85, 0)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              hsl.h,
+              Math.min(accentHSL.s * 1.71, 95),
+              Math.max(wheelBrightness * 0.7, 0)
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              hsl.h,
+              Math.min(primaryHSL.s * 0.83, 100),
+              Math.min(wheelBrightness * 1.15, 100)
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              hsl.h,
+              Math.max(secondaryHSL.s * 0.58, 40),
+              Math.min(wheelBrightness * 1.25, 100)
+            );
+          }
+          break;
+        case 'double-split':
+          // Advanced: primary + two sets of split complements for rich, complex palettes
+          if (colorKey === 'primary') {
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h + 135) % 360,
+              Math.min(secondaryHSL.s, 75),
+              Math.max(wheelBrightness * 0.9, 0)
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 225) % 360,
+              Math.min(accentHSL.s, 75),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else if (colorKey === 'secondary') {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 135 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.accent = HSLToHex(
+              (hsl.h + 90) % 360,
+              Math.min(accentHSL.s, 75),
+              Math.min(wheelBrightness * 1.08, 100)
+            );
+          } else {
+            editingTheme.colors.primary = HSLToHex(
+              (hsl.h - 225 + 360) % 360,
+              primaryHSL.s,
+              wheelBrightness
+            );
+            editingTheme.colors.secondary = HSLToHex(
+              (hsl.h - 90 + 360) % 360,
+              Math.min(secondaryHSL.s, 75),
+              Math.max(wheelBrightness * 0.9, 0)
+            );
+          }
+          break;
+      }
+    }
+
+    // Trigger reactivity
+    editingTheme = editingTheme;
+  }
+
+  function handleWheelMouseDown(event: MouseEvent): void {
+    if (!colorWheelCanvas) return;
+
+    const colorInfo = getColorAtPosition(event.clientX, event.clientY);
+    if (colorInfo) {
+      isDraggingColor = true;
+      draggedColorKey = colorInfo.colorKey;
+      colorWheelCanvas.style.cursor = 'grabbing';
+    }
+  }
+
+  function handleWheelMouseMove(event: MouseEvent): void {
+    if (!colorWheelCanvas || !editingTheme) return;
+
+    const rect = colorWheelCanvas.getBoundingClientRect();
+
+    // Convert mouse coordinates to canvas coordinates
+    // Account for any scaling between canvas resolution and display size
+    const scaleX = colorWheelCanvas.width / rect.width;
+    const scaleY = colorWheelCanvas.height / rect.height;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    const size = 280;
+    const centerX = size / 2;
+    const centerY = size / 2;
+
+    if (isDraggingColor && draggedColorKey) {
+      // Calculate angle and distance from center to mouse position
+      const dx = canvasX - centerX;
+      const dy = canvasY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const radius = size / 2 - 20;
+
+      let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+      if (angle < 0) angle += 360;
+
+      // Calculate saturation based on distance (0% at center, 100% at edge)
+      // Clamp between 0 and 100, with actual radius boundary
+      const saturation = Math.max(0, Math.min(100, (distance / radius) * 100));
+
+      // Update the color with angle and saturation
+      updateColorFromAngle(draggedColorKey, angle, saturation);
+    } else {
+      // Check if hovering over a color dot
+      const colorInfo = getColorAtPosition(event.clientX, event.clientY);
+      if (colorInfo) {
+        hoveredColorKey = colorInfo.colorKey;
+        colorWheelCanvas.style.cursor = 'grab';
+      } else {
+        hoveredColorKey = null;
+        colorWheelCanvas.style.cursor = 'default';
+      }
+
+      // Redraw to show hover state
+      drawColorWheel();
+    }
+  }
+
+  function handleWheelMouseUp(): void {
+    if (colorWheelCanvas) {
+      colorWheelCanvas.style.cursor = hoveredColorKey ? 'grab' : 'default';
+    }
+    isDraggingColor = false;
+    draggedColorKey = null;
+  }
+
+  function handleWheelMouseLeave(): void {
+    if (isDraggingColor) {
+      handleWheelMouseUp();
+    }
+    hoveredColorKey = null;
+    if (colorWheelCanvas) {
+      colorWheelCanvas.style.cursor = 'default';
     }
   }
 
@@ -927,77 +1540,9 @@
           class="theme-name-input"
         />
 
-        <div class="harmony-controls">
-          <span class="harmony-label">Color Harmony:</span>
-          <div class="harmony-buttons">
-            <button
-              type="button"
-              class="harmony-btn"
-              class:active={colorHarmonyMode === 'none'}
-              on:click={() => {
-                colorHarmonyMode = 'none';
-              }}
-            >
-              None
-            </button>
-            <button
-              type="button"
-              class="harmony-btn"
-              class:active={colorHarmonyMode === 'complementary'}
-              on:click={() => {
-                if (editingTheme) {
-                  colorHarmonyMode = 'complementary';
-                  applyColorHarmony(editingTheme.colors.primary, 'complementary');
-                }
-              }}
-            >
-              Complementary
-            </button>
-            <button
-              type="button"
-              class="harmony-btn"
-              class:active={colorHarmonyMode === 'triadic'}
-              on:click={() => {
-                if (editingTheme) {
-                  colorHarmonyMode = 'triadic';
-                  applyColorHarmony(editingTheme.colors.primary, 'triadic');
-                }
-              }}
-            >
-              Triadic
-            </button>
-            <button
-              type="button"
-              class="harmony-btn"
-              class:active={colorHarmonyMode === 'analogous'}
-              on:click={() => {
-                if (editingTheme) {
-                  colorHarmonyMode = 'analogous';
-                  applyColorHarmony(editingTheme.colors.primary, 'analogous');
-                }
-              }}
-            >
-              Analogous
-            </button>
-            <button
-              type="button"
-              class="harmony-btn"
-              class:active={colorHarmonyMode === 'split'}
-              on:click={() => {
-                if (editingTheme) {
-                  colorHarmonyMode = 'split';
-                  applyColorHarmony(editingTheme.colors.primary, 'split');
-                }
-              }}
-            >
-              Split
-            </button>
-          </div>
-        </div>
-
         <div class="color-sections">
           <div class="color-section">
-            <h4>Brand Colors</h4>
+            <h4>Focal Colors</h4>
             <div class="color-row">
               <span class="color-label">Primary</span>
               <div class="color-input-group">
@@ -1025,6 +1570,208 @@
                 <input type="color" bind:value={editingTheme.colors.accent} />
                 <input type="text" bind:value={editingTheme.colors.accent} class="hex-input" />
               </div>
+            </div>
+
+            <div class="harmony-controls">
+              <button
+                type="button"
+                class="harmony-header"
+                on:click={() => {
+                  isHarmonyExpanded = !isHarmonyExpanded;
+                }}
+              >
+                <span class="harmony-label">Color Harmony</span>
+                <span class="collapse-icon">{isHarmonyExpanded ? '▼' : '▶'}</span>
+              </button>
+
+              {#if isHarmonyExpanded}
+                <div class="harmony-content">
+                  <div class="harmony-buttons">
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'none'}
+                      on:click={() => {
+                        colorHarmonyMode = 'none';
+                      }}
+                    >
+                      None
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'complementary'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'complementary';
+                          applyColorHarmony(editingTheme.colors.primary, 'complementary');
+                        }
+                      }}
+                    >
+                      Complementary
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'triadic'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'triadic';
+                          applyColorHarmony(editingTheme.colors.primary, 'triadic');
+                        }
+                      }}
+                    >
+                      Triadic
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'analogous'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'analogous';
+                          applyColorHarmony(editingTheme.colors.primary, 'analogous');
+                        }
+                      }}
+                    >
+                      Analogous
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'split'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'split';
+                          applyColorHarmony(editingTheme.colors.primary, 'split');
+                        }
+                      }}
+                    >
+                      Split Comp
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'tetradic'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'tetradic';
+                          applyColorHarmony(editingTheme.colors.primary, 'tetradic');
+                        }
+                      }}
+                    >
+                      Tetradic
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'monochromatic'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'monochromatic';
+                          applyColorHarmony(editingTheme.colors.primary, 'monochromatic');
+                        }
+                      }}
+                    >
+                      Monochrome
+                    </button>
+                    <button
+                      type="button"
+                      class="harmony-btn"
+                      class:active={colorHarmonyMode === 'double-split'}
+                      on:click={() => {
+                        if (editingTheme) {
+                          colorHarmonyMode = 'double-split';
+                          applyColorHarmony(editingTheme.colors.primary, 'double-split');
+                        }
+                      }}
+                    >
+                      Double Split
+                    </button>
+                  </div>
+
+                  <div class="brightness-control">
+                    <label for="wheel-brightness">
+                      <span class="brightness-label">Brightness</span>
+                      <span class="brightness-value">{wheelBrightness}%</span>
+                    </label>
+                    <input
+                      id="wheel-brightness"
+                      type="range"
+                      min="0"
+                      max="80"
+                      bind:value={wheelBrightness}
+                      on:input={() => {
+                        drawColorWheel();
+                      }}
+                      class="brightness-slider"
+                    />
+                  </div>
+
+                  <div class="color-wheel-container">
+                    <canvas
+                      bind:this={colorWheelCanvas}
+                      width="280"
+                      height="280"
+                      class="color-wheel"
+                      on:mousedown={handleWheelMouseDown}
+                      on:mousemove={handleWheelMouseMove}
+                      on:mouseup={handleWheelMouseUp}
+                      on:mouseleave={handleWheelMouseLeave}
+                    ></canvas>
+                    <div class="wheel-description">
+                      {#if colorHarmonyMode === 'none'}
+                        <p>
+                          Select a harmony mode to lock colors together based on professional color
+                          theory.
+                        </p>
+                      {:else if colorHarmonyMode === 'complementary'}
+                        <p>
+                          <strong>Complementary:</strong> Primary + opposite complement with subtle accent
+                          variation. Creates maximum contrast and visual tension. Perfect for bold, attention-grabbing
+                          designs.
+                        </p>
+                      {:else if colorHarmonyMode === 'triadic'}
+                        <p>
+                          <strong>Triadic:</strong> Three colors equally spaced (120°) create balanced
+                          vibrancy. Offers visual diversity while maintaining harmony. Ideal for playful,
+                          energetic themes.
+                        </p>
+                      {:else if colorHarmonyMode === 'tetradic'}
+                        <p>
+                          <strong>Tetradic (Square):</strong> Primary + complement with balanced intermediates
+                          (90°). Rich, sophisticated palette with strong contrast. Best for complex,
+                          multi-layered designs.
+                        </p>
+                      {:else if colorHarmonyMode === 'analogous'}
+                        <p>
+                          <strong>Analogous:</strong> Adjacent colors (±25°) with subtle brightness variations.
+                          Creates serene, harmonious flow. Perfect for calm, cohesive, nature-inspired
+                          themes.
+                        </p>
+                      {:else if colorHarmonyMode === 'split'}
+                        <p>
+                          <strong>Split Complementary:</strong> Primary + two colors flanking its complement
+                          (150°/210°). Softer contrast than complementary. Great balance of tension and
+                          harmony.
+                        </p>
+                      {:else if colorHarmonyMode === 'monochromatic'}
+                        <p>
+                          <strong>Monochromatic:</strong> Single hue with varied saturation and brightness.
+                          Creates sophisticated, unified look with depth. Excellent for elegant, minimalist
+                          designs.
+                        </p>
+                      {:else if colorHarmonyMode === 'double-split'}
+                        <p>
+                          <strong>Double Split:</strong> Advanced palette with primary + dual split complements
+                          (135°/225°). Complex, rich color relationships. For sophisticated, high-impact
+                          professional themes.
+                        </p>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+              {/if}
             </div>
           </div>
 
@@ -1626,17 +2373,41 @@
 
   .harmony-controls {
     margin-bottom: 2rem;
-    padding: 1rem;
     background: var(--color-bg-secondary);
     border-radius: 8px;
   }
 
+  .harmony-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .harmony-header:hover {
+    background: var(--color-bg-hover, rgba(0, 0, 0, 0.05));
+  }
+
   .harmony-label {
-    display: block;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .collapse-icon {
+    font-size: 1rem;
     color: var(--color-text-secondary);
-    margin-bottom: 0.75rem;
+    transition: transform 0.2s;
+  }
+
+  .harmony-content {
+    padding: 0 1.5rem 1.5rem 1.5rem;
   }
 
   .harmony-buttons {
@@ -1666,6 +2437,102 @@
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
+  }
+
+  .brightness-control {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .brightness-control label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .brightness-label {
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .brightness-value {
+    font-weight: 600;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+  }
+
+  .brightness-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-bg-secondary);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .brightness-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+  }
+
+  .brightness-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+  }
+
+  .brightness-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+  }
+
+  .brightness-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+  }
+
+  .color-wheel-container {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .color-wheel {
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .wheel-description {
+    flex: 1;
+    min-width: 250px;
+    max-width: 300px;
+  }
+
+  .wheel-description p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+  }
+
+  .wheel-description strong {
+    color: var(--color-text-primary);
+    font-weight: 600;
   }
 
   .color-sections {
@@ -1824,6 +2691,21 @@
 
     .harmony-btn {
       width: 100%;
+    }
+
+    .color-wheel-container {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .color-wheel {
+      width: 240px;
+      height: 240px;
+    }
+
+    .wheel-description {
+      max-width: 100%;
+      text-align: center;
     }
   }
 </style>
