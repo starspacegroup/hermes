@@ -23,7 +23,6 @@ describe('Generic Revision Service', () => {
   let mockDb: D1Database;
   const siteId = 'site-1';
   const entityId = 'entity-1';
-  const entityType = 'product';
 
   const mockRevisionData: Revision = {
     id: 'revision-1',
@@ -464,7 +463,7 @@ describe('Generic Revision Service', () => {
 
       (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
 
-      const result = await deleteOldRevisions(mockDb, siteId, 'product', entityId, 1);
+      await deleteOldRevisions(mockDb, siteId, 'product', entityId, 1);
 
       const prepareCall = (mockDb.prepare as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(prepareCall).toContain('is_current = 0');

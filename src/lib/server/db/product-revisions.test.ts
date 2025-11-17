@@ -76,7 +76,13 @@ describe('Product Revisions', () => {
 
       (mockDb.batch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
-      const result = await createProductRevision(mockDb, siteId, productId, 'user-1', 'Initial save');
+      const result = await createProductRevision(
+        mockDb,
+        siteId,
+        productId,
+        'user-1',
+        'Initial save'
+      );
 
       expect(result.entity_type).toBe('product');
       expect(result.entity_id).toBe(productId);

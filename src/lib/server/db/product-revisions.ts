@@ -144,11 +144,7 @@ export async function restoreProductRevision(
 /**
  * Build revision tree for a product
  */
-export async function buildProductRevisionTree(
-  db: D1Database,
-  siteId: string,
-  productId: string
-) {
+export async function buildProductRevisionTree(db: D1Database, siteId: string, productId: string) {
   return buildRevisionTree<ProductRevisionData>(db, siteId, 'product', productId);
 }
 

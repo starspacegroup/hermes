@@ -115,7 +115,10 @@ export async function getRevisions<T = unknown>(
     params.push(options.offset);
   }
 
-  const result = await db.prepare(query).bind(...params).all<Revision>();
+  const result = await db
+    .prepare(query)
+    .bind(...params)
+    .all<Revision>();
 
   return (result.results || []).map((rev) => ({
     ...rev,
