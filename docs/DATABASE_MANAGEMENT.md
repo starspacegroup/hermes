@@ -93,6 +93,7 @@ Migrations are stored in the `migrations/` directory:
 
 - `0001_initial_schema.sql` - Initial database schema with multi-tenant support
 - `0002_seed_data.sql` - Sample data for development/preview environments
+- `0024_generic_revisions.sql` - Generic revision tracking system for products, pages, etc.
 
 ### Creating New Migrations
 
@@ -255,3 +256,4 @@ Then update the `database_id` in `wrangler.toml` with the returned ID.
 - [D1 Migrations Guide](https://developers.cloudflare.com/d1/platform/migrations/)
 - [Wrangler CLI Reference](https://developers.cloudflare.com/workers/wrangler/)
 - [Database Schema Documentation](./DATABASE.md)
+- [Revision System Documentation](./REVISIONS.md)

@@ -2,11 +2,17 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import ProductMediaManager from '$lib/components/admin/ProductMediaManager.svelte';
+  import RevisionModal from './RevisionModal.svelte';
   import type { Product, ProductType, FulfillmentProvider } from '$lib/types';
+  import type { RevisionNode } from '$lib/types/revisions';
+  import type { ProductRevisionData } from '$lib/server/db/product-revisions';
   import { onMount } from 'svelte';
 
   export let product: Product | null = null;
   export let isEditing = false;
+  export let revisions: RevisionNode<ProductRevisionData>[] = [];
+  export let initialCurrentRevisionId: string | null = null;
+  export let initialCurrentRevisionIsPublished = false;
 
   const DEFAULT_PRODUCT_IMAGE =
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop';
@@ -18,11 +24,26 @@
   let formPrice = product?.price || 0;
   let formImage = product?.image || '';
   let formCategory = product?.category || '';
-  let formStock = product?.stock || 0;
   let formType: ProductType = product?.type || 'physical';
   let formTags = product?.tags.join(', ') || '';
 
   let isSubmitting = false;
+  let savingDraft = false;
+  let publishing = false;
+  let savingProviderStock: string | null = null;
+  let showRevisionModal = false;
+  let currentRevisionId: string | null = initialCurrentRevisionId;
+  let currentRevisionIsPublished = initialCurrentRevisionIsPublished;
+  let hasUnsavedChanges = false;
+
+  // Track initial values to detect changes
+  let initialFormName = formName;
+  let initialFormDescription = formDescription;
+  let initialFormPrice = formPrice;
+  let initialFormImage = formImage;
+  let initialFormCategory = formCategory;
+  let initialFormType = formType;
+  let initialFormTags = formTags;
 
   // Reference to ProductMediaManager component
   let productMediaManager: ProductMediaManager | undefined;
@@ -32,6 +53,13 @@
   let selectedProviders: Map<string, { selected: boolean; cost: number; stockQuantity: number }> =
     new Map();
   let orderedProviderIds: string[] = [];
+
+  // Track initial fulfillment state
+  let initialSelectedProviders: Map<
+    string,
+    { selected: boolean; cost: number; stockQuantity: number }
+  > = new Map();
+  let initialOrderedProviderIds: string[] = [];
 
   // Drag and drop state
   let draggedIndex: number | null = null;
@@ -51,6 +79,76 @@
       thresholdOverride: number | null;
     }
   > = new Map();
+
+  // Track initial shipping state
+  let initialSelectedShippingOptions: Map<
+    string,
+    {
+      selected: boolean;
+      isDefault: boolean;
+      priceOverride: number | null;
+      thresholdOverride: number | null;
+    }
+  > = new Map();
+
+  // Check for unsaved changes - use reactive statement with direct variable access
+  $: {
+    let fulfillmentChanged = false;
+    let shippingChanged = false;
+
+    // Check if fulfillment order changed
+    if (orderedProviderIds.length !== initialOrderedProviderIds.length) {
+      fulfillmentChanged = true;
+    } else if (!orderedProviderIds.every((id, idx) => id === initialOrderedProviderIds[idx])) {
+      fulfillmentChanged = true;
+    } else {
+      // Check if any provider settings changed (excluding stock - it's not part of revisions)
+      for (const [id, current] of selectedProviders) {
+        const initial = initialSelectedProviders.get(id);
+        if (!initial) {
+          fulfillmentChanged = true;
+          break;
+        }
+        if (current.selected !== initial.selected || current.cost !== initial.cost) {
+          fulfillmentChanged = true;
+          break;
+        }
+      }
+    }
+
+    // Check if any shipping settings changed
+    for (const [id, current] of selectedShippingOptions) {
+      const initial = initialSelectedShippingOptions.get(id);
+      if (!initial) {
+        shippingChanged = true;
+        break;
+      }
+      if (
+        current.selected !== initial.selected ||
+        current.isDefault !== initial.isDefault ||
+        current.priceOverride !== initial.priceOverride ||
+        current.thresholdOverride !== initial.thresholdOverride
+      ) {
+        shippingChanged = true;
+        break;
+      }
+    }
+
+    hasUnsavedChanges =
+      formName !== initialFormName ||
+      formDescription !== initialFormDescription ||
+      formPrice !== initialFormPrice ||
+      formImage !== initialFormImage ||
+      formCategory !== initialFormCategory ||
+      formType !== initialFormType ||
+      formTags !== initialFormTags ||
+      fulfillmentChanged ||
+      shippingChanged;
+  }
+
+  // Determine button states
+  $: canSaveDraft = hasUnsavedChanges && isEditing;
+  $: canPublish = (hasUnsavedChanges && isEditing) || (!currentRevisionIsPublished && isEditing);
 
   // Load fulfillment providers and shipping options on mount
   onMount(async () => {
@@ -87,6 +185,10 @@
         // Force reactivity update
         selectedProviders = new Map(selectedProviders);
         orderedProviderIds = [...orderedProviderIds];
+
+        // Save initial state for change detection
+        initialSelectedProviders = new Map(selectedProviders);
+        initialOrderedProviderIds = [...orderedProviderIds];
       }
 
       // Load shipping options
@@ -110,6 +212,9 @@
 
         // Force reactivity update
         selectedShippingOptions = new Map(selectedShippingOptions);
+
+        // Save initial state for change detection
+        initialSelectedShippingOptions = new Map(selectedShippingOptions);
       }
     } catch (error) {
       console.error('Error loading options:', error);
@@ -137,6 +242,65 @@
     if (current) {
       selectedProviders.set(providerId, { ...current, stockQuantity });
       selectedProviders = new Map(selectedProviders);
+    }
+  }
+
+  async function handleSaveProviderStock(providerId: string) {
+    if (!product?.id || savingProviderStock) return;
+
+    const providerData = selectedProviders.get(providerId);
+    if (!providerData) return;
+
+    try {
+      savingProviderStock = providerId;
+
+      // Get all current fulfillment options
+      const fulfillmentOptions = orderedProviderIds
+        .map((id, index) => {
+          const data = selectedProviders.get(id);
+          if (!data || !data.selected) return null;
+          return {
+            providerId: id,
+            cost: data.cost,
+            stockQuantity: data.stockQuantity,
+            sortOrder: index
+          };
+        })
+        .filter((opt) => opt !== null);
+
+      // Update via API
+      const response = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: product.id,
+          fulfillmentOptions
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update stock');
+      }
+
+      toastStore.success('Stock quantity updated');
+
+      // Update initial value for this provider
+      const initial = initialSelectedProviders.get(providerId);
+      if (initial) {
+        initialSelectedProviders.set(providerId, {
+          ...initial,
+          stockQuantity: providerData.stockQuantity
+        });
+        initialSelectedProviders = new Map(initialSelectedProviders);
+      }
+
+      // Reload to get fresh data
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      toastStore.error('Failed to update stock quantity');
+    } finally {
+      savingProviderStock = null;
     }
   }
 
@@ -206,17 +370,276 @@
     }
   }
 
-  async function handleSubmit() {
-    if (isSubmitting) return;
+  function toggleRevisionModal() {
+    showRevisionModal = !showRevisionModal;
+  }
 
-    // Validate form - allow price of 0 for free products
+  async function handleRevisionSelect(revisionId: string) {
+    try {
+      const response = await fetch(`/api/products/${product?.id}/revisions/${revisionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load revision');
+      }
+
+      const data = (await response.json()) as { revision: RevisionNode<ProductRevisionData> };
+      const revision = data.revision;
+
+      // Update form fields with revision data
+      formName = revision.data.name;
+      formDescription = revision.data.description;
+      formPrice = revision.data.price;
+      formImage = revision.data.image;
+      formCategory = revision.data.category;
+      formType = revision.data.type;
+      formTags = JSON.parse(revision.data.tags).join(', ');
+      // Note: formStock is not restored - it's a live inventory value
+
+      // Restore fulfillment options from revision
+      const revisionFulfillmentOptions = revision.data.fulfillmentOptions || [];
+      orderedProviderIds = revisionFulfillmentOptions.map((opt) => opt.providerId);
+
+      // Add any remaining providers not in the revision
+      availableProviders.forEach((provider) => {
+        if (!orderedProviderIds.includes(provider.id)) {
+          orderedProviderIds.push(provider.id);
+        }
+      });
+
+      // Reset and populate selectedProviders map
+      selectedProviders.clear();
+      availableProviders.forEach((provider) => {
+        const revisionOpt = revisionFulfillmentOptions.find(
+          (opt) => opt.providerId === provider.id
+        );
+        selectedProviders.set(provider.id, {
+          selected: !!revisionOpt,
+          cost: revisionOpt?.cost || 0,
+          stockQuantity: revisionOpt?.stockQuantity || 0
+        });
+      });
+      selectedProviders = new Map(selectedProviders);
+      orderedProviderIds = [...orderedProviderIds];
+
+      // Restore shipping options from revision
+      const revisionShippingOptions = revision.data.shippingOptions || [];
+      selectedShippingOptions.clear();
+      availableShippingOptions.forEach((option) => {
+        const revisionOpt = revisionShippingOptions.find(
+          (opt) => opt.shippingOptionId === option.id
+        );
+        selectedShippingOptions.set(option.id, {
+          selected: !!revisionOpt,
+          isDefault: revisionOpt?.isDefault || false,
+          priceOverride: revisionOpt?.priceOverride ?? null,
+          thresholdOverride: revisionOpt?.thresholdOverride ?? null
+        });
+      });
+      selectedShippingOptions = new Map(selectedShippingOptions);
+
+      // Update initial values to match loaded revision
+      initialFormName = formName;
+      initialFormDescription = formDescription;
+      initialFormPrice = formPrice;
+      initialFormImage = formImage;
+      initialFormCategory = formCategory;
+      initialFormType = formType;
+      initialFormTags = formTags;
+      initialSelectedProviders = new Map(selectedProviders);
+      initialOrderedProviderIds = [...orderedProviderIds];
+      initialSelectedShippingOptions = new Map(selectedShippingOptions);
+
+      currentRevisionId = revisionId;
+      currentRevisionIsPublished = revision.is_current || false;
+
+      toastStore.info(
+        `Loaded revision ${revision.revision_hash.substring(0, 7)} from ${new Date(revision.created_at * 1000).toLocaleString()}`
+      );
+    } catch (error) {
+      console.error('Error loading revision:', error);
+      toastStore.error('Failed to load revision');
+    }
+  }
+
+  async function handleRevisionPublish(revisionId: string) {
+    if (!product?.id) return;
+
+    try {
+      publishing = true;
+      const response = await fetch(`/api/products/${product.id}/revisions/${revisionId}/publish`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to publish revision');
+      }
+
+      toastStore.success('Revision published successfully');
+      await invalidateAll();
+
+      // Load the published revision
+      await handleRevisionSelect(revisionId);
+    } catch (error) {
+      console.error('Error publishing revision:', error);
+      toastStore.error('Failed to publish revision');
+    } finally {
+      publishing = false;
+    }
+  }
+
+  async function handleSaveDraft() {
+    if (!product?.id || savingDraft) return;
+
+    // Validate form
     if (!formName || !formDescription || formPrice < 0) {
       toastStore.error('Please fill in all required fields');
       return;
     }
 
-    isSubmitting = true;
+    try {
+      savingDraft = true;
 
+      // Build product data
+      const productData = buildProductData();
+
+      // Update product in database
+      const response = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: product.id, ...productData })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save draft');
+      }
+
+      // Create a new draft revision
+      const revisionResponse = await fetch(`/api/products/${product.id}/revisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Draft saved' })
+      });
+
+      if (!revisionResponse.ok) {
+        console.error('Failed to create revision');
+      }
+
+      toastStore.success('Draft saved successfully');
+
+      // Update initial values
+      initialFormName = formName;
+      initialFormDescription = formDescription;
+      initialFormPrice = formPrice;
+      initialFormImage = formImage;
+      initialFormCategory = formCategory;
+      initialFormType = formType;
+      initialFormTags = formTags;
+      initialSelectedProviders = new Map(selectedProviders);
+      initialOrderedProviderIds = [...orderedProviderIds];
+      initialSelectedShippingOptions = new Map(selectedShippingOptions);
+
+      // Mark as draft (not published)
+      currentRevisionIsPublished = false;
+
+      // Reload data
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toastStore.error('Failed to save draft');
+    } finally {
+      savingDraft = false;
+    }
+  }
+
+  async function handlePublish() {
+    if (!product?.id || publishing) return;
+
+    // Validate form
+    if (!formName || !formDescription || formPrice < 0) {
+      toastStore.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      publishing = true;
+
+      // Build product data
+      const productData = buildProductData();
+
+      // Update product in database
+      const response = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: product.id, ...productData })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to publish product');
+      }
+
+      // Create a new revision
+      const revisionResponse = await fetch(`/api/products/${product.id}/revisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Product published' })
+      });
+
+      if (!revisionResponse.ok) {
+        throw new Error('Failed to create revision');
+      }
+
+      const revisionData = (await revisionResponse.json()) as {
+        revision?: { id: string };
+      };
+      const newRevisionId = revisionData.revision?.id;
+
+      if (newRevisionId) {
+        // Publish the revision
+        const publishResponse = await fetch(
+          `/api/products/${product.id}/revisions/${newRevisionId}/publish`,
+          { method: 'POST' }
+        );
+
+        if (!publishResponse.ok) {
+          throw new Error('Failed to publish revision');
+        }
+      }
+
+      toastStore.success('Product published successfully');
+
+      // Save media order changes if any exist
+      if (productMediaManager) {
+        try {
+          await productMediaManager.saveMediaOrder();
+        } catch (error) {
+          console.error('Failed to save media order:', error);
+        }
+      }
+
+      // Update initial values
+      initialFormName = formName;
+      initialFormDescription = formDescription;
+      initialFormPrice = formPrice;
+      initialFormImage = formImage;
+      initialFormCategory = formCategory;
+      initialFormType = formType;
+      initialFormTags = formTags;
+      initialSelectedProviders = new Map(selectedProviders);
+      initialOrderedProviderIds = [...orderedProviderIds];
+      initialSelectedShippingOptions = new Map(selectedShippingOptions);
+
+      currentRevisionIsPublished = true;
+
+      // Reload data
+      await invalidateAll();
+    } catch (error) {
+      console.error('Error publishing product:', error);
+      toastStore.error('Failed to publish product');
+    } finally {
+      publishing = false;
+    }
+  }
+
+  function buildProductData() {
     // Build fulfillment options array with sortOrder based on orderedProviderIds
     const fulfillmentOptions = orderedProviderIds
       .map((providerId, index) => {
@@ -244,13 +667,13 @@
       })
       .filter((opt) => opt !== null);
 
-    const productData = {
+    return {
       name: formName,
       description: formDescription,
       price: formPrice,
       image: formImage || DEFAULT_PRODUCT_IMAGE,
       category: formCategory || DEFAULT_CATEGORY,
-      stock: formStock,
+      stock: 0, // Stock is calculated from fulfillment options, not stored separately
       type: formType,
       tags: formTags
         .split(',')
@@ -259,66 +682,52 @@
       fulfillmentOptions,
       shippingOptions
     };
+  }
+
+  async function handleSubmit() {
+    if (isSubmitting) return;
+
+    // Validate form - allow price of 0 for free products
+    if (!formName || !formDescription || formPrice < 0) {
+      toastStore.error('Please fill in all required fields');
+      return;
+    }
+
+    isSubmitting = true;
 
     try {
-      if (isEditing && product?.id) {
-        const response = await fetch('/api/products', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ id: product.id, ...productData })
-        });
+      const productData = buildProductData();
 
-        if (!response.ok) {
-          throw new Error('Failed to update product');
-        }
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(productData)
+      });
 
-        toastStore.success(`Product "${formName}" updated successfully`);
-
-        // Save media order changes if any exist
-        if (productMediaManager) {
-          try {
-            await productMediaManager.saveMediaOrder();
-          } catch (error) {
-            console.error('Failed to save media order, but product saved:', error);
-          }
-        }
-      } else {
-        const response = await fetch('/api/products', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(productData)
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to create product');
-        }
-
-        const newProduct = (await response.json()) as Product;
-        toastStore.success(`Product "${formName}" created successfully`);
-
-        // Save any temporary media to the newly created product
-        if (productMediaManager && newProduct.id) {
-          try {
-            await productMediaManager.saveTempMediaToProduct(newProduct.id);
-          } catch (error) {
-            console.error('Failed to save media to new product:', error);
-            // Don't fail the whole operation, product is already created
-          }
-        }
+      if (!response.ok) {
+        throw new Error('Failed to create product');
       }
 
-      // Refresh the page data
-      await invalidateAll();
+      const newProduct = (await response.json()) as Product;
+      toastStore.success(`Product "${formName}" created successfully`);
+
+      // Save any temporary media to the newly created product
+      if (productMediaManager && newProduct.id) {
+        try {
+          await productMediaManager.saveTempMediaToProduct(newProduct.id);
+        } catch (error) {
+          console.error('Failed to save media to new product:', error);
+          // Don't fail the whole operation, product is already created
+        }
+      }
 
       // Navigate back to products list
       await goto('/admin/products');
     } catch (error) {
-      console.error('Error saving product:', error);
-      toastStore.error(isEditing ? 'Failed to update product' : 'Failed to create product');
+      console.error('Error creating product:', error);
+      toastStore.error('Failed to create product');
     } finally {
       isSubmitting = false;
     }
@@ -462,15 +871,29 @@
                     </div>
                     <div class="detail-input">
                       <label for="stock-{providerId}">Stock:</label>
-                      <input
-                        type="number"
-                        id="stock-{providerId}"
-                        value={providerData.stockQuantity}
-                        on:input={(e) =>
-                          updateProviderStock(providerId, Number(e.currentTarget.value))}
-                        min="0"
-                        placeholder="0"
-                      />
+                      <div class="stock-save-wrapper">
+                        <input
+                          type="number"
+                          id="stock-{providerId}"
+                          value={providerData.stockQuantity}
+                          on:input={(e) =>
+                            updateProviderStock(providerId, Number(e.currentTarget.value))}
+                          min="0"
+                          placeholder="0"
+                          disabled={savingProviderStock === providerId}
+                        />
+                        {#if initialSelectedProviders.get(providerId) && providerData.stockQuantity !== initialSelectedProviders.get(providerId)?.stockQuantity}
+                          <button
+                            type="button"
+                            class="save-provider-stock-btn"
+                            on:click={() => handleSaveProviderStock(providerId)}
+                            disabled={savingProviderStock === providerId}
+                            title="Save stock quantity"
+                          >
+                            {savingProviderStock === providerId ? 'Saving...' : 'Save'}
+                          </button>
+                        {/if}
+                      </div>
                     </div>
                   </div>
                 {/if}
@@ -557,14 +980,68 @@
       </div>
     {/if}
 
+    <!-- Revision History Button -->
+    {#if isEditing && product?.id && revisions.length > 0}
+      <div class="form-group">
+        <button type="button" class="revision-history-btn" on:click={toggleRevisionModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          View Revision History ({revisions.length})
+        </button>
+      </div>
+    {/if}
+
     <div class="form-actions">
       <button type="button" class="cancel-btn" on:click={handleCancel}>Cancel</button>
-      <button type="submit" class="submit-btn" disabled={isSubmitting}>
-        {isEditing ? 'Update Product' : 'Create Product'}
-      </button>
+      {#if isEditing}
+        <button
+          type="button"
+          class="draft-btn"
+          on:click={handleSaveDraft}
+          disabled={savingDraft || publishing || !canSaveDraft}
+          title={!canSaveDraft ? 'No changes to save' : ''}
+        >
+          {savingDraft ? 'Saving...' : 'Save Draft'}
+        </button>
+        <button
+          type="button"
+          class="submit-btn"
+          on:click={handlePublish}
+          disabled={savingDraft || publishing || !canPublish}
+          title={!canPublish
+            ? currentRevisionIsPublished
+              ? 'Current revision is already published'
+              : 'No changes to publish'
+            : currentRevisionIsPublished
+              ? 'Publish changes'
+              : 'Publish this revision'}
+        >
+          {publishing ? 'Publishing...' : 'Publish'}
+        </button>
+      {:else}
+        <button type="submit" class="submit-btn" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating...' : 'Create Product'}
+        </button>
+      {/if}
     </div>
   </form>
 </div>
+
+<!-- Revision Modal -->
+<RevisionModal
+  isOpen={showRevisionModal}
+  {revisions}
+  {currentRevisionId}
+  onSelect={handleRevisionSelect}
+  onPublish={handleRevisionPublish}
+  onClose={() => (showRevisionModal = false)}
+/>
 
 <style>
   .product-form {
@@ -704,6 +1181,22 @@
 
   .cancel-btn:hover {
     color: var(--color-text-primary);
+  }
+
+  .draft-btn {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .draft-btn:hover:not(:disabled) {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+  }
+
+  .draft-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .submit-btn {
@@ -952,5 +1445,73 @@
     .detail-input input {
       width: 100%;
     }
+  }
+
+  .revision-history-btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .revision-history-btn:hover {
+    background: var(--color-bg-accent);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  .revision-history-btn svg {
+    transition: transform 0.2s ease;
+  }
+
+  .revision-history-btn:hover svg {
+    transform: rotate(15deg);
+  }
+
+  @media (max-width: 640px) {
+    .revision-history-btn {
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
+    }
+  }
+
+  .stock-save-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .save-provider-stock-btn {
+    padding: 0.375rem 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .save-provider-stock-btn:hover:not(:disabled) {
+    background: var(--color-primary-dark, #0056b3);
+    transform: translateY(-1px);
+  }
+
+  .save-provider-stock-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

@@ -1,7 +1,7 @@
-import type { RevisionNode } from '$lib/types/pages';
+import type { RevisionNode } from '$lib/types/revisions';
 
 export interface TreeNode {
-  revision: RevisionNode;
+  revision: RevisionNode<unknown>;
   level: number;
   lane: number; // Which vertical lane (column) the node occupies
   x: number;
@@ -27,18 +27,18 @@ export interface Connection {
  * Implements a git-like graph with lanes for branches
  */
 export function calculateTreeLayout(
-  revisions: RevisionNode[],
+  revisions: RevisionNode<unknown>[],
   nodeWidth: number = 30,
   levelHeight: number = 80
 ): TreeNode[] {
   if (revisions.length === 0) return [];
 
   // Build a map for quick lookup
-  const revMap = new Map<string, RevisionNode>();
+  const revMap = new Map<string, RevisionNode<unknown>>();
   revisions.forEach((rev) => revMap.set(rev.id, rev));
 
   // Group by depth for level-based layout
-  const depthMap = new Map<number, RevisionNode[]>();
+  const depthMap = new Map<number, RevisionNode<unknown>[]>();
   let maxDepth = 0;
 
   revisions.forEach((rev) => {

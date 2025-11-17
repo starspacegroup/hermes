@@ -38,7 +38,13 @@
     </a>
   </div>
 
-  <ProductForm isEditing={true} product={data.product} />
+  <ProductForm
+    isEditing={true}
+    product={data.product}
+    revisions={data.revisions || []}
+    initialCurrentRevisionId={data.currentRevisionId}
+    initialCurrentRevisionIsPublished={data.currentRevisionIsPublished}
+  />
 </div>
 
 <style>

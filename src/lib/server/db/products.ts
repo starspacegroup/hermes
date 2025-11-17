@@ -248,6 +248,23 @@ export async function updateProductStock(
 }
 
 /**
+ * Calculate total stock from fulfillment options
+ * Returns the sum of stock quantities from all fulfillment options for a product
+ */
+export async function calculateProductStock(
+  db: D1Database,
+  siteId: string,
+  productId: string
+): Promise<number> {
+  const result = await executeOne<{ total: number }>(
+    db,
+    'SELECT COALESCE(SUM(stock_quantity), 0) as total FROM product_fulfillment_options WHERE site_id = ? AND product_id = ?',
+    [siteId, productId]
+  );
+  return result?.total || 0;
+}
+
+/**
  * Sync product image field with first media item
  * Updates the product's image field to match the first product media item (by display_order)
  * If no media items exist, keeps the current image

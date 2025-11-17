@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { RevisionNode } from '$lib/types/pages';
+  import type { RevisionNode } from '$lib/types/revisions';
   import { calculateTreeLayout, calculateConnections } from '$lib/utils/revisionGraphLayout';
 
-  export let revisions: RevisionNode[] = [];
+  export let revisions: RevisionNode<unknown>[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelectRevision: (revisionId: string) => void = () => {};
 
@@ -174,8 +174,8 @@
               }}
             />
 
-            <!-- Published indicator ring -->
-            {#if revision.is_published}
+            <!-- Current indicator ring -->
+            {#if revision.is_current}
               <circle
                 cx={x}
                 cy={y}
@@ -213,18 +213,20 @@
                   <span class="hash" style="color: {color}">
                     {formatHash(revision.revision_hash)}
                   </span>
-                  {#if revision.is_published}
+                  {#if revision.is_current}
                     <span class="badge published">✓</span>
                   {/if}
                   <span class="branch-badge" style="background: {color}">
                     L{node.lane}
                   </span>
                 </div>
-                <div class="node-title">{revision.title}</div>
+                <div class="node-title">
+                  {revision.message || `Revision ${formatHash(revision.revision_hash)}`}
+                </div>
                 <div class="node-meta">
                   <span class="time">{formatDate(revision.created_at)}</span>
-                  {#if revision.created_by}
-                    <span class="author">{revision.created_by}</span>
+                  {#if revision.user_id}
+                    <span class="author">{revision.user_id}</span>
                   {/if}
                 </div>
               </button>

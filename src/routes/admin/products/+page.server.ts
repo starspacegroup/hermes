@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getAllProducts, getProductFulfillmentOptions } from '$lib/server/db';
+import { calculateProductStock } from '$lib/server/db/products';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   // If platform is not available (development without D1), fall back to empty array
@@ -20,6 +21,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     const products = await Promise.all(
       dbProducts.map(async (p) => {
         const fulfillmentOptions = await getProductFulfillmentOptions(db, siteId, p.id);
+        const stock = await calculateProductStock(db, siteId, p.id);
         return {
           id: p.id,
           name: p.name,
@@ -27,7 +29,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
           price: p.price,
           image: p.image,
           category: p.category,
-          stock: p.stock,
+          stock,
           type: p.type,
           tags: JSON.parse(p.tags || '[]') as string[],
           fulfillmentOptions
