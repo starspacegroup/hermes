@@ -19,7 +19,7 @@
   import { AutoSaveManager } from '$lib/utils/editor/autoSaveManager';
   import { KeyboardShortcutManager } from '$lib/utils/editor/keyboardShortcuts';
   import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
-  import type { ParsedPageRevision } from '$lib/types/pages';
+  import type { ParsedPageRevision, RevisionNode as PageRevisionNode } from '$lib/types/pages';
   import type { RevisionNode } from '$lib/types/revisions';
 
   export let pageId: string | null = null;
@@ -28,6 +28,9 @@
   export let initialStatus: 'draft' | 'published' = 'draft';
   export let initialColorTheme: ColorTheme | undefined = undefined;
   export let initialWidgets: PageWidget[] = [];
+  export let initialRevisions: PageRevisionNode[] | RevisionNode<unknown>[] = [];
+  export let initialCurrentRevisionId: string | null = null;
+  export let initialCurrentRevisionIsPublished: boolean = false;
   export let onSave: (data: {
     title: string;
     slug: string;
@@ -68,10 +71,10 @@
   let showExitConfirmation = false;
   let hasUnsavedChanges = false;
 
-  // Revision state
-  let revisions: RevisionNode<unknown>[] = [];
-  let currentRevisionId: string | null = null;
-  let currentRevisionIsPublished: boolean = initialStatus === 'published';
+  // Revision state (cast to generic type for compatibility)
+  let revisions: RevisionNode<unknown>[] = initialRevisions as RevisionNode<unknown>[];
+  let currentRevisionId: string | null = initialCurrentRevisionId;
+  let currentRevisionIsPublished: boolean = initialCurrentRevisionIsPublished;
 
   // Undo/redo state
   let canUndo = false;

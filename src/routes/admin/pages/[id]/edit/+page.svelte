@@ -219,7 +219,7 @@
     }
   }
 
-  function handleCancel() {
+  function _handleCancel() {
     // Navigate to the public page
     goto(data.page.slug);
   }
@@ -236,8 +236,11 @@
   initialStatus={data.page.status}
   initialColorTheme={data.page.colorTheme}
   initialWidgets={data.widgets}
+  initialRevisions={data.revisions || []}
+  initialCurrentRevisionId={data.currentRevisionId}
+  initialCurrentRevisionIsPublished={data.currentRevisionIsPublished || false}
   onSave={handleSave}
   onSaveDraft={handleSaveDraft}
   onPublish={handlePublish}
-  onCancel={handleCancel}
+  onCancel={() => goto('/admin/pages')}
 />
