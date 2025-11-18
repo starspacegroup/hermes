@@ -7,7 +7,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { generateId, getCurrentTimestamp } from './connection.js';
 import { encrypt, decrypt } from '../crypto.js';
-import type { AISettings, AIModel, AIProvider } from '$lib/types/ai-chat';
+import type { AISettings, AIProvider } from '$lib/types/ai-chat';
 
 export interface DBAISetting {
   id: string;
@@ -147,11 +147,7 @@ export async function upsertAISetting(
 /**
  * Delete an AI setting
  */
-export async function deleteAISetting(
-  db: D1Database,
-  siteId: string,
-  key: string
-): Promise<void> {
+export async function deleteAISetting(db: D1Database, siteId: string, key: string): Promise<void> {
   await db
     .prepare('DELETE FROM ai_settings WHERE site_id = ? AND setting_key = ?')
     .bind(siteId, key)
@@ -177,10 +173,7 @@ export async function hasAPIKeysConfigured(db: D1Database, siteId: string): Prom
 /**
  * Get available AI providers (those with API keys configured)
  */
-export async function getAvailableProviders(
-  db: D1Database,
-  siteId: string
-): Promise<AIProvider[]> {
+export async function getAvailableProviders(db: D1Database, siteId: string): Promise<AIProvider[]> {
   const result = await db
     .prepare(
       `SELECT setting_key FROM ai_settings 

@@ -207,9 +207,7 @@ describe('AI Sessions Database Operations', () => {
 
       await getUserAISessions(mockDb, 'site-1', 'user-1', 'active');
 
-      expect(mockPrepare).toHaveBeenCalledWith(
-        expect.stringContaining('AND status = ?')
-      );
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('AND status = ?'));
     });
 
     it('should return empty array when no sessions found', async () => {
@@ -229,9 +227,7 @@ describe('AI Sessions Database Operations', () => {
 
       await updateAISessionMessages(mockDb, 'site-1', 'session-1', messages);
 
-      expect(mockPrepare).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE ai_sessions')
-      );
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE ai_sessions'));
       expect(mockBind).toHaveBeenCalledWith(
         JSON.stringify(messages),
         expect.any(Number),
@@ -284,9 +280,9 @@ describe('AI Sessions Database Operations', () => {
         timestamp: 1000
       };
 
-      await expect(
-        addMessageToSession(mockDb, 'site-1', 'nonexistent', message)
-      ).rejects.toThrow('Session not found');
+      await expect(addMessageToSession(mockDb, 'site-1', 'nonexistent', message)).rejects.toThrow(
+        'Session not found'
+      );
     });
   });
 
@@ -294,15 +290,8 @@ describe('AI Sessions Database Operations', () => {
     it('should update session title', async () => {
       await updateAISessionTitle(mockDb, 'site-1', 'session-1', 'New Title');
 
-      expect(mockPrepare).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE ai_sessions')
-      );
-      expect(mockBind).toHaveBeenCalledWith(
-        'New Title',
-        expect.any(Number),
-        'session-1',
-        'site-1'
-      );
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE ai_sessions'));
+      expect(mockBind).toHaveBeenCalledWith('New Title', expect.any(Number), 'session-1', 'site-1');
     });
   });
 
@@ -328,12 +317,7 @@ describe('AI Sessions Database Operations', () => {
     it('should update session status', async () => {
       await updateAISessionStatus(mockDb, 'site-1', 'session-1', 'completed');
 
-      expect(mockBind).toHaveBeenCalledWith(
-        'completed',
-        expect.any(Number),
-        'session-1',
-        'site-1'
-      );
+      expect(mockBind).toHaveBeenCalledWith('completed', expect.any(Number), 'session-1', 'site-1');
     });
   });
 

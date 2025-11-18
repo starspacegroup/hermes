@@ -103,7 +103,10 @@ export async function getUserAISessions(
 
   query += ' ORDER BY updated_at DESC';
 
-  const result = await db.prepare(query).bind(...params).all<DBAISession>();
+  const result = await db
+    .prepare(query)
+    .bind(...params)
+    .all<DBAISession>();
 
   return (result.results || []).map(dbSessionToAISession);
 }

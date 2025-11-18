@@ -14,9 +14,7 @@ import * as crypto from '../crypto';
 // Mock the crypto module
 vi.mock('../crypto', () => ({
   encrypt: vi.fn((plaintext: string) => Promise.resolve(`encrypted_${plaintext}`)),
-  decrypt: vi.fn((ciphertext: string) =>
-    Promise.resolve(ciphertext.replace('encrypted_', ''))
-  )
+  decrypt: vi.fn((ciphertext: string) => Promise.resolve(ciphertext.replace('encrypted_', '')))
 }));
 
 describe('AI Settings Database Operations', () => {
@@ -107,7 +105,8 @@ describe('AI Settings Database Operations', () => {
 
       const settings = await getAISettings(mockDb, 'site-1', testEncryptionKey);
 
-      expect(settings.some_boolean).toBe(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((settings as any).some_boolean).toBe(true);
     });
 
     it('should skip settings that fail to decrypt', async () => {
@@ -255,14 +254,7 @@ describe('AI Settings Database Operations', () => {
     });
 
     it('should store number setting as string', async () => {
-      await upsertAISetting(
-        mockDb,
-        'site-1',
-        'temperature',
-        0.7,
-        'number',
-        testEncryptionKey
-      );
+      await upsertAISetting(mockDb, 'site-1', 'temperature', 0.7, 'number', testEncryptionKey);
 
       expect(crypto.encrypt).not.toHaveBeenCalled();
       expect(mockBind).toHaveBeenCalledWith(
@@ -282,14 +274,7 @@ describe('AI Settings Database Operations', () => {
     });
 
     it('should store boolean setting as string', async () => {
-      await upsertAISetting(
-        mockDb,
-        'site-1',
-        'some_flag',
-        true,
-        'boolean',
-        testEncryptionKey
-      );
+      await upsertAISetting(mockDb, 'site-1', 'some_flag', true, 'boolean', testEncryptionKey);
 
       expect(mockBind).toHaveBeenCalledWith(
         expect.any(String),

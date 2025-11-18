@@ -4,3 +4,7 @@
 
 # Platform Engineer Password (required for engineer@hermes.local login)
 PLATFORM_ENGINEER_PASSWORD=your_secure_password_here
+
+# Encryption Key for sensitive data (API keys, secrets)
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+ENCRYPTION_KEY=your_generated_encryption_key_here
