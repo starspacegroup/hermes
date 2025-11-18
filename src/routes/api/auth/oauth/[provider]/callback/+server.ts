@@ -17,6 +17,7 @@ import {
 import { getSSOProvider } from '$lib/server/db/sso-providers.js';
 import { createOAuthProvider } from '$lib/server/oauth/providers/index.js';
 import type { OAuthProvider } from '$lib/types/oauth.js';
+import { logActivity } from '$lib/server/activity-logger';
 
 /**
  * GET /api/auth/oauth/[provider]/callback
@@ -222,21 +223,37 @@ export const GET: RequestHandler = async ({ params, url, platform, locals, cooki
 
     // Update last login
     const { updateUser } = await import('$lib/server/db/users.js');
+    const ipAddress =
+      request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null;
+    const userAgent = request.headers.get('user-agent') || null;
+
     await updateUser(db, siteId, user.id, {
       last_login_at: Math.floor(Date.now() / 1000),
-      last_login_ip:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null
+      last_login_ip: ipAddress
     });
 
-    // Log successful SSO
+    // Log successful SSO to auth audit log (for OAuth-specific tracking)
     await createAuthAuditLog(db, siteId, {
       user_id: userId,
       event_type: 'sso_completed',
       provider,
-      ip_address:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
-      user_agent: request.headers.get('user-agent') || undefined,
+      ip_address: ipAddress || undefined,
+      user_agent: userAgent || undefined,
       details: { email: user.email }
+    });
+
+    // Log successful SSO login to activity log (for general activity tracking)
+    await logActivity(db, {
+      siteId,
+      userId: user.id,
+      action: 'user.login',
+      entityType: 'user',
+      entityId: user.id,
+      entityName: user.name,
+      description: `User logged in via ${provider} SSO`,
+      ipAddress,
+      userAgent,
+      metadata: { method: 'sso', provider }
     });
 
     // Redirect to dashboard

@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDB, getUserByEmail } from '$lib/server/db';
+import { logActivity } from '$lib/server/activity-logger';
 
 /**
  * Hash a password using SHA-256 (matches the hashing in user edit)
@@ -36,11 +37,29 @@ export const POST: RequestHandler = async ({ request, cookies, platform, locals 
     const db = getDB(platform);
     const siteId = locals.siteId;
 
+    // Extract IP and user agent for logging
+    const ipAddress =
+      request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null;
+    const userAgent = request.headers.get('user-agent') || null;
+
     // Look up user in database by email
     const dbUser = await getUserByEmail(db, siteId, data.email);
 
     if (!dbUser) {
-      // User not found
+      // User not found - log failed login attempt
+      await logActivity(db, {
+        siteId,
+        userId: null,
+        action: 'user.login_failed',
+        entityType: 'user',
+        entityId: null,
+        entityName: null,
+        description: `Failed login attempt for ${data.email}`,
+        ipAddress,
+        userAgent,
+        metadata: { email: data.email, reason: 'invalid_credentials' },
+        severity: 'warning'
+      });
       return json({ success: false, error: 'Invalid email or password' }, { status: 401 });
     }
 
@@ -67,6 +86,20 @@ export const POST: RequestHandler = async ({ request, cookies, platform, locals 
     const passwordValid = await verifyPassword(data.password, dbUser.password_hash);
 
     if (!passwordValid) {
+      // Log failed login attempt due to wrong password
+      await logActivity(db, {
+        siteId,
+        userId: null,
+        action: 'user.login_failed',
+        entityType: 'user',
+        entityId: dbUser.id,
+        entityName: dbUser.name,
+        description: `Failed login attempt for ${data.email}`,
+        ipAddress,
+        userAgent,
+        metadata: { email: data.email, reason: 'invalid_password' },
+        severity: 'warning'
+      });
       return json({ success: false, error: 'Invalid email or password' }, { status: 401 });
     }
 
@@ -114,8 +147,21 @@ export const POST: RequestHandler = async ({ request, cookies, platform, locals 
     const { updateUser } = await import('$lib/server/db/users');
     await updateUser(db, siteId, dbUser.id, {
       last_login_at: Math.floor(Date.now() / 1000),
-      last_login_ip:
-        request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null
+      last_login_ip: ipAddress
+    });
+
+    // Log successful login
+    await logActivity(db, {
+      siteId,
+      userId: user.id,
+      action: 'user.login',
+      entityType: 'user',
+      entityId: user.id,
+      entityName: user.name,
+      description: 'User logged in successfully',
+      ipAddress,
+      userAgent,
+      metadata: { method: 'password' }
     });
 
     return json({
