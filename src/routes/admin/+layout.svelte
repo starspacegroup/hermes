@@ -224,6 +224,23 @@
           Pages
         </a>
 
+        <a
+          href="/admin/ai-chat"
+          class:active={currentPath.startsWith('/admin/ai-chat')}
+          on:click={closeSidebar}
+          class="ai-chat-link"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          AI Chat
+        </a>
+
         <!-- Settings with submenu -->
         <div class="menu-item-with-submenu">
           <button
@@ -865,5 +882,30 @@
     font-size: 0.625rem;
     font-weight: 700;
     letter-spacing: 0.05em;
+  }
+
+  /* AI Chat link special styling */
+  .sidebar-nav a.ai-chat-link {
+    position: relative;
+  }
+
+  .sidebar-nav a.ai-chat-link svg {
+    animation: sparkle 2s ease-in-out infinite;
+  }
+
+  @keyframes sparkle {
+    0%,
+    100% {
+      opacity: 1;
+      transform: rotate(0deg);
+    }
+    50% {
+      opacity: 0.7;
+      transform: rotate(10deg);
+    }
+  }
+
+  .sidebar-nav a.ai-chat-link:hover svg {
+    animation: sparkle 0.5s ease-in-out infinite;
   }
 </style>

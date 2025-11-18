@@ -282,9 +282,7 @@ class AnthropicProvider implements AIProviderInterface {
       const role: 'user' | 'assistant' = msg.role as 'user' | 'assistant';
 
       if (role === 'user' && msg.attachments && msg.attachments.length > 0) {
-        const content: Array<TextContent | ImageContent> = [
-          { type: 'text', text: msg.content }
-        ];
+        const content: Array<TextContent | ImageContent> = [{ type: 'text', text: msg.content }];
 
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
@@ -295,9 +293,7 @@ class AnthropicProvider implements AIProviderInterface {
 
             const mediaType = attachment.mimeType || 'image/jpeg';
             const validMediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' =
-              mediaType === 'image/png' ||
-              mediaType === 'image/gif' ||
-              mediaType === 'image/webp'
+              mediaType === 'image/png' || mediaType === 'image/gif' || mediaType === 'image/webp'
                 ? mediaType
                 : 'image/jpeg';
 
@@ -381,9 +377,7 @@ class AnthropicProvider implements AIProviderInterface {
       const role: 'user' | 'assistant' = msg.role as 'user' | 'assistant';
 
       if (role === 'user' && msg.attachments && msg.attachments.length > 0) {
-        const content: Array<TextContent | ImageContent> = [
-          { type: 'text', text: msg.content }
-        ];
+        const content: Array<TextContent | ImageContent> = [{ type: 'text', text: msg.content }];
 
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
@@ -393,9 +387,7 @@ class AnthropicProvider implements AIProviderInterface {
 
             const mediaType = attachment.mimeType || 'image/jpeg';
             const validMediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' =
-              mediaType === 'image/png' ||
-              mediaType === 'image/gif' ||
-              mediaType === 'image/webp'
+              mediaType === 'image/png' || mediaType === 'image/gif' || mediaType === 'image/webp'
                 ? mediaType
                 : 'image/jpeg';
 
