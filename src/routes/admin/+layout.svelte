@@ -36,10 +36,14 @@
       currentPath.startsWith('/admin/categories')
     ) {
       isSettingsSubmenuOpen = true;
+    } else {
+      isSettingsSubmenuOpen = false;
     }
     // Auto-expand AI chat submenu if on AI chat page
     if (currentPath.startsWith('/admin/ai-chat')) {
       isAIChatSubmenuOpen = true;
+    } else {
+      isAIChatSubmenuOpen = false;
     }
   }
 
