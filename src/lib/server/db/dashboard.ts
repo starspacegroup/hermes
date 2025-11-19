@@ -62,7 +62,6 @@ export async function getDashboardMetrics(
   db: D1Database,
   siteId: string
 ): Promise<DashboardMetrics> {
-  const now = Date.now();
   const todayStart = Math.floor(new Date(new Date().setHours(0, 0, 0, 0)).getTime() / 1000);
   const monthStart = Math.floor(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000

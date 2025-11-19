@@ -36,10 +36,18 @@
 
   <!-- Tab Navigation -->
   <div class="tabs">
-    <button class="tab" class:active={activeTab === 'general'} on:click={() => (activeTab = 'general')}>
+    <button
+      class="tab"
+      class:active={activeTab === 'general'}
+      on:click={() => (activeTab = 'general')}
+    >
       General
     </button>
-    <button class="tab" class:active={activeTab === 'address'} on:click={() => (activeTab = 'address')}>
+    <button
+      class="tab"
+      class:active={activeTab === 'address'}
+      on:click={() => (activeTab = 'address')}
+    >
       Address & Location
     </button>
     <button class="tab" class:active={activeTab === 'tax'} on:click={() => (activeTab = 'tax')}>
@@ -163,11 +171,7 @@
 
             <div class="form-group">
               <label for="dimensionUnit">Dimension Unit</label>
-              <select
-                id="dimensionUnit"
-                name="dimensionUnit"
-                value={generalSettings.dimensionUnit}
-              >
+              <select id="dimensionUnit" name="dimensionUnit" value={generalSettings.dimensionUnit}>
                 <option value="in">Inches (in)</option>
                 <option value="cm">Centimeters (cm)</option>
                 <option value="ft">Feet (ft)</option>
@@ -362,12 +366,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="smtpPort">SMTP Port</label>
-                <input
-                  id="smtpPort"
-                  name="smtpPort"
-                  type="number"
-                  value={emailSettings.smtpPort}
-                />
+                <input id="smtpPort" name="smtpPort" type="number" value={emailSettings.smtpPort} />
               </div>
 
               <div class="form-group">

@@ -9,11 +9,9 @@ import {
   getTaxSettings,
   updateTaxSettings,
   getPaymentSettings,
-  updatePaymentSettings,
   getEmailSettings,
   updateEmailSettings,
-  getApiSettings,
-  updateApiSettings
+  getApiSettings
 } from '$lib/server/db/site-settings';
 import { createActivityLog } from '$lib/server/db/activity-logs';
 

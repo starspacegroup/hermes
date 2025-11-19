@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { D1Database } from '@cloudflare/workers-types';
 import {
   getDashboardMetrics,
   getRecentOrders,
@@ -8,13 +9,13 @@ import {
 } from './dashboard';
 
 describe('Dashboard Statistics', () => {
-  let mockDb: any;
+  let mockDb: D1Database;
   const siteId = 'test-site';
 
   beforeEach(() => {
     mockDb = {
       prepare: (sql: string) => ({
-        bind: (...params: any[]) => ({
+        bind: (..._params: unknown[]) => ({
           first: async () => {
             // Total revenue and order count
             if (sql.includes('SUM(total)') && sql.includes('COUNT(*)') && sql.includes('orders')) {
@@ -45,20 +46,22 @@ describe('Dashboard Statistics', () => {
           all: async () => {
             if (sql.includes('GROUP BY status')) {
               return {
+                success: true,
                 results: [
                   { status: 'pending', count: 10 },
                   { status: 'processing', count: 15 },
                   { status: 'delivered', count: 20 },
                   { status: 'cancelled', count: 5 }
-                ]
+                ],
+                meta: {}
               };
             }
-            return { results: [] };
+            return { success: true, results: [], meta: {} };
           },
-          run: async () => ({ success: true })
+          run: async () => ({ success: true, meta: {} })
         })
       })
-    };
+    } as unknown as D1Database;
   });
 
   describe('getDashboardMetrics', () => {
@@ -83,10 +86,10 @@ describe('Dashboard Statistics', () => {
         prepare: () => ({
           bind: () => ({
             first: async () => ({ total_revenue: 0, order_count: 0, customer_count: 0 }),
-            all: async () => ({ results: [] })
+            all: async () => ({ success: true, results: [], meta: {} })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const metrics = await getDashboardMetrics(mockDb, siteId);
 
@@ -99,9 +102,10 @@ describe('Dashboard Statistics', () => {
   describe('getRecentOrders', () => {
     it('fetches recent orders with customer details', async () => {
       mockDb = {
-        prepare: (sql: string) => ({
-          bind: (...params: any[]) => ({
+        prepare: (_sql: string) => ({
+          bind: (..._params: unknown[]) => ({
             all: async () => ({
+              success: true,
               results: [
                 {
                   id: 'order-1',
@@ -117,12 +121,13 @@ describe('Dashboard Statistics', () => {
                   total: 149.99,
                   created_at: 1234567891
                 }
-              ]
+              ],
+              meta: {}
             }),
             first: async () => ({ name: 'John Doe', email: 'john@example.com' })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const orders = await getRecentOrders(mockDb, siteId, 10);
 
@@ -135,17 +140,17 @@ describe('Dashboard Statistics', () => {
     it('respects the limit parameter', async () => {
       mockDb = {
         prepare: (sql: string) => ({
-          bind: (...params: any[]) => {
+          bind: (...params: unknown[]) => {
             if (sql.includes('LIMIT')) {
               expect(params).toContain(5);
             }
             return {
-              all: async () => ({ results: [] }),
+              all: async () => ({ success: true, results: [], meta: {} }),
               first: async () => null
             };
           }
         })
-      };
+      } as unknown as D1Database;
 
       await getRecentOrders(mockDb, siteId, 5);
     });
@@ -157,6 +162,7 @@ describe('Dashboard Statistics', () => {
         prepare: () => ({
           bind: () => ({
             all: async () => ({
+              success: true,
               results: [
                 {
                   product_id: 'prod-1',
@@ -172,11 +178,12 @@ describe('Dashboard Statistics', () => {
                   total_quantity: 30,
                   total_revenue: 599.7
                 }
-              ]
+              ],
+              meta: {}
             })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const products = await getTopProducts(mockDb, siteId, 5);
 
@@ -190,10 +197,10 @@ describe('Dashboard Statistics', () => {
       mockDb = {
         prepare: () => ({
           bind: () => ({
-            all: async () => ({ results: [] })
+            all: async () => ({ success: true, results: [], meta: {} })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const products = await getTopProducts(mockDb, siteId);
 
@@ -207,6 +214,7 @@ describe('Dashboard Statistics', () => {
         prepare: () => ({
           bind: () => ({
             all: async () => ({
+              success: true,
               results: [
                 {
                   id: 'prod-1',
@@ -215,11 +223,12 @@ describe('Dashboard Statistics', () => {
                   stock: 3,
                   category: 'Electronics'
                 }
-              ]
+              ],
+              meta: {}
             })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const products = await getLowStockProducts(mockDb, siteId, 10, 5);
 
@@ -235,14 +244,16 @@ describe('Dashboard Statistics', () => {
         prepare: () => ({
           bind: () => ({
             all: async () => ({
+              success: true,
               results: [
                 { date: '2024-01-01', revenue: 100, order_count: 5 },
                 { date: '2024-01-02', revenue: 150, order_count: 7 }
-              ]
+              ],
+              meta: {}
             })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const data = await getSalesChartData(mockDb, siteId, 30);
 
@@ -256,10 +267,10 @@ describe('Dashboard Statistics', () => {
       mockDb = {
         prepare: () => ({
           bind: () => ({
-            all: async () => ({ results: [] })
+            all: async () => ({ success: true, results: [], meta: {} })
           })
         })
-      };
+      } as unknown as D1Database;
 
       const data = await getSalesChartData(mockDb, siteId);
 

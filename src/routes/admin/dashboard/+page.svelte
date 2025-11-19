@@ -14,7 +14,8 @@
   $: recentOrders = data.recentOrders || [];
   $: topProducts = data.topProducts || [];
   $: lowStockProducts = data.lowStockProducts || [];
-  $: salesData = data.salesData || [];
+  // salesData available for future sales chart widget
+  // $: salesData = data.salesData || [];
 
   let aiChatInput = '';
   let isMediaPickerOpen = false;
