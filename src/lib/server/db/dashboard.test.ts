@@ -1,0 +1,269 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  getDashboardMetrics,
+  getRecentOrders,
+  getTopProducts,
+  getLowStockProducts,
+  getSalesChartData
+} from './dashboard';
+
+describe('Dashboard Statistics', () => {
+  let mockDb: any;
+  const siteId = 'test-site';
+
+  beforeEach(() => {
+    mockDb = {
+      prepare: (sql: string) => ({
+        bind: (...params: any[]) => ({
+          first: async () => {
+            // Total revenue and order count
+            if (sql.includes('SUM(total)') && sql.includes('COUNT(*)') && sql.includes('orders')) {
+              return { total_revenue: 10000, order_count: 50 };
+            }
+            // Customer count
+            if (sql.includes('COUNT(DISTINCT user_id)') && !sql.includes('created_at >=')) {
+              return { customer_count: 25 };
+            }
+            // New customers this month
+            if (sql.includes('COUNT(DISTINCT user_id)') && sql.includes('created_at >=')) {
+              return { new_customers: 5 };
+            }
+            // Total products
+            if (sql.includes('COUNT(*)') && sql.includes('products') && !sql.includes('stock')) {
+              return { total_products: 100 };
+            }
+            // Out of stock products
+            if (sql.includes('COUNT(*)') && sql.includes('stock = 0')) {
+              return { out_of_stock: 3 };
+            }
+            // Revenue for specific periods
+            if (sql.includes('SUM(total)') && sql.includes('created_at >=')) {
+              return { revenue: 500 };
+            }
+            return null;
+          },
+          all: async () => {
+            if (sql.includes('GROUP BY status')) {
+              return {
+                results: [
+                  { status: 'pending', count: 10 },
+                  { status: 'processing', count: 15 },
+                  { status: 'delivered', count: 20 },
+                  { status: 'cancelled', count: 5 }
+                ]
+              };
+            }
+            return { results: [] };
+          },
+          run: async () => ({ success: true })
+        })
+      })
+    };
+  });
+
+  describe('getDashboardMetrics', () => {
+    it('returns comprehensive dashboard metrics', async () => {
+      const metrics = await getDashboardMetrics(mockDb, siteId);
+
+      expect(metrics).toBeDefined();
+      expect(metrics.totalRevenue).toBe(10000);
+      expect(metrics.totalOrders).toBe(50);
+      expect(metrics.totalCustomers).toBe(25);
+      expect(metrics.totalProducts).toBe(100);
+      expect(metrics.pendingOrders).toBe(10);
+      expect(metrics.processingOrders).toBe(15);
+      expect(metrics.completedOrders).toBe(20);
+      expect(metrics.cancelledOrders).toBe(5);
+      expect(metrics.outOfStockProducts).toBe(3);
+      expect(metrics.newCustomersThisMonth).toBe(5);
+    });
+
+    it('handles zero values gracefully', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => ({ total_revenue: 0, order_count: 0, customer_count: 0 }),
+            all: async () => ({ results: [] })
+          })
+        })
+      };
+
+      const metrics = await getDashboardMetrics(mockDb, siteId);
+
+      expect(metrics.totalRevenue).toBe(0);
+      expect(metrics.totalOrders).toBe(0);
+      expect(metrics.totalCustomers).toBe(0);
+    });
+  });
+
+  describe('getRecentOrders', () => {
+    it('fetches recent orders with customer details', async () => {
+      mockDb = {
+        prepare: (sql: string) => ({
+          bind: (...params: any[]) => ({
+            all: async () => ({
+              results: [
+                {
+                  id: 'order-1',
+                  user_id: 'user-1',
+                  status: 'pending',
+                  total: 99.99,
+                  created_at: 1234567890
+                },
+                {
+                  id: 'order-2',
+                  user_id: null,
+                  status: 'processing',
+                  total: 149.99,
+                  created_at: 1234567891
+                }
+              ]
+            }),
+            first: async () => ({ name: 'John Doe', email: 'john@example.com' })
+          })
+        })
+      };
+
+      const orders = await getRecentOrders(mockDb, siteId, 10);
+
+      expect(orders).toHaveLength(2);
+      expect(orders[0].id).toBe('order-1');
+      expect(orders[0].customer_name).toBe('John Doe');
+      expect(orders[1].customer_name).toBe('Guest');
+    });
+
+    it('respects the limit parameter', async () => {
+      mockDb = {
+        prepare: (sql: string) => ({
+          bind: (...params: any[]) => {
+            if (sql.includes('LIMIT')) {
+              expect(params).toContain(5);
+            }
+            return {
+              all: async () => ({ results: [] }),
+              first: async () => null
+            };
+          }
+        })
+      };
+
+      await getRecentOrders(mockDb, siteId, 5);
+    });
+  });
+
+  describe('getTopProducts', () => {
+    it('fetches top-selling products', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            all: async () => ({
+              results: [
+                {
+                  product_id: 'prod-1',
+                  name: 'Product 1',
+                  image: '/img1.jpg',
+                  total_quantity: 50,
+                  total_revenue: 999.5
+                },
+                {
+                  product_id: 'prod-2',
+                  name: 'Product 2',
+                  image: '/img2.jpg',
+                  total_quantity: 30,
+                  total_revenue: 599.7
+                }
+              ]
+            })
+          })
+        })
+      };
+
+      const products = await getTopProducts(mockDb, siteId, 5);
+
+      expect(products).toHaveLength(2);
+      expect(products[0].name).toBe('Product 1');
+      expect(products[0].total_quantity).toBe(50);
+      expect(products[1].total_revenue).toBe(599.7);
+    });
+
+    it('returns empty array when no products sold', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            all: async () => ({ results: [] })
+          })
+        })
+      };
+
+      const products = await getTopProducts(mockDb, siteId);
+
+      expect(products).toEqual([]);
+    });
+  });
+
+  describe('getLowStockProducts', () => {
+    it('fetches products below stock threshold', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            all: async () => ({
+              results: [
+                {
+                  id: 'prod-1',
+                  name: 'Low Stock Product',
+                  image: '/img.jpg',
+                  stock: 3,
+                  category: 'Electronics'
+                }
+              ]
+            })
+          })
+        })
+      };
+
+      const products = await getLowStockProducts(mockDb, siteId, 10, 5);
+
+      expect(products).toHaveLength(1);
+      expect(products[0].stock).toBe(3);
+      expect(products[0].name).toBe('Low Stock Product');
+    });
+  });
+
+  describe('getSalesChartData', () => {
+    it('fetches sales data for specified number of days', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            all: async () => ({
+              results: [
+                { date: '2024-01-01', revenue: 100, order_count: 5 },
+                { date: '2024-01-02', revenue: 150, order_count: 7 }
+              ]
+            })
+          })
+        })
+      };
+
+      const data = await getSalesChartData(mockDb, siteId, 30);
+
+      expect(data).toHaveLength(2);
+      expect(data[0].date).toBe('2024-01-01');
+      expect(data[0].revenue).toBe(100);
+      expect(data[0].orders).toBe(5);
+    });
+
+    it('returns empty array when no sales data', async () => {
+      mockDb = {
+        prepare: () => ({
+          bind: () => ({
+            all: async () => ({ results: [] })
+          })
+        })
+      };
+
+      const data = await getSalesChartData(mockDb, siteId);
+
+      expect(data).toEqual([]);
+    });
+  });
+});
