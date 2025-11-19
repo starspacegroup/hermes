@@ -26,6 +26,7 @@
   $: isLoginPage = currentPath === '/auth/login';
   $: sessions = $page.data?.sessions || [];
   $: archivedSessions = $page.data?.archivedSessions || [];
+  $: hasAIChat = $page.data?.hasAIChat || false;
   $: {
     // Auto-expand settings submenu if on a settings page
     if (
@@ -248,6 +249,195 @@
           Dashboard
         </a>
 
+        <!-- AI Chat with submenu -->
+        {#if hasAIChat}
+          <div class="menu-item-with-submenu">
+            <button
+              class="menu-item-button"
+              class:active={currentPath.startsWith('/admin/ai-chat')}
+              on:click={toggleAIChatSubmenu}
+            >
+              <div class="menu-item-content">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                <span>AI Chat</span>
+              </div>
+              <svg
+                class="chevron"
+                class:open={isAIChatSubmenuOpen}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M9 18l6-6-6-6"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg>
+            </button>
+
+            {#if isAIChatSubmenuOpen}
+              <div class="submenu">
+                <a
+                  href="/admin/ai-chat"
+                  class:active={currentPath === '/admin/ai-chat'}
+                  on:click={closeSidebar}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path
+                      d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                  </svg>
+                  New Chat
+                </a>
+
+                <div class="submenu-section">
+                  <div class="submenu-section-header">
+                    <div class="submenu-section-title">Chat History</div>
+                  </div>
+                  {#if sessions.length === 0}
+                    <div class="submenu-empty">No chat history yet</div>
+                  {:else}
+                    {#each sessions.slice(0, 10) as session (session.id)}
+                      <a
+                        href="/admin/ai-chat?session={session.id}"
+                        class:active={currentPath === '/admin/ai-chat' &&
+                          $page.url.searchParams.get('session') === session.id}
+                        on:click={closeSidebar}
+                        class="session-submenu-item"
+                      >
+                        <div class="session-submenu-content">
+                          <div class="session-submenu-title">{session.title}</div>
+                          <div class="session-submenu-meta">
+                            {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          class="session-action-btn archive"
+                          on:click={(e) => archiveSession(session.id, e)}
+                          title="Archive"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            ></path>
+                          </svg>
+                        </button>
+                      </a>
+                    {/each}
+                  {/if}
+                </div>
+
+                {#if archivedSessions.length > 0}
+                  <div class="submenu-section">
+                    <button
+                      class="submenu-section-header submenu-section-toggle"
+                      on:click={toggleArchivedSubmenu}
+                    >
+                      <div class="submenu-section-title">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ></path>
+                        </svg>
+                        Archived ({archivedSessions.length})
+                      </div>
+                      <svg
+                        class="chevron"
+                        class:open={isArchivedSubmenuOpen}
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M9 18l6-6-6-6"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+
+                    {#if isArchivedSubmenuOpen}
+                      {#each archivedSessions.slice(0, 10) as session (session.id)}
+                        <a
+                          href="/admin/ai-chat?session={session.id}"
+                          class:active={currentPath === '/admin/ai-chat' &&
+                            $page.url.searchParams.get('session') === session.id}
+                          on:click={closeSidebar}
+                          class="session-submenu-item archived"
+                        >
+                          <div class="session-submenu-content">
+                            <div class="session-submenu-title">{session.title}</div>
+                            <div class="session-submenu-meta">
+                              {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            class="session-action-btn unarchive"
+                            on:click={(e) => unarchiveSession(session.id, e)}
+                            title="Unarchive"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              ></path>
+                            </svg>
+                          </button>
+                        </a>
+                      {/each}
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
+
         <a
           href="/admin/products"
           class:active={currentPath.startsWith('/admin/products')}
@@ -300,193 +490,6 @@
           </svg>
           Pages
         </a>
-
-        <!-- AI Chat with submenu -->
-        <div class="menu-item-with-submenu">
-          <button
-            class="menu-item-button"
-            class:active={currentPath.startsWith('/admin/ai-chat')}
-            on:click={toggleAIChatSubmenu}
-          >
-            <div class="menu-item-content">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-              </svg>
-              <span>AI Chat</span>
-            </div>
-            <svg
-              class="chevron"
-              class:open={isAIChatSubmenuOpen}
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M9 18l6-6-6-6"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              ></path>
-            </svg>
-          </button>
-
-          {#if isAIChatSubmenuOpen}
-            <div class="submenu">
-              <a
-                href="/admin/ai-chat"
-                class:active={currentPath === '/admin/ai-chat'}
-                on:click={closeSidebar}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path
-                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  ></path>
-                </svg>
-                New Chat
-              </a>
-
-              <div class="submenu-section">
-                <div class="submenu-section-header">
-                  <div class="submenu-section-title">Chat History</div>
-                </div>
-                {#if sessions.length === 0}
-                  <div class="submenu-empty">No chat history yet</div>
-                {:else}
-                  {#each sessions.slice(0, 10) as session (session.id)}
-                    <a
-                      href="/admin/ai-chat?session={session.id}"
-                      class:active={currentPath === '/admin/ai-chat' &&
-                        $page.url.searchParams.get('session') === session.id}
-                      on:click={closeSidebar}
-                      class="session-submenu-item"
-                    >
-                      <div class="session-submenu-content">
-                        <div class="session-submenu-title">{session.title}</div>
-                        <div class="session-submenu-meta">
-                          {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        class="session-action-btn archive"
-                        on:click={(e) => archiveSession(session.id, e)}
-                        title="Archive"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          ></path>
-                        </svg>
-                      </button>
-                    </a>
-                  {/each}
-                {/if}
-              </div>
-
-              {#if archivedSessions.length > 0}
-                <div class="submenu-section">
-                  <button
-                    class="submenu-section-header submenu-section-toggle"
-                    on:click={toggleArchivedSubmenu}
-                  >
-                    <div class="submenu-section-title">
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <path
-                          d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        ></path>
-                      </svg>
-                      Archived ({archivedSessions.length})
-                    </div>
-                    <svg
-                      class="chevron"
-                      class:open={isArchivedSubmenuOpen}
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        d="M9 18l6-6-6-6"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      ></path>
-                    </svg>
-                  </button>
-
-                  {#if isArchivedSubmenuOpen}
-                    {#each archivedSessions.slice(0, 10) as session (session.id)}
-                      <a
-                        href="/admin/ai-chat?session={session.id}"
-                        class:active={currentPath === '/admin/ai-chat' &&
-                          $page.url.searchParams.get('session') === session.id}
-                        on:click={closeSidebar}
-                        class="session-submenu-item archived"
-                      >
-                        <div class="session-submenu-content">
-                          <div class="session-submenu-title">{session.title}</div>
-                          <div class="session-submenu-meta">
-                            {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          class="session-action-btn unarchive"
-                          on:click={(e) => unarchiveSession(session.id, e)}
-                          title="Unarchive"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                          >
-                            <path
-                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            ></path>
-                          </svg>
-                        </button>
-                      </a>
-                    {/each}
-                  {/if}
-                </div>
-              {/if}
-            </div>
-          {/if}
-        </div>
 
         <!-- Settings with submenu -->
         <div class="menu-item-with-submenu">

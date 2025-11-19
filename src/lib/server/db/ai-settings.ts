@@ -171,6 +171,29 @@ export async function hasAPIKeysConfigured(db: D1Database, siteId: string): Prom
 }
 
 /**
+ * Check if AI chat is enabled (toggle is on) AND has API keys configured
+ * Returns true only when both conditions are met
+ */
+export async function isAIChatEnabled(
+  db: D1Database,
+  siteId: string,
+  encryptionKey: string
+): Promise<boolean> {
+  // First check if the enabled flag is set
+  const enabledSetting = await getAISetting(db, siteId, 'ai_chat_enabled', encryptionKey);
+
+  // If explicitly disabled or not set, return false
+  if (enabledSetting !== true) {
+    return false;
+  }
+
+  // If enabled is true, also check if API keys are configured
+  const hasKeys = await hasAPIKeysConfigured(db, siteId);
+
+  return hasKeys;
+}
+
+/**
  * Get available AI providers (those with API keys configured)
  */
 export async function getAvailableProviders(db: D1Database, siteId: string): Promise<AIProvider[]> {

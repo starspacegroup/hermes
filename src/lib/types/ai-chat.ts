@@ -40,6 +40,7 @@ export interface AISessionContext {
 }
 
 export interface AISettings {
+  ai_chat_enabled?: boolean;
   openai_api_key?: string;
   anthropic_api_key?: string;
   grok_api_key?: string;

@@ -1,9 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import type { PageData } from './$types';
   import MediaPicker from '$lib/components/MediaPicker.svelte';
 
   export let data: PageData;
+
+  // Get hasAIChat from parent layout data
+  $: hasAIChat = $page.data?.hasAIChat || false;
 
   // Get metrics from server (real data from database)
   const metrics = data.metrics;
@@ -94,133 +98,135 @@
   </div>
 
   <!-- AI Chat Quick Access -->
-  <div class="ai-chat-hero">
-    <div class="ai-chat-container">
-      <div class="ai-chat-icon">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          ></path>
-        </svg>
-      </div>
-      <div class="ai-chat-content">
-        <h2>AI Assistant</h2>
-        <form on:submit={handleAIChatSubmit}>
-          {#if selectedMedia.length > 0}
-            <div class="selected-files-dashboard">
-              {#each selectedMedia as media, i}
-                <div class="file-chip-dashboard">
-                  {#if media.type === 'image'}
-                    <img src={media.url} alt={media.filename} class="file-preview-dashboard" />
-                  {:else}
-                    <div class="file-icon-dashboard">🎥</div>
-                  {/if}
-                  <span class="file-name-dashboard">{media.filename}</span>
-                  <button
-                    type="button"
-                    class="remove-file-dashboard"
-                    on:click={() => removeMedia(i)}
-                    aria-label="Remove media"
-                  >
-                    ✕
-                  </button>
-                </div>
-              {/each}
+  {#if hasAIChat}
+    <div class="ai-chat-hero">
+      <div class="ai-chat-container">
+        <div class="ai-chat-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+        </div>
+        <div class="ai-chat-content">
+          <h2>AI Assistant</h2>
+          <form on:submit={handleAIChatSubmit}>
+            {#if selectedMedia.length > 0}
+              <div class="selected-files-dashboard">
+                {#each selectedMedia as media, i}
+                  <div class="file-chip-dashboard">
+                    {#if media.type === 'image'}
+                      <img src={media.url} alt={media.filename} class="file-preview-dashboard" />
+                    {:else}
+                      <div class="file-icon-dashboard">🎥</div>
+                    {/if}
+                    <span class="file-name-dashboard">{media.filename}</span>
+                    <button
+                      type="button"
+                      class="remove-file-dashboard"
+                      on:click={() => removeMedia(i)}
+                      aria-label="Remove media"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+            <div class="ai-chat-input-wrapper" on:click|stopPropagation role="none">
+              <button
+                type="button"
+                class="attach-btn-dashboard"
+                on:click={openMediaPicker}
+                aria-label="Select media"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <circle
+                    cx="8.5"
+                    cy="8.5"
+                    r="1.5"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></circle>
+                  <path
+                    d="M21 15l-5-5L5 21"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+              </button>
+              <input
+                type="text"
+                bind:value={aiChatInput}
+                placeholder="Describe a product to create, ask for help, or get insights..."
+                class="ai-chat-input"
+                on:click|stopPropagation
+              />
+              <button type="submit" class="ai-chat-submit" aria-label="Send message">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+              </button>
             </div>
-          {/if}
-          <div class="ai-chat-input-wrapper" on:click|stopPropagation role="none">
+          </form>
+          <div class="ai-chat-suggestions">
+            <span class="suggestion-label">Try:</span>
             <button
               type="button"
-              class="attach-btn-dashboard"
-              on:click={openMediaPicker}
-              aria-label="Select media"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'Create a wireless Bluetooth speaker';
+                handleAIChatSubmit(new Event('submit'));
+              }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="2"
-                  ry="2"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></rect>
-                <circle
-                  cx="8.5"
-                  cy="8.5"
-                  r="1.5"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></circle>
-                <path
-                  d="M21 15l-5-5L5 21"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-              </svg>
+              Create a product
             </button>
-            <input
-              type="text"
-              bind:value={aiChatInput}
-              placeholder="Describe a product to create, ask for help, or get insights..."
-              class="ai-chat-input"
-              on:click|stopPropagation
-            />
-            <button type="submit" class="ai-chat-submit" aria-label="Send message">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-              </svg>
+            <button
+              type="button"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'Show me sales insights';
+                handleAIChatSubmit(new Event('submit'));
+              }}
+            >
+              Get insights
+            </button>
+            <button
+              type="button"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'How do I add a new category?';
+                handleAIChatSubmit(new Event('submit'));
+              }}
+            >
+              Ask for help
             </button>
           </div>
-        </form>
-        <div class="ai-chat-suggestions">
-          <span class="suggestion-label">Try:</span>
-          <button
-            type="button"
-            class="suggestion-tag"
-            on:click|stopPropagation={() => {
-              aiChatInput = 'Create a wireless Bluetooth speaker';
-              handleAIChatSubmit(new Event('submit'));
-            }}
-          >
-            Create a product
-          </button>
-          <button
-            type="button"
-            class="suggestion-tag"
-            on:click|stopPropagation={() => {
-              aiChatInput = 'Show me sales insights';
-              handleAIChatSubmit(new Event('submit'));
-            }}
-          >
-            Get insights
-          </button>
-          <button
-            type="button"
-            class="suggestion-tag"
-            on:click|stopPropagation={() => {
-              aiChatInput = 'How do I add a new category?';
-              handleAIChatSubmit(new Event('submit'));
-            }}
-          >
-            Ask for help
-          </button>
         </div>
       </div>
     </div>
-  </div>
+  {/if}
 
   <!-- Metrics Grid -->
   <div class="metrics-grid">

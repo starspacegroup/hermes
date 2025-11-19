@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { invalidate } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
   import type { PageData, ActionData } from './$types';
   import type { AIProvider } from '$lib/types/ai-chat';
@@ -14,6 +15,7 @@
   let isSubmitting = false;
 
   // Settings form
+  let aiChatEnabled = data.settings.ai_chat_enabled ?? false;
   let preferredModel = data.settings.preferred_model || 'gpt-4o';
   let temperature = data.settings.temperature?.toString() || '0.7';
   let maxTokens = data.settings.max_tokens?.toString() || '4096';
@@ -79,238 +81,300 @@
     </div>
   </header>
 
-  {#if !data.hasKeys}
-    <div class="info-banner">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-        <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"></path>
-      </svg>
-      <div>
-        <strong>Get Started with AI Chat</strong>
-        <p>
-          Add at least one API key below to enable the AI chat assistant for product creation. Your
-          keys are encrypted and stored securely.
-        </p>
-      </div>
-    </div>
-  {/if}
-
-  <!-- API Keys Section -->
-  <section class="settings-section">
-    <h2>API Keys</h2>
-    <p class="section-description">
-      Add API keys for AI providers. Keys are encrypted at rest and never exposed in the UI.
-    </p>
-
-    <div class="provider-cards">
-      {#each providers as provider}
-        {@const hasKey = data.settings[`${provider}_api_key`]}
-
-        <div class="provider-card" class:has-key={hasKey}>
-          <div class="provider-header">
-            <div class="provider-info">
-              <h3>{getProviderName(provider)}</h3>
-              <p>{getProviderDescription(provider)}</p>
-            </div>
-            {#if hasKey}
-              <span class="status-badge configured">Configured</span>
-            {:else}
-              <span class="status-badge not-configured">Not configured</span>
-            {/if}
-          </div>
-
-          <div class="provider-actions">
-            <button
-              type="button"
-              class="btn btn-primary"
-              on:click={() => openApiKeyModal(provider)}
-            >
-              {hasKey ? 'Update Key' : 'Add Key'}
-            </button>
-
-            {#if hasKey}
-              <form method="POST" action="?/deleteApiKey" use:enhance>
-                <input type="hidden" name="provider" value={provider} />
-                <button
-                  type="submit"
-                  class="btn btn-danger-outline"
-                  on:click={(e) => {
-                    if (!confirm(`Delete ${getProviderName(provider)} API key?`)) {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </form>
-            {/if}
-          </div>
-
-          {#if hasKey}
-            <div class="key-info">
-              <div class="key-mask">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect>
-                  <path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2" stroke-linecap="round"></path>
-                </svg>
-                <span>••••••••••••</span>
-              </div>
-              <small>Last updated: Recently</small>
-            </div>
-          {/if}
+  <!-- Enable/Disable Toggle -->
+  <section class="settings-section toggle-section">
+    <div class="toggle-container">
+      <div class="toggle-content">
+        <div>
+          <h2>AI Chat Assistant</h2>
+          <p>Enable or disable the AI chat assistant for your site</p>
         </div>
-      {/each}
-    </div>
-  </section>
-
-  <!-- Model Configuration Section -->
-  <section class="settings-section">
-    <h2>Model Configuration</h2>
-    <p class="section-description">
-      Configure the default AI model and parameters for chat conversations.
-    </p>
-
-    <form method="POST" action="?/saveSettings" use:enhance class="settings-form">
-      <div class="form-group">
-        <label for="preferred_model">
-          Preferred Model
-          <span class="help-text">Default model for new conversations</span>
-        </label>
-        <select id="preferred_model" name="preferred_model" bind:value={preferredModel}>
-          {#each data.supportedModels as model}
-            <option value={model.model}>{model.label}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="temperature">
-            Temperature
-            <span class="help-text">0 = precise, 2 = creative</span>
-          </label>
-          <input
-            type="number"
-            id="temperature"
-            name="temperature"
-            bind:value={temperature}
-            min="0"
-            max="2"
-            step="0.1"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="max_tokens">
-            Max Tokens
-            <span class="help-text">Maximum response length</span>
-          </label>
-          <input
-            type="number"
-            id="max_tokens"
-            name="max_tokens"
-            bind:value={maxTokens}
-            min="100"
-            max="16000"
-            step="100"
-          />
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="cost_limit_daily">
-            Daily Cost Limit (USD)
-            <span class="help-text">Pause chat when exceeded</span>
-          </label>
-          <input
-            type="number"
-            id="cost_limit_daily"
-            name="cost_limit_daily"
-            bind:value={costLimitDaily}
-            min="0"
-            step="1"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="rate_limit_per_minute">
-            Rate Limit (requests/min)
-            <span class="help-text">Prevent excessive usage</span>
-          </label>
-          <input
-            type="number"
-            id="rate_limit_per_minute"
-            name="rate_limit_per_minute"
-            bind:value={rateLimitPerMinute}
-            min="1"
-            max="100"
-            step="1"
-          />
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : 'Save Settings'}
-        </button>
-
-        <button
-          type="button"
-          class="btn btn-secondary"
-          on:click={() => {
-            preferredModel = data.settings.preferred_model || 'gpt-4o';
-            temperature = data.settings.temperature?.toString() || '0.7';
-            maxTokens = data.settings.max_tokens?.toString() || '4096';
-            costLimitDaily = data.settings.cost_limit_daily?.toString() || '10';
-            rateLimitPerMinute = data.settings.rate_limit_per_minute?.toString() || '10';
+        <form
+          method="POST"
+          action="?/toggleEnabled"
+          use:enhance={() => {
+            return async ({ result }) => {
+              if (result.type === 'success') {
+                // Invalidate layout data to update menu visibility in real-time
+                await invalidate('app:layout');
+                toastStore.success(
+                  aiChatEnabled ? 'AI chat enabled successfully' : 'AI chat disabled successfully'
+                );
+              } else if (result.type === 'failure' && result.data) {
+                const data = result.data;
+                const errorMsg =
+                  (typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+                    ? data.error
+                    : null) || 'Failed to toggle AI chat';
+                toastStore.error(errorMsg);
+                // Revert the toggle on failure
+                aiChatEnabled = !aiChatEnabled;
+              }
+            };
           }}
         >
-          Reset
-        </button>
-      </div>
-    </form>
-  </section>
-
-  <!-- Documentation Section -->
-  <section class="settings-section">
-    <h2>Getting API Keys</h2>
-    <div class="docs-grid">
-      <div class="doc-card">
-        <h3>OpenAI</h3>
-        <p>Get your API key from the OpenAI platform.</p>
-        <a
-          href="https://platform.openai.com/api-keys"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="doc-link"
-        >
-          Get OpenAI API Key →
-        </a>
-      </div>
-
-      <div class="doc-card">
-        <h3>Anthropic</h3>
-        <p>Get your API key from the Anthropic console.</p>
-        <a
-          href="https://console.anthropic.com/settings/keys"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="doc-link"
-        >
-          Get Anthropic API Key →
-        </a>
-      </div>
-
-      <div class="doc-card">
-        <h3>Grok (X.AI)</h3>
-        <p>Get your API key from the X.AI platform.</p>
-        <a href="https://x.ai/" target="_blank" rel="noopener noreferrer" class="doc-link">
-          Get Grok API Key →
-        </a>
+          <input type="hidden" name="enabled" value={aiChatEnabled ? 'true' : 'false'} />
+          <label class="toggle-switch">
+            <input
+              type="checkbox"
+              checked={aiChatEnabled}
+              on:change={(e) => {
+                const target = e.target;
+                if (target instanceof HTMLInputElement) {
+                  aiChatEnabled = target.checked;
+                  const form = target.closest('form');
+                  if (form) {
+                    // Update hidden input before submitting
+                    const hiddenInput = form.querySelector('input[name="enabled"]');
+                    if (hiddenInput instanceof HTMLInputElement) {
+                      hiddenInput.value = target.checked ? 'true' : 'false';
+                    }
+                    form.requestSubmit();
+                  }
+                }
+              }}
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </form>
       </div>
     </div>
   </section>
+
+  {#if aiChatEnabled}
+    {#if !data.hasKeys}
+      <div class="info-banner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        <div>
+          <strong>Get Started with AI Chat</strong>
+          <p>
+            Add at least one API key below to enable the AI chat assistant for product creation.
+            Your keys are encrypted and stored securely.
+          </p>
+        </div>
+      </div>
+    {/if}
+
+    <!-- API Keys Section -->
+    <section class="settings-section">
+      <h2>API Keys</h2>
+      <p class="section-description">
+        Add API keys for AI providers. Keys are encrypted at rest and never exposed in the UI.
+      </p>
+
+      <div class="provider-cards">
+        {#each providers as provider}
+          {@const hasKey = data.settings[`${provider}_api_key`]}
+
+          <div class="provider-card" class:has-key={hasKey}>
+            <div class="provider-header">
+              <div class="provider-info">
+                <h3>{getProviderName(provider)}</h3>
+                <p>{getProviderDescription(provider)}</p>
+              </div>
+              {#if hasKey}
+                <span class="status-badge configured">Configured</span>
+              {:else}
+                <span class="status-badge not-configured">Not configured</span>
+              {/if}
+            </div>
+
+            <div class="provider-actions">
+              <button
+                type="button"
+                class="btn btn-primary"
+                on:click={() => openApiKeyModal(provider)}
+              >
+                {hasKey ? 'Update Key' : 'Add Key'}
+              </button>
+
+              {#if hasKey}
+                <form method="POST" action="?/deleteApiKey" use:enhance>
+                  <input type="hidden" name="provider" value={provider} />
+                  <button
+                    type="submit"
+                    class="btn btn-danger-outline"
+                    on:click={(e) => {
+                      if (!confirm(`Delete ${getProviderName(provider)} API key?`)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </form>
+              {/if}
+            </div>
+
+            {#if hasKey}
+              <div class="key-info">
+                <div class="key-mask">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect>
+                    <path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2" stroke-linecap="round"></path>
+                  </svg>
+                  <span>••••••••••••</span>
+                </div>
+                <small>Last updated: Recently</small>
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Model Configuration Section -->
+    <section class="settings-section">
+      <h2>Model Configuration</h2>
+      <p class="section-description">
+        Configure the default AI model and parameters for chat conversations.
+      </p>
+
+      <form method="POST" action="?/saveSettings" use:enhance class="settings-form">
+        <div class="form-group">
+          <label for="preferred_model">
+            Preferred Model
+            <span class="help-text">Default model for new conversations</span>
+          </label>
+          <select id="preferred_model" name="preferred_model" bind:value={preferredModel}>
+            {#each data.supportedModels as model}
+              <option value={model.model}>{model.label}</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="temperature">
+              Temperature
+              <span class="help-text">0 = precise, 2 = creative</span>
+            </label>
+            <input
+              type="number"
+              id="temperature"
+              name="temperature"
+              bind:value={temperature}
+              min="0"
+              max="2"
+              step="0.1"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="max_tokens">
+              Max Tokens
+              <span class="help-text">Maximum response length</span>
+            </label>
+            <input
+              type="number"
+              id="max_tokens"
+              name="max_tokens"
+              bind:value={maxTokens}
+              min="100"
+              max="16000"
+              step="100"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cost_limit_daily">
+              Daily Cost Limit (USD)
+              <span class="help-text">Pause chat when exceeded</span>
+            </label>
+            <input
+              type="number"
+              id="cost_limit_daily"
+              name="cost_limit_daily"
+              bind:value={costLimitDaily}
+              min="0"
+              step="1"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="rate_limit_per_minute">
+              Rate Limit (requests/min)
+              <span class="help-text">Prevent excessive usage</span>
+            </label>
+            <input
+              type="number"
+              id="rate_limit_per_minute"
+              name="rate_limit_per_minute"
+              bind:value={rateLimitPerMinute}
+              min="1"
+              max="100"
+              step="1"
+            />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Settings'}
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            on:click={() => {
+              preferredModel = data.settings.preferred_model || 'gpt-4o';
+              temperature = data.settings.temperature?.toString() || '0.7';
+              maxTokens = data.settings.max_tokens?.toString() || '4096';
+              costLimitDaily = data.settings.cost_limit_daily?.toString() || '10';
+              rateLimitPerMinute = data.settings.rate_limit_per_minute?.toString() || '10';
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Documentation Section -->
+    <section class="settings-section">
+      <h2>Getting API Keys</h2>
+      <div class="docs-grid">
+        <div class="doc-card">
+          <h3>OpenAI</h3>
+          <p>Get your API key from the OpenAI platform.</p>
+          <a
+            href="https://platform.openai.com/api-keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="doc-link"
+          >
+            Get OpenAI API Key →
+          </a>
+        </div>
+
+        <div class="doc-card">
+          <h3>Anthropic</h3>
+          <p>Get your API key from the Anthropic console.</p>
+          <a
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="doc-link"
+          >
+            Get Anthropic API Key →
+          </a>
+        </div>
+
+        <div class="doc-card">
+          <h3>Grok (X.AI)</h3>
+          <p>Get your API key from the X.AI platform.</p>
+          <a href="https://x.ai/" target="_blank" rel="noopener noreferrer" class="doc-link">
+            Get Grok API Key →
+          </a>
+        </div>
+      </div>
+    </section>
+  {/if}
 </div>
 
 <!-- API Key Modal -->
@@ -741,6 +805,89 @@
   .btn-danger-outline:hover {
     background: var(--color-danger);
     color: white;
+  }
+
+  /* Toggle section styles */
+  .toggle-section {
+    margin-bottom: 2rem;
+  }
+
+  .toggle-container {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .toggle-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .toggle-content > div h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.25rem 0;
+  }
+
+  .toggle-content > div p {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  /* Toggle switch styles */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 56px;
+    height: 32px;
+    cursor: pointer;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-border-secondary);
+    transition: 0.3s;
+    border-radius: 32px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: '';
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: var(--color-primary);
+  }
+
+  input:focus + .toggle-slider {
+    box-shadow: 0 0 0 3px var(--color-primary-alpha);
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(24px);
   }
 
   @media (max-width: 768px) {

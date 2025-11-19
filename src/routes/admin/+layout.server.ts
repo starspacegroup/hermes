@@ -2,9 +2,12 @@ import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { getDB } from '$lib/server/db/connection';
 import { getUserAISessions } from '$lib/server/db/ai-sessions';
+import { isAIChatEnabled } from '$lib/server/db/ai-settings';
 import type { AISession } from '$lib/types/ai-chat';
 
-export const load: LayoutServerLoad = async ({ cookies, url, platform, locals }) => {
+export const load: LayoutServerLoad = async ({ cookies, url, platform, locals, depends }) => {
+  // Mark this load function as dependent on AI settings changes
+  depends('app:layout');
   // Allow login page to be accessed without authentication
   if (url.pathname === '/auth/login') {
     return {};
@@ -35,11 +38,15 @@ export const load: LayoutServerLoad = async ({ cookies, url, platform, locals })
     // Load user's chat sessions if they're an admin
     let sessions: AISession[] = [];
     let archivedSessions: AISession[] = [];
-    if (locals.currentUser && platform?.env?.DB) {
+    let hasAIChat = false;
+    if (locals.currentUser && platform?.env?.DB && platform?.env?.ENCRYPTION_KEY) {
       const db = getDB(platform);
       const siteId = locals.siteId;
       const userId = locals.currentUser.id;
+      const encryptionKey = platform.env.ENCRYPTION_KEY;
       try {
+        // Check if AI chat is enabled and configured
+        hasAIChat = await isAIChatEnabled(db, siteId, encryptionKey);
         // Load active sessions
         sessions = await getUserAISessions(db, siteId, userId, 'active');
         // Load archived sessions
@@ -52,7 +59,8 @@ export const load: LayoutServerLoad = async ({ cookies, url, platform, locals })
     return {
       user,
       sessions,
-      archivedSessions
+      archivedSessions,
+      hasAIChat
     };
   } catch (error) {
     // Check if it's a redirect error (which we want to throw)

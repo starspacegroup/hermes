@@ -288,6 +288,58 @@ export const actions: Actions = {
       console.error('Failed to initialize defaults:', err);
       return fail(500, { error: 'Failed to initialize defaults' });
     }
+  },
+
+  toggleEnabled: async ({ request, platform, locals }) => {
+    if (!locals.currentUser) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    if (locals.currentUser.role !== 'admin' && locals.currentUser.role !== 'platform_engineer') {
+      return fail(403, { error: 'Access denied. Admin role required.' });
+    }
+
+    const db = getDB(platform);
+    const siteId = locals.siteId;
+    const encryptionKey = platform?.env?.ENCRYPTION_KEY;
+
+    if (!encryptionKey) {
+      return fail(500, { error: 'Encryption key not configured' });
+    }
+
+    const formData = await request.formData();
+    const enabled = formData.get('enabled')?.toString() === 'true';
+
+    try {
+      await upsertAISetting(
+        db,
+        siteId,
+        'ai_chat_enabled',
+        enabled,
+        'boolean',
+        encryptionKey,
+        'Enable or disable AI chat assistant'
+      );
+
+      // Log the activity
+      await createActivityLog(db, siteId, {
+        user_id: locals.currentUser.id,
+        action: enabled ? 'Enabled AI Chat' : 'Disabled AI Chat',
+        entity_type: 'ai_settings',
+        entity_id: 'ai_chat_enabled',
+        description: enabled
+          ? 'Enabled AI chat assistant for the site'
+          : 'Disabled AI chat assistant for the site'
+      });
+
+      return {
+        success: true,
+        message: enabled ? 'AI chat enabled successfully' : 'AI chat disabled successfully'
+      };
+    } catch (err) {
+      console.error('Failed to toggle AI chat:', err);
+      return fail(500, { error: 'Failed to toggle AI chat' });
+    }
   }
 };
 
