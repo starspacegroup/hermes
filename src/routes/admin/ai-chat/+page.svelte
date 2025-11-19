@@ -18,6 +18,7 @@
   let updateFrameId: number | null = null;
   let lastUpdateTime = 0;
   const UPDATE_THROTTLE_MS = 50; // Update UI at most every 50ms
+  let textareaElement: HTMLTextAreaElement;
 
   // Scroll to bottom without blocking
   function scrollToBottom() {
@@ -60,12 +61,10 @@
     }
 
     const messageText = inputText.trim();
-    inputText = '';
-
+    
     // Convert files to base64 for attachments
     const attachments: AIChatMessage['attachments'] = [];
     const filesToProcess = [...selectedFiles];
-    selectedFiles = [];
 
     try {
       for (const file of filesToProcess) {
@@ -101,6 +100,14 @@
       attachments
     };
     messages = [...messages, userMessage];
+
+    // Clear input and files, then restore focus
+    inputText = '';
+    selectedFiles = [];
+    await tick();
+    if (textareaElement) {
+      textareaElement.focus();
+    }
 
     // Stream AI response
     isStreaming = true;
@@ -246,6 +253,11 @@
       scrollToBottom();
     } finally {
       isStreaming = false;
+      // Restore focus to textarea after streaming completes
+      await tick();
+      if (textareaElement) {
+        textareaElement.focus();
+      }
     }
   }
 
@@ -340,9 +352,8 @@
 
   onMount(() => {
     // Focus input on mount
-    const textarea = document.querySelector('textarea');
-    if (textarea) {
-      textarea.focus();
+    if (textareaElement) {
+      textareaElement.focus();
     }
   });
 
@@ -592,6 +603,7 @@
         </button>
 
         <textarea
+          bind:this={textareaElement}
           bind:value={inputText}
           on:keydown={handleKeyDown}
           on:paste={handlePaste}
