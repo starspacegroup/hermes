@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/auth';
-  import { themeStore } from '$lib/stores/theme';
-  import { goto } from '$app/navigation';
+  import { beforeNavigate, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
-  import { beforeNavigate } from '$app/navigation';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+
+  import Avatar from '$lib/components/Avatar.svelte';
   import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
+  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import { authStore } from '$lib/stores/auth';
+  import { themeStore } from '$lib/stores/theme';
   import type { Notification } from '$lib/types/notifications';
 
   let isSidebarOpen = false;
@@ -696,7 +697,7 @@
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">{$authStore.user?.name?.charAt(0) || 'A'}</div>
+          <Avatar name={$authStore.user?.name} size="large" variant="primary" />
           <div class="user-details">
             <div class="user-name">{$authStore.user?.name || 'Admin'}</div>
             <div class="user-role">{$authStore.user?.role || 'admin'}</div>
@@ -1110,9 +1111,9 @@
   }
 
   .sidebar-footer {
-    padding: 1rem;
-    border-top: 1px solid var(--color-border-secondary);
-    transition: border-color var(--transition-normal);
+    margin-top: auto;
+    border-top: 1px solid var(--color-border-primary);
+    padding-top: 0.75rem;
   }
 
   .user-info {
@@ -1123,23 +1124,9 @@
     margin-bottom: 0.75rem;
   }
 
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.125rem;
-  }
-
   .user-details {
     flex: 1;
   }
-
   .user-name {
     font-weight: 600;
     color: var(--color-text-primary);

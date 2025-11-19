@@ -27,6 +27,11 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 
   return {
     hasApiKeys: hasKeys,
-    sessions
+    sessions,
+    currentUser: {
+      id: locals.currentUser.id,
+      name: locals.currentUser.name,
+      role: locals.currentUser.role
+    }
   };
 };

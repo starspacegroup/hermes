@@ -5,6 +5,7 @@
   import type { PageData } from './$types';
   import type { AIChatMessage, AISession } from '$lib/types/ai-chat';
   import MediaPicker from '$lib/components/MediaPicker.svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
 
   export let data: PageData;
 
@@ -653,22 +654,7 @@
             <div class="message {message.role}">
               <div class="message-avatar">
                 {#if message.role === 'user'}
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path
-                      d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    ></path>
-                    <circle
-                      cx="12"
-                      cy="7"
-                      r="4"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    ></circle>
-                  </svg>
+                  <Avatar name={data.currentUser?.name} size="medium" variant="primary" />
                 {:else}
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path
@@ -1085,11 +1071,6 @@
 
   .message.assistant .message-avatar {
     background: var(--color-primary);
-    color: white;
-  }
-
-  .message.user .message-avatar {
-    background: var(--color-text-secondary);
     color: white;
   }
 
