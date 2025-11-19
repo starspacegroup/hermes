@@ -15,6 +15,36 @@
   let sessionId: string | null = null;
   let messagesContainer: HTMLDivElement;
   let isMediaPickerOpen = false;
+
+  // Helper function to format timestamps
+  function formatTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  // Helper function to format model name
+  function formatModelName(model?: string): string {
+    if (!model) return '';
+    const names: Record<string, string> = {
+      'gpt-4o': 'GPT-4o',
+      'gpt-4o-mini': 'GPT-4o Mini',
+      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+      'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+      'grok-beta': 'Grok Beta'
+    };
+    return names[model] || model;
+  }
   let selectedMedia: Array<{
     id: string;
     url: string;
@@ -254,6 +284,11 @@
 
               const data = JSON.parse(jsonStr);
 
+              // Debug: log all data received in final chunk
+              if (data.done) {
+                console.log('Final chunk data:', data);
+              }
+
               if (data.error) {
                 console.error('AI error from stream:', data.error);
                 assistantMessage.content = `❌ ${data.error}`;
@@ -286,8 +321,32 @@
                 }
               }
 
+              // Capture model and usage info from final chunk
+              if (data.model) {
+                assistantMessage.model = data.model;
+                console.log('Captured model:', data.model);
+              }
+              if (data.usage) {
+                assistantMessage.usage = {
+                  inputTokens: data.usage.inputTokens,
+                  outputTokens: data.usage.outputTokens,
+                  totalTokens: data.usage.totalTokens,
+                  estimatedCost: data.estimatedCost || 0
+                };
+                console.log('Captured usage:', assistantMessage.usage);
+              }
+
+              // Force reactive update to display the metadata
+              if (data.model || data.usage) {
+                messages = [...messages];
+              }
+
               // Update session title if this is a new session and first message
-              if (messages.length === 2 && currentSessionTitle === 'New Conversation') {
+              if (
+                sessionId &&
+                messages.length === 2 &&
+                currentSessionTitle === 'New Conversation'
+              ) {
                 // Generate title from first user message
                 const firstUserMsg = messages.find((m) => m.role === 'user')?.content || '';
                 const autoTitle =
@@ -298,7 +357,7 @@
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ title: autoTitle })
-                });
+                }).catch((err) => console.error('Failed to update session title:', err));
               }
 
               if (data.done && data.productCommand) {
@@ -667,6 +726,21 @@
                 {/if}
               </div>
               <div class="message-content">
+                <div class="message-header">
+                  <span class="message-timestamp">{formatTimestamp(message.timestamp)}</span>
+                  {#if message.role === 'assistant' && message.model}
+                    <span class="message-meta">
+                      <span class="model-badge">{formatModelName(message.model)}</span>
+                      {#if message.usage}
+                        <span class="usage-info">
+                          {message.usage.totalTokens.toLocaleString()} tokens · ${message.usage.estimatedCost.toFixed(
+                            4
+                          )}
+                        </span>
+                      {/if}
+                    </span>
+                  {/if}
+                </div>
                 {#if message.attachments && message.attachments.length > 0}
                   <div class="attachments-grid">
                     {#each message.attachments as attachment (attachment.id)}
@@ -1079,6 +1153,47 @@
     max-width: calc(100% - 50px);
     min-width: 0; /* Allow flex child to shrink */
     overflow-wrap: break-word;
+  }
+
+  .message-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    flex-wrap: wrap;
+  }
+
+  .message.user .message-header {
+    justify-content: flex-end;
+  }
+
+  .message-timestamp {
+    font-weight: 500;
+  }
+
+  .message-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .model-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    background: var(--color-bg-tertiary);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .usage-info {
+    font-size: 0.7rem;
+    color: var(--color-text-tertiary);
   }
 
   .message-text {
@@ -1593,6 +1708,21 @@
 
     .message-content {
       max-width: calc(100% - 42px);
+    }
+
+    .message-header {
+      font-size: 0.6875rem;
+      gap: 0.5rem;
+      margin-bottom: 0.375rem;
+    }
+
+    .model-badge {
+      font-size: 0.65rem;
+      padding: 0.125rem 0.375rem;
+    }
+
+    .usage-info {
+      font-size: 0.65rem;
     }
 
     .message-text {

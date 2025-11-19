@@ -236,6 +236,9 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
         let savedToDB = false; // Track if we've saved to DB at least once
         let accumulatedResponse = '';
         const assistantMessageTimestamp = Date.now();
+        let usageInfo:
+          | { inputTokens: number; outputTokens: number; totalTokens: number }
+          | undefined;
 
         try {
           // Stream the AI response
@@ -250,29 +253,66 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
             systemPrompt: enhancedSystemPrompt
           })) {
             if (chunk.done) {
-              // Final save: update assistant message in session with complete response
-              const updatedMessages = [
-                ...session.messages,
-                userMessage,
-                {
-                  role: 'assistant' as const,
-                  content: accumulatedResponse,
-                  timestamp: assistantMessageTimestamp
+              // Capture usage info if available
+              if (chunk.usage) {
+                usageInfo = chunk.usage;
+              }
+
+              // Calculate estimated cost
+              let estimatedCost = 0;
+              if (usageInfo) {
+                const modelCosts: Record<string, { input: number; output: number }> = {
+                  'gpt-4o': { input: 0.0025, output: 0.01 },
+                  'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+                  'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
+                  'claude-3-5-haiku-20241022': { input: 0.0008, output: 0.004 }
+                };
+                const costs = modelCosts[preferredModel];
+                if (costs) {
+                  estimatedCost =
+                    (usageInfo.inputTokens / 1000) * costs.input +
+                    (usageInfo.outputTokens / 1000) * costs.output;
                 }
-              ];
+              }
+
+              // Final save: update assistant message in session with complete response
+              const assistantMessage: AIChatMessage = {
+                role: 'assistant' as const,
+                content: accumulatedResponse,
+                timestamp: assistantMessageTimestamp,
+                model: preferredModel,
+                usage: usageInfo
+                  ? {
+                      ...usageInfo,
+                      estimatedCost
+                    }
+                  : undefined
+              };
+
+              const updatedMessages = [...session.messages, userMessage, assistantMessage];
               await updateAISessionMessages(db, siteId, session.id, updatedMessages);
               savedToDB = true;
 
               // Check if response contains a product command
               const productCommand = parseProductCommand(accumulatedResponse);
 
-              // Send final chunk with session ID and product command if present
+              // Log usage info for debugging
+              console.log('Sending final chunk with usage:', {
+                model: preferredModel,
+                usage: usageInfo,
+                estimatedCost
+              });
+
+              // Send final chunk with session ID, usage info, and product command if present
               controller.enqueue(
                 encoder.encode(
                   `data: ${JSON.stringify({
                     content: '',
                     done: true,
                     sessionId: session.id,
+                    model: preferredModel,
+                    usage: usageInfo,
+                    estimatedCost,
                     productCommand: productCommand || undefined
                   })}\n\n`
                 )

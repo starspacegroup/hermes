@@ -11,6 +11,13 @@ export interface AIChatMessage {
     productId: string;
     productName: string;
   };
+  model?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    estimatedCost: number;
+  };
 }
 
 export interface AIChatAttachment {

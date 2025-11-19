@@ -9,6 +9,11 @@ export interface AIStreamChunk {
   content: string;
   done: boolean;
   finishReason?: 'stop' | 'length' | 'content_filter' | 'tool_calls';
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
 
 export interface AICompletionRequest {
@@ -143,12 +148,26 @@ class OpenAIProvider implements AIProviderInterface {
         messages,
         temperature: request.temperature ?? 0.7,
         max_tokens: request.maxTokens ?? 4096,
-        stream: true
+        stream: true,
+        stream_options: { include_usage: true }
       });
+
+      let usageData: { inputTokens: number; outputTokens: number; totalTokens: number } | undefined;
+      let finishReasonData: AIStreamChunk['finishReason'] | undefined;
 
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta;
         const finishReason = chunk.choices[0]?.finish_reason;
+
+        // Check for usage information in any chunk
+        if (chunk.usage) {
+          console.log('OpenAI usage chunk:', JSON.stringify(chunk.usage, null, 2));
+          usageData = {
+            inputTokens: chunk.usage.prompt_tokens || 0,
+            outputTokens: chunk.usage.completion_tokens || 0,
+            totalTokens: chunk.usage.total_tokens || 0
+          };
+        }
 
         if (delta?.content) {
           yield {
@@ -157,13 +176,20 @@ class OpenAIProvider implements AIProviderInterface {
           };
         }
 
+        // Store finish reason but don't send done yet - wait for usage
         if (finishReason) {
-          yield {
-            content: '',
-            done: true,
-            finishReason: finishReason as AIStreamChunk['finishReason']
-          };
+          finishReasonData = finishReason as AIStreamChunk['finishReason'];
         }
+      }
+
+      // After stream ends, send final chunk with usage data
+      if (finishReasonData) {
+        yield {
+          content: '',
+          done: true,
+          finishReason: finishReasonData,
+          usage: usageData
+        };
       }
     } catch (err) {
       console.error('OpenAI API error:', err);
@@ -340,6 +366,8 @@ class AnthropicProvider implements AIProviderInterface {
       max_tokens: request.maxTokens ?? 4096
     });
 
+    let finalMessage: { usage?: { input_tokens: number; output_tokens: number } } | null = null;
+
     for await (const chunk of stream) {
       if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
         yield {
@@ -349,10 +377,19 @@ class AnthropicProvider implements AIProviderInterface {
       }
 
       if (chunk.type === 'message_stop') {
+        finalMessage = await stream.finalMessage();
         yield {
           content: '',
           done: true,
-          finishReason: 'stop'
+          finishReason: 'stop',
+          usage: finalMessage?.usage
+            ? {
+                inputTokens: finalMessage.usage.input_tokens || 0,
+                outputTokens: finalMessage.usage.output_tokens || 0,
+                totalTokens:
+                  (finalMessage.usage.input_tokens || 0) + (finalMessage.usage.output_tokens || 0)
+              }
+            : undefined
         };
       }
     }
