@@ -668,7 +668,7 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_site ON user_preferences(site_id
 2. Add `+page.server.ts` if server-side data loading needed
 3. Use TypeScript for all logic
 4. Export `load` function for data fetching
-5. Add tests in `+page.test.ts`
+5. Add tests in `page.test.ts`
 
 ### Creating a Database Entity
 

@@ -1,10 +1,27 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import type { PageData } from './$types';
+  import MediaPicker from '$lib/components/MediaPicker.svelte';
 
   export let data: PageData;
 
+  // Get hasAIChat from parent layout data
+  $: hasAIChat = $page.data?.hasAIChat || false;
+
   // Get metrics from server (real data from database)
   const metrics = data.metrics;
+
+  let aiChatInput = '';
+  let isMediaPickerOpen = false;
+  let selectedMedia: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    type: 'image' | 'video';
+    mimeType: string;
+    size: number;
+  }> = [];
 
   const recentOrders = [
     { id: 'ORD-001', customer: 'John Doe', amount: 299.99, status: 'completed' },
@@ -31,6 +48,43 @@
         return 'var(--color-danger)';
     }
   }
+
+  function handleMediaSelect(
+    event: CustomEvent<
+      Array<{
+        id: string;
+        url: string;
+        filename: string;
+        type: 'image' | 'video';
+        mimeType: string;
+        size: number;
+      }>
+    >
+  ) {
+    selectedMedia = [...selectedMedia, ...event.detail];
+  }
+
+  function removeMedia(index: number) {
+    selectedMedia = selectedMedia.filter((_, i) => i !== index);
+  }
+
+  function openMediaPicker() {
+    isMediaPickerOpen = true;
+  }
+
+  function handleAIChatSubmit(event: Event): void {
+    event.preventDefault();
+    if (aiChatInput.trim() || selectedMedia.length > 0) {
+      // Store the input and media in sessionStorage to pass to AI chat page
+      sessionStorage.setItem('aiChatInitialMessage', aiChatInput.trim());
+      if (selectedMedia.length > 0) {
+        sessionStorage.setItem('aiChatInitialMedia', JSON.stringify(selectedMedia));
+      }
+      goto('/admin/ai-chat');
+    } else {
+      goto('/admin/ai-chat');
+    }
+  }
 </script>
 
 <svelte:head>
@@ -42,6 +96,137 @@
     <h1>Dashboard</h1>
     <p>Welcome to your admin dashboard</p>
   </div>
+
+  <!-- AI Chat Quick Access -->
+  {#if hasAIChat}
+    <div class="ai-chat-hero">
+      <div class="ai-chat-container">
+        <div class="ai-chat-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+        </div>
+        <div class="ai-chat-content">
+          <h2>AI Assistant</h2>
+          <form on:submit={handleAIChatSubmit}>
+            {#if selectedMedia.length > 0}
+              <div class="selected-files-dashboard">
+                {#each selectedMedia as media, i}
+                  <div class="file-chip-dashboard">
+                    {#if media.type === 'image'}
+                      <img src={media.url} alt={media.filename} class="file-preview-dashboard" />
+                    {:else}
+                      <div class="file-icon-dashboard">🎥</div>
+                    {/if}
+                    <span class="file-name-dashboard">{media.filename}</span>
+                    <button
+                      type="button"
+                      class="remove-file-dashboard"
+                      on:click={() => removeMedia(i)}
+                      aria-label="Remove media"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+            <div class="ai-chat-input-wrapper" on:click|stopPropagation role="none">
+              <button
+                type="button"
+                class="attach-btn-dashboard"
+                on:click={openMediaPicker}
+                aria-label="Select media"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <circle
+                    cx="8.5"
+                    cy="8.5"
+                    r="1.5"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></circle>
+                  <path
+                    d="M21 15l-5-5L5 21"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+              </button>
+              <input
+                type="text"
+                bind:value={aiChatInput}
+                placeholder="Describe a product to create, ask for help, or get insights..."
+                class="ai-chat-input"
+                on:click|stopPropagation
+              />
+              <button type="submit" class="ai-chat-submit" aria-label="Send message">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+          </form>
+          <div class="ai-chat-suggestions">
+            <span class="suggestion-label">Try:</span>
+            <button
+              type="button"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'Create a wireless Bluetooth speaker';
+                handleAIChatSubmit(new Event('submit'));
+              }}
+            >
+              Create a product
+            </button>
+            <button
+              type="button"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'Show me sales insights';
+                handleAIChatSubmit(new Event('submit'));
+              }}
+            >
+              Get insights
+            </button>
+            <button
+              type="button"
+              class="suggestion-tag"
+              on:click|stopPropagation={() => {
+                aiChatInput = 'How do I add a new category?';
+                handleAIChatSubmit(new Event('submit'));
+              }}
+            >
+              Ask for help
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Metrics Grid -->
   <div class="metrics-grid">
@@ -242,6 +427,8 @@
   </div>
 </div>
 
+<MediaPicker bind:isOpen={isMediaPickerOpen} on:select={handleMediaSelect} />
+
 <style>
   .dashboard {
     max-width: 1400px;
@@ -249,6 +436,262 @@
 
   .dashboard-header {
     margin-bottom: 2rem;
+  }
+
+  /* AI Chat Hero Section */
+  .ai-chat-hero {
+    margin-bottom: 2.5rem;
+  }
+
+  .ai-chat-container {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 15%, var(--color-bg-primary)),
+      color-mix(in srgb, var(--color-primary) 5%, var(--color-bg-primary))
+    );
+    border: 2px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 24px var(--color-shadow-medium);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal);
+  }
+
+  .ai-chat-icon {
+    width: 64px;
+    height: 64px;
+    background: var(--color-primary);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  }
+
+  .ai-chat-icon svg {
+    color: white;
+  }
+
+  .ai-chat-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ai-chat-content h2 {
+    color: var(--color-text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    transition: color var(--transition-normal);
+  }
+
+  .ai-chat-content form {
+    margin-bottom: 0.75rem;
+  }
+
+  .selected-files-dashboard {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .file-chip-dashboard {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    max-width: 250px;
+  }
+
+  .file-preview-dashboard {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .file-icon-dashboard {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .file-name-dashboard {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary);
+  }
+
+  .remove-file-dashboard {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all var(--transition-normal);
+    font-size: 1.125rem;
+  }
+
+  .remove-file-dashboard:hover {
+    color: var(--color-danger);
+    background: var(--color-bg-danger-light);
+  }
+
+  .ai-chat-input-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-border-secondary);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal);
+  }
+
+  .ai-chat-input-wrapper:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  }
+
+  .attach-btn-dashboard {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+  }
+
+  .attach-btn-dashboard svg {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .attach-btn-dashboard svg path,
+  .attach-btn-dashboard svg rect,
+  .attach-btn-dashboard svg circle {
+    stroke: currentColor;
+  }
+
+  .attach-btn-dashboard:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .ai-chat-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    outline: none;
+    font-family: inherit;
+    transition: color var(--transition-normal);
+  }
+
+  .ai-chat-input::placeholder {
+    color: var(--color-text-tertiary);
+    transition: color var(--transition-normal);
+  }
+
+  .ai-chat-submit {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: none;
+    background: var(--color-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+      background-color var(--transition-normal),
+      transform var(--transition-normal);
+  }
+
+  .ai-chat-submit:hover {
+    background: var(--color-primary-hover);
+    transform: scale(1.05);
+  }
+
+  .ai-chat-submit svg {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .ai-chat-submit svg path {
+    stroke: white;
+  }
+
+  .ai-chat-suggestions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .suggestion-label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    transition: color var(--transition-normal);
+  }
+
+  .suggestion-tag {
+    padding: 0.375rem 0.875rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      color var(--transition-normal),
+      transform var(--transition-normal);
+  }
+
+  .suggestion-tag:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    transform: translateY(-1px);
   }
 
   .dashboard-header h1 {
@@ -467,6 +910,63 @@
       font-size: 1.5rem;
     }
 
+    .ai-chat-hero {
+      margin-bottom: 2rem;
+    }
+
+    .ai-chat-container {
+      flex-direction: column;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .ai-chat-icon {
+      width: 56px;
+      height: 56px;
+    }
+
+    .ai-chat-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .ai-chat-content h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .ai-chat-input-wrapper {
+      flex-direction: column;
+      gap: 0.625rem;
+      padding: 0.875rem;
+    }
+
+    .ai-chat-input {
+      font-size: 0.9375rem;
+      text-align: center;
+    }
+
+    .ai-chat-submit {
+      width: 100%;
+      height: 44px;
+    }
+
+    .ai-chat-suggestions {
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .suggestion-label {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .suggestion-tag {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+
     .metrics-grid {
       grid-template-columns: 1fr;
     }
@@ -482,6 +982,16 @@
     .action-btn {
       width: 100%;
       justify-content: center;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .ai-chat-input-wrapper {
+      flex-wrap: wrap;
+    }
+
+    .ai-chat-input {
+      min-width: 300px;
     }
   }
 </style>

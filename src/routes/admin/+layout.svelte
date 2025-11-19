@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { authStore } from '$lib/stores/auth';
-  import { themeStore } from '$lib/stores/theme';
-  import { goto } from '$app/navigation';
+  import { beforeNavigate, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
-  import { beforeNavigate } from '$app/navigation';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+
+  import Avatar from '$lib/components/Avatar.svelte';
   import NotificationCenter from '$lib/components/notifications/NotificationCenter.svelte';
+  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import { authStore } from '$lib/stores/auth';
+  import { themeStore } from '$lib/stores/theme';
   import type { Notification } from '$lib/types/notifications';
 
   let isSidebarOpen = false;
   let isSettingsSubmenuOpen = false;
+  let isAIChatSubmenuOpen = false;
+  let isArchivedSubmenuOpen = false;
   let currentPath = '';
   let notifications: Notification[] = [];
   let unreadCount = 0;
@@ -22,14 +25,26 @@
     isSidebarOpen = false;
   });
   $: isLoginPage = currentPath === '/auth/login';
+  $: sessions = $page.data?.sessions || [];
+  $: archivedSessions = $page.data?.archivedSessions || [];
+  $: hasAIChat = $page.data?.hasAIChat || false;
   $: {
     // Auto-expand settings submenu if on a settings page
     if (
       currentPath.startsWith('/admin/settings') ||
       currentPath.startsWith('/admin/providers') ||
-      currentPath.startsWith('/admin/themes')
+      currentPath.startsWith('/admin/themes') ||
+      currentPath.startsWith('/admin/categories')
     ) {
       isSettingsSubmenuOpen = true;
+    } else {
+      isSettingsSubmenuOpen = false;
+    }
+    // Auto-expand AI chat submenu if on AI chat page
+    if (currentPath.startsWith('/admin/ai-chat')) {
+      isAIChatSubmenuOpen = true;
+    } else {
+      isAIChatSubmenuOpen = false;
     }
   }
 
@@ -92,6 +107,75 @@
 
   function toggleSettingsSubmenu() {
     isSettingsSubmenuOpen = !isSettingsSubmenuOpen;
+  }
+
+  function toggleAIChatSubmenu() {
+    isAIChatSubmenuOpen = !isAIChatSubmenuOpen;
+  }
+
+  function formatSessionDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  async function archiveSession(sessionId: string, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      const response = await fetch(`/api/ai-chat/sessions?id=${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to archive session');
+      }
+
+      // Reload page data to refresh session lists
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to archive session:', error);
+      alert('Failed to archive session. Please try again.');
+    }
+  }
+
+  async function unarchiveSession(sessionId: string, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      const response = await fetch(`/api/ai-chat/sessions?id=${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unarchive session');
+      }
+
+      // Reload page data to refresh session lists
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to unarchive session:', error);
+      alert('Failed to unarchive session. Please try again.');
+    }
+  }
+
+  function toggleArchivedSubmenu() {
+    isArchivedSubmenuOpen = !isArchivedSubmenuOpen;
   }
 </script>
 
@@ -169,6 +253,195 @@
           </svg>
           Dashboard
         </a>
+
+        <!-- AI Chat with submenu -->
+        {#if hasAIChat}
+          <div class="menu-item-with-submenu">
+            <button
+              class="menu-item-button"
+              class:active={currentPath.startsWith('/admin/ai-chat')}
+              on:click={toggleAIChatSubmenu}
+            >
+              <div class="menu-item-content">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                <span>AI</span>
+              </div>
+              <svg
+                class="chevron"
+                class:open={isAIChatSubmenuOpen}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M9 18l6-6-6-6"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg>
+            </button>
+
+            {#if isAIChatSubmenuOpen}
+              <div class="submenu">
+                <a
+                  href="/admin/ai-chat"
+                  class:active={currentPath === '/admin/ai-chat'}
+                  on:click={closeSidebar}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path
+                      d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                  </svg>
+                  New Chat
+                </a>
+
+                <div class="submenu-section">
+                  <div class="submenu-section-header">
+                    <div class="submenu-section-title">Chat History</div>
+                  </div>
+                  {#if sessions.length === 0}
+                    <div class="submenu-empty">No chat history yet</div>
+                  {:else}
+                    {#each sessions.slice(0, 10) as session (session.id)}
+                      <a
+                        href="/admin/ai-chat?session={session.id}"
+                        class:active={currentPath === '/admin/ai-chat' &&
+                          $page.url.searchParams.get('session') === session.id}
+                        on:click={closeSidebar}
+                        class="session-submenu-item"
+                      >
+                        <div class="session-submenu-content">
+                          <div class="session-submenu-title">{session.title}</div>
+                          <div class="session-submenu-meta">
+                            {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          class="session-action-btn archive"
+                          on:click={(e) => archiveSession(session.id, e)}
+                          title="Archive"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            ></path>
+                          </svg>
+                        </button>
+                      </a>
+                    {/each}
+                  {/if}
+                </div>
+
+                {#if archivedSessions.length > 0}
+                  <div class="submenu-section">
+                    <button
+                      class="submenu-section-header submenu-section-toggle"
+                      on:click={toggleArchivedSubmenu}
+                    >
+                      <div class="submenu-section-title">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ></path>
+                        </svg>
+                        Archived ({archivedSessions.length})
+                      </div>
+                      <svg
+                        class="chevron"
+                        class:open={isArchivedSubmenuOpen}
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M9 18l6-6-6-6"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+
+                    {#if isArchivedSubmenuOpen}
+                      {#each archivedSessions.slice(0, 10) as session (session.id)}
+                        <a
+                          href="/admin/ai-chat?session={session.id}"
+                          class:active={currentPath === '/admin/ai-chat' &&
+                            $page.url.searchParams.get('session') === session.id}
+                          on:click={closeSidebar}
+                          class="session-submenu-item archived"
+                        >
+                          <div class="session-submenu-content">
+                            <div class="session-submenu-title">{session.title}</div>
+                            <div class="session-submenu-meta">
+                              {formatSessionDate(session.updated_at)} • {session.messages.length} msgs
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            class="session-action-btn unarchive"
+                            on:click={(e) => unarchiveSession(session.id, e)}
+                            title="Unarchive"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              ></path>
+                            </svg>
+                          </button>
+                        </a>
+                      {/each}
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
 
         <a
           href="/admin/products"
@@ -344,6 +617,21 @@
                 </svg>
                 SSO
               </a>
+              <a
+                href="/admin/settings/ai"
+                class:active={currentPath.startsWith('/admin/settings/ai')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                AI
+              </a>
             </div>
           {/if}
         </div>
@@ -409,7 +697,7 @@
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <div class="user-avatar">{$authStore.user?.name?.charAt(0) || 'A'}</div>
+          <Avatar name={$authStore.user?.name} size="large" variant="primary" />
           <div class="user-details">
             <div class="user-name">{$authStore.user?.name || 'Admin'}</div>
             <div class="user-role">{$authStore.user?.role || 'admin'}</div>
@@ -692,10 +980,140 @@
     border-right: 3px solid var(--color-primary);
   }
 
+  .submenu-section {
+    padding-top: 0.5rem;
+  }
+
+  .submenu-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem 0.25rem 3rem;
+    gap: 0.5rem;
+  }
+
+  .submenu-section-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-normal);
+  }
+
+  .submenu-section-toggle:hover {
+    background: var(--color-bg-accent);
+  }
+
+  .submenu-section-toggle .submenu-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .submenu-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .submenu-empty {
+    padding: 0.5rem 1rem 0.5rem 3rem;
+    font-size: 0.85rem;
+    color: var(--color-text-tertiary);
+    font-style: italic;
+  }
+
+  .session-submenu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.5rem 3rem;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition:
+      background-color var(--transition-normal),
+      border-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .session-submenu-item.archived {
+    opacity: 0.7;
+  }
+
+  .session-submenu-item:hover {
+    background: var(--color-bg-accent);
+  }
+
+  .session-submenu-item.active {
+    background: var(--color-bg-accent);
+    border-left-color: var(--color-primary);
+  }
+
+  .session-submenu-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .session-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0;
+  }
+
+  .session-submenu-item:hover .session-action-btn {
+    opacity: 1;
+  }
+
+  .session-action-btn:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .session-action-btn.archive:hover {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-tertiary));
+    color: var(--color-primary);
+  }
+
+  .session-action-btn.unarchive:hover {
+    background: color-mix(in srgb, var(--color-success) 10%, var(--color-bg-tertiary));
+    color: var(--color-success);
+  }
+
+  .session-submenu-title {
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .session-submenu-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+  }
+
   .sidebar-footer {
-    padding: 1rem;
-    border-top: 1px solid var(--color-border-secondary);
-    transition: border-color var(--transition-normal);
+    margin-top: auto;
+    border-top: 1px solid var(--color-border-primary);
+    padding-top: 0.75rem;
   }
 
   .user-info {
@@ -706,23 +1124,9 @@
     margin-bottom: 0.75rem;
   }
 
-  .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.125rem;
-  }
-
   .user-details {
     flex: 1;
   }
-
   .user-name {
     font-weight: 600;
     color: var(--color-text-primary);

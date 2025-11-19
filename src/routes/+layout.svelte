@@ -1,13 +1,16 @@
 <script lang="ts">
-  import '../app.css';
-  import { cartStore } from '../lib/stores/cart';
-  import { themeStore } from '../lib/stores/theme';
-  import { authStore, authState } from '../lib/stores/auth';
-  import ThemeToggle from '../lib/components/ThemeToggle.svelte';
-  import ToastContainer from '../lib/components/ToastContainer.svelte';
+  import { onMount, onDestroy } from 'svelte';
+
+  import Avatar from '../lib/components/Avatar.svelte';
   import BuildInfo from '../lib/components/BuildInfo.svelte';
   import ThemePreviewIndicator from '../lib/components/ThemePreviewIndicator.svelte';
-  import { onMount, onDestroy } from 'svelte';
+  import ThemeToggle from '../lib/components/ThemeToggle.svelte';
+  import ToastContainer from '../lib/components/ToastContainer.svelte';
+  import { authStore, authState } from '../lib/stores/auth';
+  import { cartStore } from '../lib/stores/cart';
+  import { themeStore } from '../lib/stores/theme';
+
+  import '../app.css';
   import { page } from '$app/stores';
   import { goto, beforeNavigate } from '$app/navigation';
   import type { LayoutData } from './$types';
@@ -134,9 +137,7 @@
           {#if $authState.isAuthenticated}
             <div class="account-menu-container">
               <button class="account-button" on:click={toggleAccountMenu} aria-label="Account menu">
-                <div class="account-avatar">
-                  {$authState.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+                <Avatar name={$authState.user?.name} size="small" variant="primary" />
                 <span class="account-name">{$authState.user?.name || 'User'}</span>
                 <svg
                   width="16"
@@ -560,19 +561,6 @@
 
   .account-button:hover {
     background-color: var(--color-bg-accent);
-  }
-
-  .account-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 0.9rem;
   }
 
   .account-name {
