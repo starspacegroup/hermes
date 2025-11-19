@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import type { PageData } from './$types';
   import type { AIChatMessage } from '$lib/types/ai-chat';
 
@@ -14,10 +14,14 @@
   let selectedFiles: File[] = [];
   let createdProduct: { id: string; name: string } | null = null;
   let isCreatingProduct = false;
+  let pendingUpdate = false;
+  let updateFrameId: number | null = null;
+  let lastUpdateTime = 0;
+  const UPDATE_THROTTLE_MS = 50; // Update UI at most every 50ms
 
-  // Auto-scroll to bottom when new messages arrive
-  $: if (messages.length > 0) {
-    tick().then(() => {
+  // Scroll to bottom without blocking
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
       if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
@@ -51,7 +55,9 @@
   }
 
   async function sendMessage() {
-    if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) return;
+    if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) {
+      return;
+    }
 
     const messageText = inputText.trim();
     inputText = '';
@@ -104,6 +110,34 @@
       timestamp: Date.now()
     };
     messages = [...messages, assistantMessage];
+    await tick();
+    scrollToBottom();
+
+    // Function to batch UI updates using time-based throttling
+    const scheduleUpdate = () => {
+      if (pendingUpdate) return;
+
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateTime;
+
+      if (timeSinceLastUpdate >= UPDATE_THROTTLE_MS) {
+        // Enough time has passed, update immediately
+        lastUpdateTime = now;
+        messages = [...messages];
+        scrollToBottom();
+      } else {
+        // Schedule update for later
+        pendingUpdate = true;
+        const delay = UPDATE_THROTTLE_MS - timeSinceLastUpdate;
+        updateFrameId = setTimeout(() => {
+          lastUpdateTime = Date.now();
+          messages = [...messages];
+          scrollToBottom();
+          pendingUpdate = false;
+          updateFrameId = null;
+        }, delay) as unknown as number;
+      }
+    };
 
     try {
       const response = await fetch('/api/ai-chat', {
@@ -149,7 +183,14 @@
 
               if (data.error) {
                 assistantMessage.content = `Error: ${data.error}`;
+                // Cancel any pending updates and update immediately
+                if (updateFrameId !== null) {
+                  clearTimeout(updateFrameId);
+                  pendingUpdate = false;
+                  updateFrameId = null;
+                }
                 messages = [...messages];
+                scrollToBottom();
                 break;
               }
 
@@ -159,12 +200,22 @@
 
               if (data.done && data.productCommand) {
                 // AI wants to create a product
+                // Cancel any pending updates and update immediately
+                if (updateFrameId !== null) {
+                  clearTimeout(updateFrameId);
+                  pendingUpdate = false;
+                  updateFrameId = null;
+                }
+                messages = [...messages];
+                scrollToBottom();
                 await handleProductCreation(data.productCommand);
               }
 
               if (!data.done && data.content) {
+                // Accumulate content without triggering immediate re-render
                 assistantMessage.content += data.content;
-                messages = [...messages];
+                // Schedule a batched update
+                scheduleUpdate();
               }
             } catch (parseError) {
               console.error('Failed to parse SSE data:', line, parseError);
@@ -173,10 +224,26 @@
           }
         }
       }
+
+      // Ensure final update happens
+      if (updateFrameId !== null) {
+        clearTimeout(updateFrameId);
+        pendingUpdate = false;
+        updateFrameId = null;
+      }
+      messages = [...messages];
+      scrollToBottom();
     } catch (error) {
       console.error('Chat error:', error);
       assistantMessage.content = 'Sorry, something went wrong. Please try again.';
+      // Cancel any pending updates
+      if (updateFrameId !== null) {
+        clearTimeout(updateFrameId);
+        pendingUpdate = false;
+        updateFrameId = null;
+      }
       messages = [...messages];
+      scrollToBottom();
     } finally {
       isStreaming = false;
     }
@@ -278,6 +345,13 @@
       textarea.focus();
     }
   });
+
+  onDestroy(() => {
+    // Clean up any pending timeouts
+    if (updateFrameId !== null) {
+      clearTimeout(updateFrameId);
+    }
+  });
 </script>
 
 <svelte:head>
@@ -361,7 +435,7 @@
         </div>
       {/if}
 
-      {#each messages as message, i (i)}
+      {#each messages as message, i (message.timestamp + '-' + i)}
         <div class="message {message.role}">
           <div class="message-avatar">
             {#if message.role === 'user'}
@@ -395,7 +469,7 @@
           <div class="message-content">
             {#if message.attachments && message.attachments.length > 0}
               <div class="attachments-grid">
-                {#each message.attachments as attachment}
+                {#each message.attachments as attachment (attachment.id)}
                   {#if attachment.type === 'image'}
                     <img src={attachment.url} alt={attachment.filename} class="attachment-image" />
                   {/if}
@@ -635,7 +709,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
-    scroll-behavior: smooth;
+    /* scroll-behavior: smooth removed - was causing jank during streaming */
     -webkit-overflow-scrolling: touch;
   }
 
@@ -703,7 +777,7 @@
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
-    animation: fadeIn 0.3s ease-in;
+    /* Animation removed - was causing performance issues during streaming */
   }
 
   .message.assistant {

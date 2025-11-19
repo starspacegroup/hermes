@@ -151,9 +151,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
               accumulatedResponse += content;
               // Send chunk to client
               controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ content, done: false })}\n\n`
-                )
+                encoder.encode(`data: ${JSON.stringify({ content, done: false })}\n\n`)
               );
             }
           }
