@@ -283,7 +283,7 @@
                   ></path>
                   <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
                 </svg>
-                Providers
+                Fulfillment
               </a>
               <a
                 href="/admin/settings/shipping"
