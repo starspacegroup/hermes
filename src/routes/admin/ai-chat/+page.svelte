@@ -37,14 +37,14 @@
   // Watch for URL parameter changes to load different sessions
   $: {
     const sessionParam = $page.url.searchParams.get('session');
-    
+
     // Skip if we're programmatically updating the URL (e.g., during session creation)
-    if (!isUpdatingUrlProgrammatically) {
-      if (sessionParam && sessionParam !== sessionId && !isStreaming) {
-        // Only load session if we're not currently streaming
-        // (streaming will update sessionId and URL)
+    // OR if we're currently streaming (to avoid clearing messages mid-stream)
+    if (!isUpdatingUrlProgrammatically && !isStreaming) {
+      if (sessionParam && sessionParam !== sessionId) {
+        // Session parameter changed to a different value - load it
         loadSessionFromId(sessionParam);
-      } else if (!sessionParam && sessionId !== null && !isStreaming) {
+      } else if (!sessionParam && sessionId !== null) {
         // URL cleared, reset to new conversation (but not while streaming)
         messages = [];
         sessionId = null;
@@ -267,9 +267,10 @@
                 break;
               }
 
-              if (data.sessionId) {
+              if (data.sessionId && !sessionId) {
+                // First time receiving session ID - set it and update URL
                 sessionId = data.sessionId;
-                // Update URL with session ID to prevent reactive watcher from clearing messages
+                // Update URL with session ID
                 const currentUrl = $page.url;
                 if (sessionId && currentUrl.searchParams.get('session') !== sessionId) {
                   isUpdatingUrlProgrammatically = true;
@@ -277,25 +278,26 @@
                   newUrl.searchParams.set('session', sessionId);
                   // Use SvelteKit's goto with replaceState to properly update $page store
                   goto(newUrl.toString(), { replaceState: true, noScroll: true, keepFocus: true });
-                  // Reset flag after a brief delay to allow $page store to update
+                  // Keep flag set longer to ensure reactive statement doesn't fire during URL update
                   setTimeout(() => {
                     isUpdatingUrlProgrammatically = false;
-                  }, 100);
+                  }, 500);
                 }
-                // Update session title if this is a new session and first message
-                if (messages.length === 2 && currentSessionTitle === 'New Conversation') {
-                  // Generate title from first user message
-                  const firstUserMsg = messages.find((m) => m.role === 'user')?.content || '';
-                  const autoTitle =
-                    firstUserMsg.slice(0, 50) + (firstUserMsg.length > 50 ? '...' : '');
-                  currentSessionTitle = autoTitle;
-                  // Update in database
-                  fetch(`/api/ai-chat/sessions?id=${sessionId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: autoTitle })
-                  });
-                }
+              }
+
+              // Update session title if this is a new session and first message
+              if (messages.length === 2 && currentSessionTitle === 'New Conversation') {
+                // Generate title from first user message
+                const firstUserMsg = messages.find((m) => m.role === 'user')?.content || '';
+                const autoTitle =
+                  firstUserMsg.slice(0, 50) + (firstUserMsg.length > 50 ? '...' : '');
+                currentSessionTitle = autoTitle;
+                // Update in database
+                fetch(`/api/ai-chat/sessions?id=${sessionId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ title: autoTitle })
+                });
               }
 
               if (data.done && data.productCommand) {
@@ -457,15 +459,11 @@
         }
       }
 
-      // Set temporary state for scrolling
+      // Set product creation state - will persist until user dismisses
       createdProduct = {
         id: result.product.id,
         name: result.product.name
       };
-      // Clear after scroll
-      setTimeout(() => {
-        createdProduct = null;
-      }, 100);
     } catch (error) {
       console.error('Product creation error:', error);
 

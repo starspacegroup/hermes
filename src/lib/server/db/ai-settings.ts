@@ -165,7 +165,7 @@ export async function hasAPIKeysConfigured(db: D1Database, siteId: string): Prom
        AND setting_type = 'encrypted'`
     )
     .bind(siteId)
-    .first<{ count: number; }>();
+    .first<{ count: number }>();
 
   return (result?.count || 0) > 0;
 }
@@ -204,7 +204,7 @@ export async function getAvailableProviders(db: D1Database, siteId: string): Pro
        AND setting_type = 'encrypted'`
     )
     .bind(siteId)
-    .all<{ setting_key: string; }>();
+    .all<{ setting_key: string }>();
 
   const providers: AIProvider[] = [];
 
@@ -257,13 +257,13 @@ export async function setDefaultAIConfig(
 export async function getAvailableFulfillmentProvidersForAI(
   db: D1Database,
   siteId: string
-): Promise<Array<{ id: string; name: string; isDefault: boolean; }>> {
+): Promise<Array<{ id: string; name: string; isDefault: boolean }>> {
   const result = await db
     .prepare(
       'SELECT id, name, is_default FROM fulfillment_providers WHERE site_id = ? AND is_active = 1 ORDER BY is_default DESC, name ASC'
     )
     .bind(siteId)
-    .all<{ id: string; name: string; is_default: number; }>();
+    .all<{ id: string; name: string; is_default: number }>();
 
   return (result.results || []).map((provider) => ({
     id: provider.id,

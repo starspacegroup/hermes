@@ -2,7 +2,12 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db/connection';
 import { getAISettings, getAvailableFulfillmentProvidersForAI } from '$lib/server/db/ai-settings';
-import { getAISession, createAISession, addMessageToSession } from '$lib/server/db/ai-sessions';
+import {
+  getAISession,
+  createAISession,
+  addMessageToSession,
+  updateAISessionMessages
+} from '$lib/server/db/ai-sessions';
 import { createAIProvider } from '$lib/server/ai/providers';
 import { PRODUCT_CREATION_SYSTEM_PROMPT } from '$lib/server/ai/prompts';
 import { parseProductCommand } from '$lib/server/ai/product-parser';
@@ -228,10 +233,15 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let savedToDB = false; // Track if we've saved to DB at least once
         let accumulatedResponse = '';
+        const assistantMessageTimestamp = Date.now();
 
         try {
           // Stream the AI response
+          let chunkCount = 0;
+          const SAVE_INTERVAL = 20; // Save to DB every 20 chunks (roughly every few seconds)
+
           for await (const chunk of provider.streamCompletion({
             messages: allMessages,
             model: preferredModel,
@@ -240,13 +250,18 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
             systemPrompt: enhancedSystemPrompt
           })) {
             if (chunk.done) {
-              // Save assistant message to session
-              const assistantMessage: AIChatMessage = {
-                role: 'assistant',
-                content: accumulatedResponse,
-                timestamp: Date.now()
-              };
-              await addMessageToSession(db, siteId, session.id, assistantMessage);
+              // Final save: update assistant message in session with complete response
+              const updatedMessages = [
+                ...session.messages,
+                userMessage,
+                {
+                  role: 'assistant' as const,
+                  content: accumulatedResponse,
+                  timestamp: assistantMessageTimestamp
+                }
+              ];
+              await updateAISessionMessages(db, siteId, session.id, updatedMessages);
+              savedToDB = true;
 
               // Check if response contains a product command
               const productCommand = parseProductCommand(accumulatedResponse);
@@ -265,6 +280,30 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
             } else {
               const content = chunk.content || '';
               accumulatedResponse += content;
+              chunkCount++;
+
+              // Periodically save partial response to DB (every N chunks)
+              // This ensures the conversation persists even if the client disconnects
+              if (chunkCount % SAVE_INTERVAL === 0 && accumulatedResponse.length > 0) {
+                try {
+                  // Update the messages array with current partial response
+                  const updatedMessages = [
+                    ...session.messages,
+                    userMessage,
+                    {
+                      role: 'assistant' as const,
+                      content: accumulatedResponse,
+                      timestamp: assistantMessageTimestamp
+                    }
+                  ];
+                  await updateAISessionMessages(db, siteId, session.id, updatedMessages);
+                  savedToDB = true;
+                } catch (saveError) {
+                  // Log but don't fail the stream if DB save fails
+                  console.error('Failed to save partial response to DB:', saveError);
+                }
+              }
+
               // Send chunk to client
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ content, done: false })}\n\n`)
@@ -275,6 +314,26 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
           controller.close();
         } catch (err) {
           console.error('AI streaming error:', err);
+
+          // Save any partial response we accumulated before the error
+          if (accumulatedResponse.length > 0 && !savedToDB) {
+            try {
+              const updatedMessages = [
+                ...session.messages,
+                userMessage,
+                {
+                  role: 'assistant' as const,
+                  content: accumulatedResponse + ' [interrupted by error]',
+                  timestamp: assistantMessageTimestamp
+                }
+              ];
+              await updateAISessionMessages(db, siteId, session.id, updatedMessages);
+              console.log('Saved partial response to DB after streaming error');
+            } catch (saveError) {
+              console.error('Failed to save partial response after error:', saveError);
+            }
+          }
+
           const errorMessage =
             err instanceof Error
               ? err.message
