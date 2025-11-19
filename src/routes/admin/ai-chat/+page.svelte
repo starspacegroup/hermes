@@ -981,6 +981,17 @@
     transition: all var(--transition-normal);
   }
 
+  .attach-btn svg,
+  .send-btn svg {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .attach-btn svg path,
+  .send-btn svg path {
+    stroke: currentColor;
+  }
+
   .attach-btn:hover:not(:disabled),
   .send-btn:hover:not(:disabled) {
     background: var(--color-bg-tertiary);
@@ -990,6 +1001,10 @@
   .send-btn:not(:disabled) {
     background: var(--color-primary);
     color: white;
+  }
+
+  .send-btn:not(:disabled) svg path {
+    stroke: white;
   }
 
   .send-btn:hover:not(:disabled) {
