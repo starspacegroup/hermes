@@ -252,6 +252,12 @@
 
               if (data.sessionId) {
                 sessionId = data.sessionId;
+                // Update URL with session ID to prevent reactive watcher from clearing messages
+                const url = new URL(window.location.href);
+                if (sessionId && url.searchParams.get('session') !== sessionId) {
+                  url.searchParams.set('session', sessionId);
+                  window.history.replaceState({}, '', url.toString());
+                }
                 // Update session title if this is a new session and first message
                 if (messages.length === 2 && currentSessionTitle === 'New Conversation') {
                   // Generate title from first user message
@@ -399,18 +405,43 @@
         };
       };
 
+      // Add success message with product link to chat
+      const successMessage = {
+        role: 'assistant' as const,
+        content: `Product "${result.product.name}" has been created successfully!`,
+        timestamp: Date.now(),
+        productLink: {
+          productId: result.product.id,
+          productName: result.product.name
+        }
+      };
+      messages = [...messages, successMessage];
+
+      // Save success message to database if we have a sessionId
+      if (sessionId) {
+        try {
+          await fetch('/api/ai-chat/sessions/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              message: successMessage
+            })
+          });
+        } catch (error) {
+          console.error('Failed to save product success message:', error);
+        }
+      }
+
+      // Set temporary state for scrolling
       createdProduct = {
         id: result.product.id,
         name: result.product.name
       };
-
-      // Add success message to chat
-      const successMessage = {
-        role: 'assistant' as const,
-        content: `✅ Product "${result.product.name}" has been created successfully! You can view and edit it using the link below.`,
-        timestamp: Date.now()
-      };
-      messages = [...messages, successMessage];
+      // Clear after scroll
+      setTimeout(() => {
+        createdProduct = null;
+      }, 100);
     } catch (error) {
       console.error('Product creation error:', error);
 
@@ -564,55 +595,89 @@
         {/if}
 
         {#each messages as message, i (message.timestamp + '-' + i)}
-          <div class="message {message.role}">
-            <div class="message-avatar">
-              {#if message.role === 'user'}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          {#if message.productLink}
+            <!-- Product Creation Alert Card -->
+            <div class="product-alert-card">
+              <div class="alert-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path
-                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+                    d="M22 11.08V12a10 10 0 11-5.93-9.14"
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   ></path>
-                  <circle
-                    cx="12"
-                    cy="7"
-                    r="4"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  ></circle>
-                </svg>
-              {:else}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path
-                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    d="M22 4L12 14.01l-3-3"
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   ></path>
                 </svg>
-              {/if}
+              </div>
+              <div class="alert-content">
+                <strong class="alert-title">✅ Product Created Successfully!</strong>
+                <p class="product-name">{message.productLink.productName}</p>
+                <p class="alert-message">{message.content}</p>
+                <a
+                  href="/admin/products/{message.productLink.productId}/edit"
+                  class="btn-view-product-card"
+                >
+                  View & Edit Product
+                </a>
+              </div>
             </div>
-            <div class="message-content">
-              {#if message.attachments && message.attachments.length > 0}
-                <div class="attachments-grid">
-                  {#each message.attachments as attachment (attachment.id)}
-                    {#if attachment.type === 'image'}
-                      <img
-                        src={attachment.url}
-                        alt={attachment.filename}
-                        class="attachment-image"
-                      />
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-              {#if message.content}
-                <div class="message-text">{message.content}</div>
-              {/if}
+          {:else}
+            <!-- Regular Message -->
+            <div class="message {message.role}">
+              <div class="message-avatar">
+                {#if message.role === 'user'}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path
+                      d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                    <circle
+                      cx="12"
+                      cy="7"
+                      r="4"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></circle>
+                  </svg>
+                {:else}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path
+                      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                  </svg>
+                {/if}
+              </div>
+              <div class="message-content">
+                {#if message.attachments && message.attachments.length > 0}
+                  <div class="attachments-grid">
+                    {#each message.attachments as attachment (attachment.id)}
+                      {#if attachment.type === 'image'}
+                        <img
+                          src={attachment.url}
+                          alt={attachment.filename}
+                          class="attachment-image"
+                        />
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+                {#if message.content}
+                  <div class="message-text">{message.content}</div>
+                {/if}
+              </div>
             </div>
-          </div>
+          {/if}
         {/each}
 
         {#if isStreaming}
@@ -1045,6 +1110,116 @@
     height: 200px;
     object-fit: cover;
     border-radius: 8px;
+  }
+
+  /* Product Alert Card */
+  .product-alert-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 500px;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.25);
+    color: white;
+    text-align: center;
+  }
+
+  .alert-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    backdrop-filter: blur(10px);
+  }
+
+  .alert-icon svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  .alert-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .alert-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: block;
+  }
+
+  .product-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+  }
+
+  .alert-message {
+    font-size: 0.95rem;
+    margin: 0;
+    opacity: 0.95;
+    line-height: 1.5;
+  }
+
+  .btn-view-product-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 2rem;
+    margin-top: 0.5rem;
+    background: white;
+    color: #16a34a;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all var(--transition-normal);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-view-product-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .product-alert-card {
+      margin: 1.5rem 1rem;
+      padding: 1.5rem;
+    }
+
+    .alert-icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    .alert-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .alert-title {
+      font-size: 1.25rem;
+    }
+
+    .product-name {
+      font-size: 1rem;
+    }
   }
 
   /* Streaming Indicator */

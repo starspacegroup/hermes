@@ -7,6 +7,10 @@ export interface AIChatMessage {
   content: string;
   timestamp: number;
   attachments?: AIChatAttachment[];
+  productLink?: {
+    productId: string;
+    productName: string;
+  };
 }
 
 export interface AIChatAttachment {
