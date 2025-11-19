@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { cartStore } from '../../lib/stores/cart.ts';
   import Button from '../../lib/components/Button.svelte';
+  import { calculateTotalStock } from '$lib/utils/stock';
 
   $: totalItems = cartStore.getTotalItems($cartStore);
   $: totalPrice = cartStore.getTotalPrice($cartStore);
@@ -42,6 +43,7 @@
   <div class="cart-content">
     <div class="cart-items">
       {#each $cartStore as item}
+        {@const totalStock = calculateTotalStock(item.fulfillmentOptions)}
         <div class="cart-item">
           <img src={item.image} alt={item.name} />
           <div class="item-details">
@@ -60,7 +62,7 @@
               <span class="quantity">{item.quantity}</span>
               <button
                 on:click={() => updateQuantity(item.id, item.quantity + 1)}
-                disabled={item.quantity >= item.stock}
+                disabled={item.quantity >= totalStock}
               >
                 +
               </button>
