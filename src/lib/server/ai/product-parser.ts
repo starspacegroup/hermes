@@ -19,6 +19,8 @@ export interface ProductCreationData {
       cost: number;
       stockQuantity: number;
       enabled: boolean;
+      createProvider?: boolean;
+      description?: string;
     }>;
     variants?: Array<{
       name: string;
@@ -140,6 +142,7 @@ function validateProductCreation(data: unknown): ProductCreationData | null {
       stock: product.stock,
       tags: product.tags,
       image: product.image || '',
+      fulfillmentOptions: product.fulfillmentOptions,
       variants: product.variants,
       seo: product.seo
     }

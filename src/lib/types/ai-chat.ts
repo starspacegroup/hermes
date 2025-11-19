@@ -98,11 +98,13 @@ export interface AIProductData {
 }
 
 export interface AIFulfillmentOption {
-  providerId: string;
+  providerId: string; // Use 'CREATE_NEW' if creating a new provider
   providerName?: string;
   cost: number;
   stockQuantity: number;
   enabled: boolean;
+  createProvider?: boolean; // Set to true if this option should create a new provider
+  description?: string; // Provider description when creating a new provider
 }
 
 export interface AIProductVariant {
