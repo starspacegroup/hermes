@@ -1,14 +1,27 @@
 <script lang="ts">
+  import { enhance } from '$app/forms';
   import { toastStore } from '$lib/stores/toast';
+  import type { PageData, ActionData } from './$types';
 
-  let siteName = 'Hermes eCommerce';
-  let siteEmail = 'admin@hermes.local';
-  let currency = 'USD';
-  let timezone = 'America/New_York';
+  export let data: PageData;
+  export let form: ActionData;
 
-  function handleSave() {
-    toastStore.success('Settings saved successfully!');
+  // Reactive statements to handle form responses
+  $: if (form?.success) {
+    toastStore.success(form.message || 'Settings saved successfully!');
   }
+  $: if (form?.error) {
+    toastStore.error(form.error);
+  }
+
+  // Initialize form data from server
+  $: generalSettings = data.settings.general;
+  $: addressSettings = data.settings.address;
+  $: taxSettings = data.settings.tax;
+  $: emailSettings = data.settings.email;
+
+  let activeTab = 'general';
+  let isSubmitting = false;
 </script>
 
 <svelte:head>
@@ -21,140 +34,438 @@
     <p>Manage your site configuration</p>
   </div>
 
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab" class:active={activeTab === 'general'} on:click={() => (activeTab = 'general')}>
+      General
+    </button>
+    <button class="tab" class:active={activeTab === 'address'} on:click={() => (activeTab = 'address')}>
+      Address & Location
+    </button>
+    <button class="tab" class:active={activeTab === 'tax'} on:click={() => (activeTab = 'tax')}>
+      Tax Settings
+    </button>
+    <button class="tab" class:active={activeTab === 'email'} on:click={() => (activeTab = 'email')}>
+      Email Settings
+    </button>
+  </div>
+
   <div class="settings-grid">
     <!-- General Settings -->
-    <div class="settings-card">
-      <h2>General Settings</h2>
-      <form on:submit|preventDefault={handleSave}>
-        <div class="form-group">
-          <label for="siteName">Site Name</label>
-          <input id="siteName" type="text" bind:value={siteName} />
-        </div>
-
-        <div class="form-group">
-          <label for="siteEmail">Site Email</label>
-          <input id="siteEmail" type="email" bind:value={siteEmail} />
-        </div>
-
-        <div class="form-group">
-          <label for="currency">Currency</label>
-          <select id="currency" bind:value={currency}>
-            <option value="USD">USD - US Dollar</option>
-            <option value="EUR">EUR - Euro</option>
-            <option value="GBP">GBP - British Pound</option>
-            <option value="CAD">CAD - Canadian Dollar</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="timezone">Timezone</label>
-          <select id="timezone" bind:value={timezone}>
-            <option value="America/New_York">Eastern Time</option>
-            <option value="America/Chicago">Central Time</option>
-            <option value="America/Denver">Mountain Time</option>
-            <option value="America/Los_Angeles">Pacific Time</option>
-            <option value="UTC">UTC</option>
-          </select>
-        </div>
-
-        <button type="submit" class="save-btn">Save Changes</button>
-      </form>
-    </div>
-
-    <!-- Security Settings -->
-    <div class="settings-card">
-      <h2>Security Settings</h2>
-      <div class="security-info">
-        <div class="info-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          <div>
-            <div class="info-label">CSRF Protection</div>
-            <div class="info-value">Enabled</div>
+    {#if activeTab === 'general'}
+      <div class="settings-card">
+        <h2>General Settings</h2>
+        <form
+          method="POST"
+          action="?/updateGeneral"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-group">
+            <label for="storeName">Store Name</label>
+            <input
+              id="storeName"
+              name="storeName"
+              type="text"
+              value={generalSettings.storeName}
+              required
+            />
           </div>
-        </div>
 
-        <div class="info-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"></rect>
-            <path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2" stroke-linecap="round"></path>
-          </svg>
-          <div>
-            <div class="info-label">Session Timeout</div>
-            <div class="info-value">30 minutes</div>
+          <div class="form-group">
+            <label for="tagline">Tagline</label>
+            <input id="tagline" name="tagline" type="text" value={generalSettings.tagline} />
           </div>
-        </div>
 
-        <div class="info-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M8.5 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          <div>
-            <div class="info-label">User Roles</div>
-            <div class="info-value">Admin, User</div>
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              rows="3"
+              value={generalSettings.description}
+            ></textarea>
           </div>
-        </div>
+
+          <div class="form-group">
+            <label for="storeEmail">Store Email</label>
+            <input
+              id="storeEmail"
+              name="storeEmail"
+              type="email"
+              value={generalSettings.storeEmail}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="supportEmail">Support Email</label>
+            <input
+              id="supportEmail"
+              name="supportEmail"
+              type="email"
+              value={generalSettings.supportEmail}
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="contactPhone">Contact Phone</label>
+            <input
+              id="contactPhone"
+              name="contactPhone"
+              type="tel"
+              value={generalSettings.contactPhone}
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="currency">Currency</label>
+            <select id="currency" name="currency" value={generalSettings.currency}>
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="timezone">Timezone</label>
+            <select id="timezone" name="timezone" value={generalSettings.timezone}>
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">Eastern Time (US)</option>
+              <option value="America/Chicago">Central Time (US)</option>
+              <option value="America/Denver">Mountain Time (US)</option>
+              <option value="America/Los_Angeles">Pacific Time (US)</option>
+              <option value="Europe/London">London</option>
+              <option value="Europe/Paris">Paris</option>
+              <option value="Asia/Tokyo">Tokyo</option>
+              <option value="Australia/Sydney">Sydney</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="weightUnit">Weight Unit</label>
+              <select id="weightUnit" name="weightUnit" value={generalSettings.weightUnit}>
+                <option value="lb">Pounds (lb)</option>
+                <option value="kg">Kilograms (kg)</option>
+                <option value="oz">Ounces (oz)</option>
+                <option value="g">Grams (g)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="dimensionUnit">Dimension Unit</label>
+              <select
+                id="dimensionUnit"
+                name="dimensionUnit"
+                value={generalSettings.dimensionUnit}
+              >
+                <option value="in">Inches (in)</option>
+                <option value="cm">Centimeters (cm)</option>
+                <option value="ft">Feet (ft)</option>
+                <option value="m">Meters (m)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
       </div>
-    </div>
+    {/if}
 
-    <!-- Performance Settings -->
-    <div class="settings-card">
-      <h2>Performance Settings</h2>
-      <div class="performance-info">
-        <div class="perf-item">
-          <label for="lazy-loading">
-            <input id="lazy-loading" type="checkbox" checked disabled />
-            <span>Lazy Loading</span>
-          </label>
-          <p>Load images and content as needed</p>
-        </div>
+    <!-- Address Settings -->
+    {#if activeTab === 'address'}
+      <div class="settings-card">
+        <h2>Address & Location</h2>
+        <form
+          method="POST"
+          action="?/updateAddress"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-group">
+            <label for="street">Street Address</label>
+            <input id="street" name="street" type="text" value={addressSettings.street} />
+          </div>
 
-        <div class="perf-item">
-          <label for="caching">
-            <input id="caching" type="checkbox" checked disabled />
-            <span>Caching</span>
-          </label>
-          <p>Cache frequently accessed data</p>
-        </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="city">City</label>
+              <input id="city" name="city" type="text" value={addressSettings.city} />
+            </div>
 
-        <div class="perf-item">
-          <label for="optimistic-ui">
-            <input id="optimistic-ui" type="checkbox" checked disabled />
-            <span>Optimistic UI</span>
-          </label>
-          <p>Update UI before server confirms</p>
-        </div>
+            <div class="form-group">
+              <label for="state">State/Province</label>
+              <input id="state" name="state" type="text" value={addressSettings.state} />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="postcode">Postal Code</label>
+              <input id="postcode" name="postcode" type="text" value={addressSettings.postcode} />
+            </div>
+
+            <div class="form-group">
+              <label for="country">Country</label>
+              <select id="country" name="country" value={addressSettings.country}>
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                <option value="GB">United Kingdom</option>
+                <option value="AU">Australia</option>
+                <option value="DE">Germany</option>
+                <option value="FR">France</option>
+                <option value="JP">Japan</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="geolocationEnabled"
+                value="true"
+                checked={addressSettings.geolocationEnabled}
+              />
+              <span>Enable Geolocation</span>
+            </label>
+            <p class="help-text">Allow customers to use their location for shipping estimates</p>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
       </div>
-    </div>
+    {/if}
 
-    <!-- API Settings -->
-    <div class="settings-card">
-      <h2>API Settings</h2>
-      <div class="api-info">
-        <div class="info-group">
-          <div class="info-label">API Endpoint</div>
-          <code>https://api.hermes.local/v1</code>
-        </div>
+    <!-- Tax Settings -->
+    {#if activeTab === 'tax'}
+      <div class="settings-card">
+        <h2>Tax Settings</h2>
+        <form
+          method="POST"
+          action="?/updateTax"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="calculationsEnabled"
+                value="true"
+                checked={taxSettings.calculationsEnabled}
+              />
+              <span>Enable Tax Calculations</span>
+            </label>
+            <p class="help-text">Automatically calculate taxes at checkout</p>
+          </div>
 
-        <div class="info-group">
-          <div class="info-label">API Key</div>
-          <code>••••••••••••••••</code>
-        </div>
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="pricesIncludeTax"
+                value="true"
+                checked={taxSettings.pricesIncludeTax}
+              />
+              <span>Prices Include Tax</span>
+            </label>
+            <p class="help-text">Product prices already include tax</p>
+          </div>
 
-        <button class="secondary-btn">Regenerate API Key</button>
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="displayPricesWithTax"
+                value="true"
+                checked={taxSettings.displayPricesWithTax}
+              />
+              <span>Display Prices With Tax</span>
+            </label>
+            <p class="help-text">Show tax-inclusive prices to customers</p>
+          </div>
+
+          <div class="form-group">
+            <label for="defaultRate">Default Tax Rate (%)</label>
+            <input
+              id="defaultRate"
+              name="defaultRate"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={taxSettings.defaultRate}
+            />
+            <p class="help-text">Applied when specific tax rates aren't configured</p>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
       </div>
-    </div>
+    {/if}
+
+    <!-- Email Settings -->
+    {#if activeTab === 'email'}
+      <div class="settings-card">
+        <h2>Email Settings</h2>
+        <form
+          method="POST"
+          action="?/updateEmail"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-group">
+            <label for="provider">Email Provider</label>
+            <select id="provider" name="provider" value={emailSettings.provider}>
+              <option value="sendmail">Sendmail</option>
+              <option value="smtp">SMTP</option>
+            </select>
+          </div>
+
+          {#if emailSettings.provider === 'smtp'}
+            <div class="form-group">
+              <label for="smtpHost">SMTP Host</label>
+              <input id="smtpHost" name="smtpHost" type="text" value={emailSettings.smtpHost} />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="smtpPort">SMTP Port</label>
+                <input
+                  id="smtpPort"
+                  name="smtpPort"
+                  type="number"
+                  value={emailSettings.smtpPort}
+                />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="smtpSecure"
+                    value="true"
+                    checked={emailSettings.smtpSecure}
+                  />
+                  <span>Use SSL/TLS</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="smtpUsername">SMTP Username</label>
+              <input
+                id="smtpUsername"
+                name="smtpUsername"
+                type="text"
+                value={emailSettings.smtpUsername}
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="smtpPassword">SMTP Password</label>
+              <input
+                id="smtpPassword"
+                name="smtpPassword"
+                type="password"
+                value={emailSettings.smtpPassword}
+                autocomplete="off"
+              />
+            </div>
+          {/if}
+
+          <div class="form-group">
+            <label for="fromName">From Name</label>
+            <input id="fromName" name="fromName" type="text" value={emailSettings.fromName} />
+          </div>
+
+          <div class="form-group">
+            <label for="fromAddress">From Email Address</label>
+            <input
+              id="fromAddress"
+              name="fromAddress"
+              type="email"
+              value={emailSettings.fromAddress}
+            />
+          </div>
+
+          <div class="form-section">
+            <h3>Email Notifications</h3>
+
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="newOrderEnabled"
+                  value="true"
+                  checked={emailSettings.newOrderEnabled}
+                />
+                <span>New Order Notifications</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="orderStatusEnabled"
+                  value="true"
+                  checked={emailSettings.orderStatusEnabled}
+                />
+                <span>Order Status Change Notifications</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="customerWelcomeEnabled"
+                  value="true"
+                  checked={emailSettings.customerWelcomeEnabled}
+                />
+                <span>Customer Welcome Emails</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -178,6 +489,37 @@
     color: var(--color-text-secondary);
     margin: 0;
     transition: color var(--transition-normal);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--color-border-secondary);
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 0.875rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    white-space: nowrap;
+    margin-bottom: -2px;
+  }
+
+  .tab:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-secondary);
+  }
+
+  .tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
   }
 
   .settings-grid {
@@ -218,6 +560,10 @@
 
   input[type='text'],
   input[type='email'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='password'],
+  textarea,
   select {
     width: 100%;
     padding: 0.75rem;
@@ -226,16 +572,59 @@
     font-size: 1rem;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
+    font-family: inherit;
     transition:
       border-color var(--transition-normal),
       background-color var(--transition-normal),
       color var(--transition-normal);
   }
 
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
   input:focus,
+  textarea:focus,
   select:focus {
     outline: none;
-    border-color: var(--color-border-focus);
+    border-color: var(--color-primary);
+  }
+
+  input[type='checkbox'] {
+    width: auto;
+    margin-right: 0.5rem;
+  }
+
+  label:has(input[type='checkbox']) {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border-secondary);
+  }
+
+  .form-section h3 {
+    color: var(--color-text-primary);
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+  }
+
+  .help-text {
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary);
+    margin: 0.25rem 0 0 0;
   }
 
   .save-btn {
@@ -246,126 +635,21 @@
     border: none;
     border-radius: 8px;
     font-weight: 500;
+    font-size: 1rem;
     cursor: pointer;
     transition:
       background-color var(--transition-normal),
       transform var(--transition-normal);
   }
 
-  .save-btn:hover {
+  .save-btn:hover:not(:disabled) {
     background: var(--color-primary-hover);
     transform: translateY(-2px);
   }
 
-  .security-info,
-  .performance-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .info-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--color-bg-tertiary);
-    border-radius: 8px;
-    transition: background-color var(--transition-normal);
-  }
-
-  .info-item svg {
-    color: var(--color-primary);
-    flex-shrink: 0;
-    transition: color var(--transition-normal);
-  }
-
-  .info-label {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    font-size: 0.875rem;
-    transition: color var(--transition-normal);
-  }
-
-  .info-value {
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    transition: color var(--transition-normal);
-  }
-
-  .perf-item {
-    padding: 1rem;
-    background: var(--color-bg-tertiary);
-    border-radius: 8px;
-    transition: background-color var(--transition-normal);
-  }
-
-  .perf-item label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-  }
-
-  .perf-item input[type='checkbox'] {
-    width: auto;
-    cursor: pointer;
-  }
-
-  .perf-item p {
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    margin: 0;
-    transition: color var(--transition-normal);
-  }
-
-  .api-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .info-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .info-group .info-label {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    font-size: 0.9rem;
-    transition: color var(--transition-normal);
-  }
-
-  code {
-    display: block;
-    padding: 0.75rem;
-    background: var(--color-bg-tertiary);
-    border-radius: 6px;
-    font-family: monospace;
-    color: var(--color-text-primary);
-    font-size: 0.9rem;
-    transition:
-      background-color var(--transition-normal),
-      color var(--transition-normal);
-  }
-
-  .secondary-btn {
-    padding: 0.75rem 1.5rem;
-    background: var(--color-secondary);
-    color: var(--color-text-inverse);
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color var(--transition-normal);
-  }
-
-  .secondary-btn:hover {
-    background: var(--color-secondary-hover);
+  .save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   @media (max-width: 768px) {
