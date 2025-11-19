@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db/connection';
-import { getAISettings } from '$lib/server/db/ai-settings';
+import { getAISettings, getAvailableFulfillmentProvidersForAI } from '$lib/server/db/ai-settings';
 import { getAISession, createAISession, addMessageToSession } from '$lib/server/db/ai-sessions';
 import { createAIProvider } from '$lib/server/ai/providers';
 import { PRODUCT_CREATION_SYSTEM_PROMPT } from '$lib/server/ai/prompts';
@@ -210,6 +210,20 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       }
     }
 
+    // Get available fulfillment providers for AI context
+    const fulfillmentProviders = await getAvailableFulfillmentProvidersForAI(db, siteId);
+
+    // Build enhanced system prompt with fulfillment provider context
+    const enhancedSystemPrompt = `${PRODUCT_CREATION_SYSTEM_PROMPT}
+
+## Available Fulfillment Providers
+
+The following fulfillment providers are currently available for this site:
+
+${fulfillmentProviders.map((p) => `- **${p.name}** (ID: ${p.id})${p.isDefault ? ' [DEFAULT]' : ''}`).join('\n')}
+
+When creating products, use these provider IDs in the fulfillmentOptions array. If the user doesn't specify providers, use the default provider${fulfillmentProviders.length === 0 ? ' (Note: No providers configured - prompt user to set up fulfillment first)' : ''}.`;
+
     // Create a streaming response
     const stream = new ReadableStream({
       async start(controller) {
@@ -223,7 +237,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
             model: preferredModel,
             temperature,
             maxTokens,
-            systemPrompt: PRODUCT_CREATION_SYSTEM_PROMPT
+            systemPrompt: enhancedSystemPrompt
           })) {
             if (chunk.done) {
               // Save assistant message to session

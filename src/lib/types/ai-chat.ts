@@ -89,11 +89,20 @@ export interface AIProductData {
   images?: string[];
   videos?: string[];
   variants?: AIProductVariant[];
+  fulfillmentOptions?: AIFulfillmentOption[];
   seo?: {
     title?: string;
     description?: string;
     keywords?: string[];
   };
+}
+
+export interface AIFulfillmentOption {
+  providerId: string;
+  providerName?: string;
+  cost: number;
+  stockQuantity: number;
+  enabled: boolean;
 }
 
 export interface AIProductVariant {

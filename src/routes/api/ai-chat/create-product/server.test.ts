@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import * as dbConnection from '$lib/server/db/connection';
 import * as productsDb from '$lib/server/db/products';
 import * as mediaDb from '$lib/server/db/media';
+import * as fulfillmentDb from '$lib/server/db/fulfillment-providers';
 import * as activityLogger from '$lib/server/activity-logger';
 
 type ExtractRequestEvent<T> = T extends (event: infer E) => unknown ? E : never;
@@ -20,6 +21,7 @@ interface ProductCreationResponse {
 vi.mock('$lib/server/db/connection');
 vi.mock('$lib/server/db/products');
 vi.mock('$lib/server/db/media');
+vi.mock('$lib/server/db/fulfillment-providers');
 vi.mock('$lib/server/activity-logger');
 
 describe('POST /api/ai-chat/create-product', () => {
@@ -383,5 +385,223 @@ describe('POST /api/ai-chat/create-product', () => {
     } as unknown as MockRequestEvent;
 
     await expect(POST(mockEvent)).rejects.toThrow();
+  });
+
+  it('creates product with fulfillment options', async () => {
+    const mockProduct = {
+      id: 'product-1',
+      site_id: mockSiteId,
+      name: 'Test Product',
+      description: 'Test description',
+      price: 29.99,
+      category: 'electronics',
+      type: 'physical' as const,
+      stock: 10,
+      tags: '["tag1","tag2"]',
+      image: '',
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+
+    vi.mocked(productsDb.createProduct).mockResolvedValue(mockProduct);
+    vi.mocked(fulfillmentDb.setProductFulfillmentOptions).mockResolvedValue(undefined);
+    vi.mocked(activityLogger.logActivity).mockResolvedValue(undefined);
+
+    const mockRequest = {
+      json: vi.fn().mockResolvedValue({
+        product: {
+          name: 'Test Product',
+          description: 'Test description',
+          price: 29.99,
+          category: 'electronics',
+          type: 'physical',
+          stock: 10,
+          tags: ['tag1', 'tag2'],
+          fulfillmentOptions: [
+            {
+              providerId: 'provider-1',
+              providerName: 'In-House',
+              cost: 15.0,
+              stockQuantity: 50,
+              enabled: true
+            },
+            {
+              providerId: 'provider-2',
+              providerName: 'Amazon FBA',
+              cost: 18.0,
+              stockQuantity: 30,
+              enabled: true
+            }
+          ]
+        }
+      })
+    } as unknown as Request;
+
+    const mockEvent = {
+      request: mockRequest,
+      platform: mockPlatform,
+      locals: {
+        currentUser: mockUser,
+        siteId: mockSiteId
+      }
+    } as unknown as MockRequestEvent;
+
+    const response = await POST(mockEvent);
+    const data = (await response.json()) as ProductCreationResponse;
+
+    expect(productsDb.createProduct).toHaveBeenCalledWith(mockDb, mockSiteId, {
+      name: 'Test Product',
+      description: 'Test description',
+      price: 29.99,
+      category: 'electronics',
+      type: 'physical',
+      stock: 10,
+      tags: ['tag1', 'tag2'],
+      image: ''
+    });
+
+    expect(fulfillmentDb.setProductFulfillmentOptions).toHaveBeenCalledWith(
+      mockDb,
+      mockSiteId,
+      'product-1',
+      [
+        {
+          providerId: 'provider-1',
+          cost: 15.0,
+          stockQuantity: 50,
+          sortOrder: 0
+        },
+        {
+          providerId: 'provider-2',
+          cost: 18.0,
+          stockQuantity: 30,
+          sortOrder: 1
+        }
+      ]
+    );
+
+    expect(data.success).toBe(true);
+    expect(data.product?.name).toBe('Test Product');
+  });
+
+  it('filters out disabled fulfillment options', async () => {
+    const mockProduct = {
+      id: 'product-1',
+      site_id: mockSiteId,
+      name: 'Test Product',
+      description: 'Test description',
+      price: 29.99,
+      category: 'electronics',
+      type: 'physical' as const,
+      stock: 10,
+      tags: '["tag1"]',
+      image: '',
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+
+    vi.mocked(productsDb.createProduct).mockResolvedValue(mockProduct);
+    vi.mocked(fulfillmentDb.setProductFulfillmentOptions).mockResolvedValue(undefined);
+    vi.mocked(activityLogger.logActivity).mockResolvedValue(undefined);
+
+    const mockRequest = {
+      json: vi.fn().mockResolvedValue({
+        product: {
+          name: 'Test Product',
+          description: 'Test description',
+          price: 29.99,
+          category: 'electronics',
+          type: 'physical',
+          stock: 10,
+          tags: ['tag1'],
+          fulfillmentOptions: [
+            {
+              providerId: 'provider-1',
+              cost: 15.0,
+              stockQuantity: 50,
+              enabled: true
+            },
+            {
+              providerId: 'provider-2',
+              cost: 18.0,
+              stockQuantity: 30,
+              enabled: false
+            }
+          ]
+        }
+      })
+    } as unknown as Request;
+
+    const mockEvent = {
+      request: mockRequest,
+      platform: mockPlatform,
+      locals: {
+        currentUser: mockUser,
+        siteId: mockSiteId
+      }
+    } as unknown as MockRequestEvent;
+
+    await POST(mockEvent);
+
+    expect(fulfillmentDb.setProductFulfillmentOptions).toHaveBeenCalledWith(
+      mockDb,
+      mockSiteId,
+      'product-1',
+      [
+        {
+          providerId: 'provider-1',
+          cost: 15.0,
+          stockQuantity: 50,
+          sortOrder: 0
+        }
+      ]
+    );
+  });
+
+  it('does not set fulfillment options when none provided', async () => {
+    const mockProduct = {
+      id: 'product-1',
+      site_id: mockSiteId,
+      name: 'Test Product',
+      description: 'Test description',
+      price: 29.99,
+      category: 'electronics',
+      type: 'physical' as const,
+      stock: 10,
+      tags: '["tag1"]',
+      image: '',
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+
+    vi.mocked(productsDb.createProduct).mockResolvedValue(mockProduct);
+    vi.mocked(activityLogger.logActivity).mockResolvedValue(undefined);
+
+    const mockRequest = {
+      json: vi.fn().mockResolvedValue({
+        product: {
+          name: 'Test Product',
+          description: 'Test description',
+          price: 29.99,
+          category: 'electronics',
+          type: 'physical',
+          stock: 10,
+          tags: ['tag1']
+        }
+      })
+    } as unknown as Request;
+
+    const mockEvent = {
+      request: mockRequest,
+      platform: mockPlatform,
+      locals: {
+        currentUser: mockUser,
+        siteId: mockSiteId
+      }
+    } as unknown as MockRequestEvent;
+
+    await POST(mockEvent);
+
+    expect(fulfillmentDb.setProductFulfillmentOptions).not.toHaveBeenCalled();
   });
 });

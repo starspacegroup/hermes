@@ -118,7 +118,7 @@ describe('POST /api/ai-chat/sessions/message', () => {
     } as unknown as MockRequestEvent);
 
     expect(response.status).toBe(200);
-    const result = (await response.json()) as { success: boolean; };
+    const result = (await response.json()) as { success: boolean };
     expect(result.success).toBe(true);
   });
 

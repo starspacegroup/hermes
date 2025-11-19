@@ -7,7 +7,8 @@ import {
   deleteAISetting,
   hasAPIKeysConfigured,
   getAvailableProviders,
-  setDefaultAIConfig
+  setDefaultAIConfig,
+  getAvailableFulfillmentProvidersForAI
 } from './ai-settings';
 import * as crypto from '../crypto';
 
@@ -381,6 +382,60 @@ describe('AI Settings Database Operations', () => {
       expect(calls.some((call) => call[2] === 'max_tokens')).toBe(true);
       expect(calls.some((call) => call[2] === 'cost_limit_daily')).toBe(true);
       expect(calls.some((call) => call[2] === 'rate_limit_per_minute')).toBe(true);
+    });
+  });
+
+  describe('getAvailableFulfillmentProvidersForAI', () => {
+    it('should return active fulfillment providers ordered by default first', async () => {
+      const mockProviders = [
+        { id: 'provider-1', name: 'In-House', is_default: 1 },
+        { id: 'provider-2', name: 'Amazon FBA', is_default: 0 },
+        { id: 'provider-3', name: 'Dropship', is_default: 0 }
+      ];
+      mockAll.mockResolvedValue({ results: mockProviders });
+
+      const providers = await getAvailableFulfillmentProvidersForAI(mockDb, 'site-1');
+
+      expect(providers).toEqual([
+        { id: 'provider-1', name: 'In-House', isDefault: true },
+        { id: 'provider-2', name: 'Amazon FBA', isDefault: false },
+        { id: 'provider-3', name: 'Dropship', isDefault: false }
+      ]);
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE site_id = ? AND is_active = 1')
+      );
+      expect(mockBind).toHaveBeenCalledWith('site-1');
+    });
+
+    it('should return empty array when no active providers exist', async () => {
+      mockAll.mockResolvedValue({ results: [] });
+
+      const providers = await getAvailableFulfillmentProvidersForAI(mockDb, 'site-1');
+
+      expect(providers).toEqual([]);
+    });
+
+    it('should only return active providers', async () => {
+      const mockProviders = [{ id: 'provider-1', name: 'In-House', is_default: 1 }];
+      mockAll.mockResolvedValue({ results: mockProviders });
+
+      await getAvailableFulfillmentProvidersForAI(mockDb, 'site-1');
+
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('is_active = 1'));
+    });
+
+    it('should order by is_default DESC then name ASC', async () => {
+      const mockProviders = [
+        { id: 'provider-1', name: 'In-House', is_default: 1 },
+        { id: 'provider-2', name: 'Amazon', is_default: 0 }
+      ];
+      mockAll.mockResolvedValue({ results: mockProviders });
+
+      await getAvailableFulfillmentProvidersForAI(mockDb, 'site-1');
+
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('ORDER BY is_default DESC, name ASC')
+      );
     });
   });
 });

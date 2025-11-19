@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from 'svelte';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types';
   import type { AIChatMessage, AISession } from '$lib/types/ai-chat';
   import MediaPicker from '$lib/components/MediaPicker.svelte';
@@ -31,18 +32,25 @@
 
   // Session state
   let currentSessionTitle = 'New Conversation';
+  let isUpdatingUrlProgrammatically = false;
 
   // Watch for URL parameter changes to load different sessions
   $: {
     const sessionParam = $page.url.searchParams.get('session');
-    if (sessionParam && sessionParam !== sessionId) {
-      loadSessionFromId(sessionParam);
-    } else if (!sessionParam && sessionId !== null) {
-      // URL cleared, reset to new conversation
-      messages = [];
-      sessionId = null;
-      currentSessionTitle = 'New Conversation';
-      createdProduct = null;
+    
+    // Skip if we're programmatically updating the URL (e.g., during session creation)
+    if (!isUpdatingUrlProgrammatically) {
+      if (sessionParam && sessionParam !== sessionId && !isStreaming) {
+        // Only load session if we're not currently streaming
+        // (streaming will update sessionId and URL)
+        loadSessionFromId(sessionParam);
+      } else if (!sessionParam && sessionId !== null && !isStreaming) {
+        // URL cleared, reset to new conversation (but not while streaming)
+        messages = [];
+        sessionId = null;
+        currentSessionTitle = 'New Conversation';
+        createdProduct = null;
+      }
     }
   }
 
@@ -57,6 +65,11 @@
 
   // Session management function
   async function loadSessionFromId(id: string) {
+    // If we already have this session loaded with messages, don't reload
+    if (sessionId === id && messages.length > 0) {
+      return;
+    }
+
     // Find session in data
     const session = data.sessions.find((s: AISession) => s.id === id);
     if (session) {
@@ -68,6 +81,10 @@
       if (textareaElement) {
         textareaElement.focus();
       }
+    } else {
+      // Session not found in initial data (might be newly created)
+      // Keep current messages and sessionId as-is
+      console.log('Session not found in data, keeping current state:', id);
     }
   }
 
@@ -253,10 +270,17 @@
               if (data.sessionId) {
                 sessionId = data.sessionId;
                 // Update URL with session ID to prevent reactive watcher from clearing messages
-                const url = new URL(window.location.href);
-                if (sessionId && url.searchParams.get('session') !== sessionId) {
-                  url.searchParams.set('session', sessionId);
-                  window.history.replaceState({}, '', url.toString());
+                const currentUrl = $page.url;
+                if (sessionId && currentUrl.searchParams.get('session') !== sessionId) {
+                  isUpdatingUrlProgrammatically = true;
+                  const newUrl = new URL(currentUrl);
+                  newUrl.searchParams.set('session', sessionId);
+                  // Use SvelteKit's goto with replaceState to properly update $page store
+                  goto(newUrl.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+                  // Reset flag after a brief delay to allow $page store to update
+                  setTimeout(() => {
+                    isUpdatingUrlProgrammatically = false;
+                  }, 100);
                 }
                 // Update session title if this is a new session and first message
                 if (messages.length === 2 && currentSessionTitle === 'New Conversation') {

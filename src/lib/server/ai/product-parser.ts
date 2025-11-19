@@ -13,6 +13,13 @@ export interface ProductCreationData {
     stock: number;
     tags: string[];
     image?: string;
+    fulfillmentOptions?: Array<{
+      providerId: string;
+      providerName?: string;
+      cost: number;
+      stockQuantity: number;
+      enabled: boolean;
+    }>;
     variants?: Array<{
       name: string;
       options: string[];

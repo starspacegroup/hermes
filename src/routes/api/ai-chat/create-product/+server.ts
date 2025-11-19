@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db/connection';
 import { createProduct } from '$lib/server/db/products';
 import { createProductMedia } from '$lib/server/db/media';
+import { setProductFulfillmentOptions } from '$lib/server/db/fulfillment-providers';
 import { logActivity } from '$lib/server/activity-logger';
 import type { ProductCreationData } from '$lib/server/ai/product-parser';
 
@@ -68,6 +69,22 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       tags: productData.tags,
       image: productData.image || ''
     });
+
+    // Set fulfillment options if provided (for physical products)
+    if (productData.fulfillmentOptions && productData.fulfillmentOptions.length > 0) {
+      const fulfillmentOptions = productData.fulfillmentOptions
+        .filter((opt) => opt.enabled)
+        .map((opt, index) => ({
+          providerId: opt.providerId,
+          cost: opt.cost,
+          stockQuantity: opt.stockQuantity || 0,
+          sortOrder: index
+        }));
+
+      if (fulfillmentOptions.length > 0) {
+        await setProductFulfillmentOptions(db, siteId, product.id, fulfillmentOptions);
+      }
+    }
 
     // Create product media entries for attachments
     const createdMedia = [];
