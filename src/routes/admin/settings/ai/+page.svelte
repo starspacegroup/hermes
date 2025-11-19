@@ -76,7 +76,7 @@
 <div class="ai-settings-page">
   <header class="page-header">
     <div>
-      <h1>AI Chat Settings</h1>
+      <h1>AI Settings</h1>
       <p class="subtitle">Configure AI providers and models for the chat assistant</p>
     </div>
   </header>

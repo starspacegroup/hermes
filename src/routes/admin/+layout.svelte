@@ -270,7 +270,7 @@
                     stroke-linejoin="round"
                   ></path>
                 </svg>
-                <span>AI Chat</span>
+                <span>AI</span>
               </div>
               <svg
                 class="chevron"
@@ -629,7 +629,7 @@
                     stroke-linejoin="round"
                   ></path>
                 </svg>
-                AI Chat
+                AI
               </a>
             </div>
           {/if}
