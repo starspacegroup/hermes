@@ -61,7 +61,7 @@
     }
 
     const messageText = inputText.trim();
-    
+
     // Convert files to base64 for attachments
     const attachments: AIChatMessage['attachments'] = [];
     const filesToProcess = [...selectedFiles];
@@ -634,14 +634,28 @@
 </div>
 
 <style>
+  /* Override admin layout padding to make chat full-screen */
+  :global(.main-content:has(.chat-container)) {
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
   .chat-container {
     display: flex;
     flex-direction: column;
+    width: 100%;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
     background: var(--color-bg-primary);
     overflow: hidden;
-    position: relative;
+  }
+
+  /* Mobile: Account for mobile header height */
+  @media (max-width: 768px) {
+    .chat-container {
+      height: calc(100vh - 76px); /* Subtract mobile header */
+      height: calc(100dvh - 76px);
+    }
   }
 
   /* No Keys Banner */
@@ -720,9 +734,11 @@
   .messages-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem;
     /* scroll-behavior: smooth removed - was causing jank during streaming */
     -webkit-overflow-scrolling: touch;
+    min-height: 0; /* Allow flex child to shrink below content size */
   }
 
   /* Welcome Screen */
@@ -834,6 +850,8 @@
   .message-content {
     flex: 1;
     max-width: calc(100% - 50px);
+    min-width: 0; /* Allow flex child to shrink */
+    overflow-wrap: break-word;
   }
 
   .message-text {
@@ -1181,23 +1199,340 @@
     opacity: 1;
   }
 
-  /* Mobile Optimizations */
+  /* Mobile-First Optimizations */
   @media (max-width: 768px) {
+    /* Adjust for mobile admin header */
+    :global(body:has(.chat-container)) {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
     .chat-header {
-      padding: 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .header-content {
+      gap: 0.5rem;
+    }
+
+    .header-icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .header-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .header-text h1 {
+      font-size: 1rem;
+    }
+
+    .header-text p {
+      font-size: 0.8125rem;
     }
 
     .messages-container {
       padding: 0.75rem;
     }
 
-    .input-container {
-      padding: 0.75rem;
-      padding-bottom: calc(env(safe-area-inset-bottom, 0rem) + 0.75rem);
+    .message {
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+    }
+
+    .message-avatar svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .message-content {
+      max-width: calc(100% - 42px);
+    }
+
+    .message-text {
+      padding: 0.75rem 1rem;
+      font-size: 0.9375rem;
+      line-height: 1.5;
     }
 
     .attachments-grid {
       grid-template-columns: 1fr;
+      gap: 0.375rem;
+    }
+
+    .attachment-image {
+      height: 180px;
+    }
+
+    .welcome-screen {
+      padding: 1rem;
+    }
+
+    .welcome-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 1rem;
+    }
+
+    .welcome-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .welcome-screen h2 {
+      font-size: 1.25rem;
+    }
+
+    .welcome-screen p {
+      font-size: 0.9375rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .suggestions {
+      gap: 0.5rem;
+      max-width: 100%;
+    }
+
+    .suggestion-chip {
+      padding: 0.625rem 1rem;
+      font-size: 0.8125rem;
+      flex: 0 0 auto;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .input-container {
+      padding: 0.75rem;
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+
+    .input-bar {
+      padding: 0.625rem;
+      gap: 0.5rem;
+    }
+
+    .attach-btn,
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .attach-btn svg,
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    textarea {
+      font-size: 0.9375rem;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+
+    .file-chip {
+      padding: 0.375rem 0.5rem;
+      max-width: 100%;
+    }
+
+    .file-preview {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .file-name {
+      font-size: 0.8125rem;
+      max-width: calc(100vw - 160px);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-status {
+      bottom: calc(72px + env(safe-area-inset-bottom, 0rem));
+      left: 0.75rem;
+      right: 0.75rem;
+      transform: none;
+    }
+
+    .product-status .status-content {
+      padding: 0.875rem 1rem;
+      gap: 0.75rem;
+      min-width: auto;
+      max-width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .status-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .status-text strong {
+      font-size: 0.875rem;
+    }
+
+    .status-text span {
+      font-size: 0.8125rem;
+      word-break: break-word;
+    }
+
+    .btn-view-product {
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+    }
+
+    .no-keys-banner {
+      padding: 1rem;
+    }
+
+    .banner-content {
+      max-width: 100%;
+      padding: 0 0.5rem;
+    }
+
+    .banner-content h2 {
+      font-size: 1.25rem;
+    }
+
+    .banner-content p {
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+
+    .banner-content svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .banner-content .btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  /* Small Mobile (Portrait phones) */
+  @media (max-width: 375px) {
+    .header-text h1 {
+      font-size: 0.9375rem;
+    }
+
+    .header-text p {
+      font-size: 0.75rem;
+    }
+
+    .suggestion-chip {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.875rem;
+    }
+
+    .file-name {
+      max-width: calc(100vw - 140px);
+    }
+
+    .message-text {
+      font-size: 0.875rem;
+    }
+  }
+
+  /* Tablet Optimizations */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .message-content {
+      max-width: 70%;
+    }
+
+    .product-status {
+      bottom: calc(90px + env(safe-area-inset-bottom, 0rem));
+    }
+
+    .attachments-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Desktop Optimizations */
+  @media (min-width: 1025px) {
+    .message-content {
+      max-width: 60%;
+    }
+
+    .attachments-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .suggestions {
+      max-width: 700px;
+    }
+  }
+
+  /* Large Desktop */
+  @media (min-width: 1440px) {
+    .messages-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .welcome-screen {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+  }
+
+  /* Landscape mobile phones */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .chat-header {
+      padding: 0.5rem 1rem;
+    }
+
+    .header-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .header-text h1 {
+      font-size: 0.9375rem;
+    }
+
+    .header-text p {
+      display: none; /* Hide subtitle in landscape to save space */
+    }
+
+    .welcome-screen {
+      padding: 0.75rem 1rem;
+    }
+
+    .welcome-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 0.75rem;
+    }
+
+    .welcome-screen h2 {
+      font-size: 1.125rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .welcome-screen p {
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .input-container {
+      padding: 0.5rem 0.75rem;
+    }
+
+    textarea {
+      max-height: 80px;
     }
   }
 </style>
