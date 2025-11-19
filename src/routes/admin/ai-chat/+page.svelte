@@ -2,6 +2,7 @@
   import { onMount, onDestroy, tick } from 'svelte';
   import type { PageData } from './$types';
   import type { AIChatMessage } from '$lib/types/ai-chat';
+  import MediaPicker from '$lib/components/MediaPicker.svelte';
 
   export let data: PageData;
 
@@ -10,8 +11,15 @@
   let isStreaming = false;
   let sessionId: string | null = null;
   let messagesContainer: HTMLDivElement;
-  let fileInput: HTMLInputElement;
-  let selectedFiles: File[] = [];
+  let isMediaPickerOpen = false;
+  let selectedMedia: Array<{
+    id: string;
+    url: string;
+    filename: string;
+    type: 'image' | 'video';
+    mimeType: string;
+    size: number;
+  }> = [];
   let createdProduct: { id: string; name: string } | null = null;
   let isCreatingProduct = false;
   let pendingUpdate = false;
@@ -29,67 +37,57 @@
     });
   }
 
-  function handleFileSelect(event: Event) {
-    const target = event.target as HTMLInputElement;
-    if (target.files) {
-      selectedFiles = [...selectedFiles, ...Array.from(target.files)];
-      target.value = '';
-    }
+  function handleMediaSelect(
+    event: CustomEvent<
+      Array<{
+        id: string;
+        url: string;
+        filename: string;
+        type: 'image' | 'video';
+        mimeType: string;
+        size: number;
+      }>
+    >
+  ) {
+    selectedMedia = [...selectedMedia, ...event.detail];
   }
 
-  function removeFile(index: number) {
-    selectedFiles = selectedFiles.filter((_, i) => i !== index);
+  function removeMedia(index: number) {
+    selectedMedia = selectedMedia.filter((_, i) => i !== index);
   }
 
-  function handlePaste(event: ClipboardEvent) {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of Array.from(items)) {
-      if (item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) {
-          selectedFiles = [...selectedFiles, file];
-        }
-      }
-    }
+  function openMediaPicker() {
+    isMediaPickerOpen = true;
   }
 
   async function sendMessage() {
-    if ((!inputText.trim() && selectedFiles.length === 0) || isStreaming) {
+    if ((!inputText.trim() && selectedMedia.length === 0) || isStreaming) {
       return;
     }
 
     const messageText = inputText.trim();
 
-    // Convert files to base64 for attachments
-    const attachments: AIChatMessage['attachments'] = [];
-    const filesToProcess = [...selectedFiles];
+    // Use selected media items as attachments
+    const attachments: AIChatMessage['attachments'] = selectedMedia.map((media) => ({
+      id: media.id,
+      type: media.type,
+      url: media.url,
+      filename: media.filename,
+      mimeType: media.mimeType,
+      size: media.size
+    }));
 
-    try {
-      for (const file of filesToProcess) {
-        const base64 = await fileToBase64(file);
-        attachments.push({
-          id: crypto.randomUUID(),
-          type: file.type.startsWith('video/') ? 'video' : 'image',
-          url: base64,
-          filename: file.name,
-          mimeType: file.type,
-          size: file.size
-        });
-      }
-    } catch (fileError) {
-      console.error('Error reading files:', fileError);
-      // Add error message to chat
-      messages = [
-        ...messages,
-        {
-          role: 'assistant',
-          content: '❌ Sorry, there was an error reading one or more files. Please try again.',
-          timestamp: Date.now()
-        }
-      ];
-      return;
+    // Debug: log attachments being sent
+    if (attachments.length > 0) {
+      console.log(
+        'Sending attachments:',
+        attachments.map((a) => ({
+          type: a.type,
+          filename: a.filename,
+          urlPrefix: a.url.substring(0, 50) + '...',
+          size: a.size
+        }))
+      );
     }
 
     // Add user message to UI
@@ -101,9 +99,9 @@
     };
     messages = [...messages, userMessage];
 
-    // Clear input and files, then restore focus
+    // Clear input and media, then restore focus
     inputText = '';
-    selectedFiles = [];
+    selectedMedia = [];
     await tick();
     if (textareaElement) {
       textareaElement.focus();
@@ -147,6 +145,11 @@
     };
 
     try {
+      console.log('Sending message to API...', {
+        hasAttachments: attachments.length > 0,
+        messageLength: messageText.length
+      });
+
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: {
@@ -159,8 +162,19 @@
         })
       });
 
+      console.log('API response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        let errorMessage = 'Failed to send message';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       if (!response.body) {
@@ -189,7 +203,8 @@
               const data = JSON.parse(jsonStr);
 
               if (data.error) {
-                assistantMessage.content = `Error: ${data.error}`;
+                console.error('AI error from stream:', data.error);
+                assistantMessage.content = `❌ ${data.error}`;
                 // Cancel any pending updates and update immediately
                 if (updateFrameId !== null) {
                   clearTimeout(updateFrameId);
@@ -242,7 +257,8 @@
       scrollToBottom();
     } catch (error) {
       console.error('Chat error:', error);
-      assistantMessage.content = 'Sorry, something went wrong. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      assistantMessage.content = `❌ Sorry, something went wrong: ${errorMessage}. Please try again.`;
       // Cancel any pending updates
       if (updateFrameId !== null) {
         clearTimeout(updateFrameId);
@@ -334,15 +350,6 @@
     }
   }
 
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -350,10 +357,35 @@
     }
   }
 
-  onMount(() => {
-    // Focus input on mount
-    if (textareaElement) {
-      textareaElement.focus();
+  onMount(async () => {
+    // Check for initial message and media from dashboard
+    const initialMessage = sessionStorage.getItem('aiChatInitialMessage');
+    const initialMediaStr = sessionStorage.getItem('aiChatInitialMedia');
+
+    if (initialMessage) {
+      sessionStorage.removeItem('aiChatInitialMessage');
+      inputText = initialMessage;
+    }
+
+    if (initialMediaStr) {
+      try {
+        sessionStorage.removeItem('aiChatInitialMedia');
+        selectedMedia = JSON.parse(initialMediaStr);
+      } catch (e) {
+        console.error('Failed to parse initial media:', e);
+      }
+    }
+
+    if (initialMessage || selectedMedia.length > 0) {
+      // Wait a tick for the input to be bound
+      await tick();
+      // Auto-send the message
+      sendMessage();
+    } else {
+      // Focus input on mount
+      if (textareaElement) {
+        textareaElement.focus();
+      }
     }
   });
 
@@ -552,21 +584,21 @@
 
     <!-- Input Area -->
     <div class="input-container">
-      {#if selectedFiles.length > 0}
+      {#if selectedMedia.length > 0}
         <div class="selected-files">
-          {#each selectedFiles as file, i}
+          {#each selectedMedia as media, i}
             <div class="file-chip">
-              {#if file.type.startsWith('image/')}
-                <img src={URL.createObjectURL(file)} alt={file.name} class="file-preview" />
+              {#if media.type === 'image'}
+                <img src={media.url} alt={media.filename} class="file-preview" />
               {:else}
-                <div class="file-icon">📄</div>
+                <div class="file-icon">🎥</div>
               {/if}
-              <span class="file-name">{file.name}</span>
+              <span class="file-name">{media.filename}</span>
               <button
                 type="button"
                 class="remove-file"
-                on:click={() => removeFile(i)}
-                aria-label="Remove file"
+                on:click={() => removeMedia(i)}
+                aria-label="Remove media"
               >
                 ✕
               </button>
@@ -576,25 +608,35 @@
       {/if}
 
       <div class="input-bar">
-        <input
-          type="file"
-          bind:this={fileInput}
-          on:change={handleFileSelect}
-          accept="image/*,video/*"
-          multiple
-          style="display: none;"
-        />
-
         <button
           type="button"
           class="attach-btn"
-          on:click={() => fileInput.click()}
+          on:click={openMediaPicker}
           disabled={isStreaming}
-          aria-label="Attach files"
+          aria-label="Select media"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="2"
+              ry="2"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></rect>
+            <circle
+              cx="8.5"
+              cy="8.5"
+              r="1.5"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></circle>
             <path
-              d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+              d="M21 15l-5-5L5 21"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -606,7 +648,6 @@
           bind:this={textareaElement}
           bind:value={inputText}
           on:keydown={handleKeyDown}
-          on:paste={handlePaste}
           placeholder="Describe your product or ask for help..."
           rows="1"
           disabled={isStreaming}
@@ -616,7 +657,7 @@
           type="button"
           class="send-btn"
           on:click={sendMessage}
-          disabled={(!inputText.trim() && selectedFiles.length === 0) || isStreaming}
+          disabled={(!inputText.trim() && selectedMedia.length === 0) || isStreaming}
           aria-label="Send message"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -632,6 +673,14 @@
     </div>
   {/if}
 </div>
+
+<!-- Media Picker Modal -->
+<MediaPicker
+  bind:isOpen={isMediaPickerOpen}
+  allowMultiple={true}
+  on:select={handleMediaSelect}
+  on:close={() => (isMediaPickerOpen = false)}
+/>
 
 <style>
   /* Override admin layout padding to make chat full-screen */
@@ -736,6 +785,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 1rem;
+    width: 100%; /* Ensure container fills available width */
     /* scroll-behavior: smooth removed - was causing jank during streaming */
     -webkit-overflow-scrolling: touch;
     min-height: 0; /* Allow flex child to shrink below content size */
@@ -805,15 +855,18 @@
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
+    width: 100%; /* Ensure message spans full width */
     /* Animation removed - was causing performance issues during streaming */
   }
 
   .message.assistant {
     flex-direction: row;
+    justify-content: flex-start; /* Align assistant messages to the left */
   }
 
   .message.user {
     flex-direction: row-reverse;
+    justify-content: flex-start; /* Align user messages to the right */
   }
 
   @keyframes fadeIn {
@@ -848,7 +901,7 @@
   }
 
   .message-content {
-    flex: 1;
+    flex: 0 1 auto; /* Size based on content, not container */
     max-width: calc(100% - 50px);
     min-width: 0; /* Allow flex child to shrink */
     overflow-wrap: break-word;

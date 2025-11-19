@@ -6,7 +6,7 @@ import { getAISession, createAISession, addMessageToSession } from '$lib/server/
 import { createAIProvider } from '$lib/server/ai/providers';
 import { PRODUCT_CREATION_SYSTEM_PROMPT } from '$lib/server/ai/prompts';
 import { parseProductCommand } from '$lib/server/ai/product-parser';
-import type { AIChatMessage } from '$lib/types/ai-chat';
+import type { AIChatMessage, AIChatAttachment } from '$lib/types/ai-chat';
 
 /**
  * POST /api/ai-chat
@@ -47,9 +47,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       }>;
     };
 
-    // Validate message
-    if (!message || message.trim() === '') {
-      throw error(400, 'Message is required');
+    // Validate message - allow empty message if there are attachments
+    if ((!message || message.trim() === '') && (!attachments || attachments.length === 0)) {
+      throw error(400, 'Message or attachments are required');
     }
 
     // Get or create session
@@ -68,11 +68,17 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     }
 
     // Add user message to session
+    // Store original attachments (URLs, not data URIs) to avoid DB size limits
+    // If no text but has images, add a default prompt
+    const messageContent =
+      message.trim() ||
+      (attachments && attachments.length > 0 ? 'What do you see in this image?' : '');
+
     const userMessage: AIChatMessage = {
       role: 'user',
-      content: message,
+      content: messageContent,
       timestamp: Date.now(),
-      attachments: attachments || []
+      attachments: attachments || [] // Store original URLs, not data URIs
     };
 
     await addMessageToSession(db, siteId, session.id, userMessage);
@@ -105,8 +111,104 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     // Create provider instance
     const provider = createAIProvider(providerName, apiKey as string);
 
-    // Get all messages for context
-    const allMessages = [...session.messages, userMessage];
+    // Check if model supports vision when images are present
+    const hasImages = attachments && attachments.some((att) => att.type === 'image');
+    console.log('Has images:', hasImages, 'Model:', preferredModel, 'Provider:', providerName);
+
+    if (hasImages) {
+      console.log(
+        `Processing message with ${attachments.length} attachments using model ${preferredModel}`
+      );
+      if (!provider.supportsVision(preferredModel)) {
+        const errorMsg = `Model ${preferredModel} does not support image analysis. Please select a vision-capable model (e.g., gpt-4o, gpt-4o-mini, claude-3-5-sonnet) in AI settings.`;
+        console.error(errorMsg);
+        throw error(400, errorMsg);
+      }
+    }
+
+    // Get all messages for context and convert attachments to data URIs for AI provider
+    const mediaBucket = platform?.env?.MEDIA_BUCKET;
+    if (!mediaBucket) {
+      throw error(500, 'Media bucket not configured');
+    }
+
+    const allMessages: AIChatMessage[] = [];
+    for (const msg of [...session.messages, userMessage]) {
+      if (msg.attachments && msg.attachments.length > 0) {
+        // Convert media URLs to data URIs for AI provider
+        const processedAttachments: AIChatAttachment[] = [];
+        for (const attachment of msg.attachments) {
+          if (attachment.type === 'image') {
+            console.log(`Converting attachment ${attachment.url} to data URI for AI...`);
+
+            // Skip if already a data URI
+            if (attachment.url.startsWith('data:')) {
+              processedAttachments.push(attachment);
+              continue;
+            }
+
+            // Fetch from R2 and convert to data URI
+            const mediaResponse = await mediaBucket.get(attachment.url.replace('/api/media/', ''));
+            if (!mediaResponse) {
+              console.error(`Media not found in R2: ${attachment.url}`);
+              continue;
+            }
+            const arrayBuffer = await mediaResponse.arrayBuffer();
+
+            // Check file size (OpenAI has a 20MB limit per image)
+            const sizeMB = arrayBuffer.byteLength / (1024 * 1024);
+            if (sizeMB > 20) {
+              console.error(
+                `Image ${attachment.filename} is too large (${sizeMB.toFixed(1)}MB). Skipping.`
+              );
+              continue;
+            }
+
+            const buffer = new Uint8Array(arrayBuffer);
+
+            // Convert to base64 using proper chunking to avoid stack overflow
+            let binaryString = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < buffer.length; i += chunkSize) {
+              const chunk = Array.from(buffer.slice(i, i + chunkSize));
+              binaryString += String.fromCharCode(...chunk);
+            }
+            const base64 = btoa(binaryString);
+
+            const dataUri = `data:${attachment.mimeType};base64,${base64}`;
+            processedAttachments.push({
+              ...attachment,
+              url: dataUri
+            });
+          } else {
+            // For non-image types, keep as-is
+            processedAttachments.push(attachment);
+          }
+        }
+
+        allMessages.push({
+          ...msg,
+          attachments: processedAttachments
+        });
+      } else {
+        allMessages.push(msg);
+      }
+    }
+    console.log('Calling AI provider with', allMessages.length, 'messages');
+
+    // Debug: Log message attachments
+    for (const msg of allMessages) {
+      if (msg.attachments && msg.attachments.length > 0) {
+        console.log(
+          `Message has ${msg.attachments.length} attachments:`,
+          msg.attachments.map((att) => ({
+            type: att.type,
+            mimeType: att.mimeType,
+            urlPrefix: att.url.substring(0, 50)
+          }))
+        );
+      }
+    }
 
     // Create a streaming response
     const stream = new ReadableStream({
@@ -159,10 +261,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
           controller.close();
         } catch (err) {
           console.error('AI streaming error:', err);
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : 'Failed to generate response. Please check server logs.';
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ error: 'Failed to generate response', done: true })}\n\n`
-            )
+            encoder.encode(`data: ${JSON.stringify({ error: errorMessage, done: true })}\n\n`)
           );
           controller.close();
         }
@@ -181,7 +285,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
     if (err instanceof Error && 'status' in err) {
       throw err;
     }
-    throw error(500, 'Failed to process AI chat request');
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Detailed error:', errorMessage, err);
+    throw error(500, errorMessage || 'Failed to process AI chat request');
   }
 };
 

@@ -114,12 +114,12 @@ class OpenAIProvider implements AIProviderInterface {
         // Add images
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
+            // OpenAI supports both data URIs and public URLs
+            // Pass the URL as-is if it's a data URI or starts with http/https
             content.push({
               type: 'image_url',
               image_url: {
-                url: attachment.url.startsWith('data:')
-                  ? attachment.url
-                  : `data:image/jpeg;base64,${attachment.url}`
+                url: attachment.url
               }
             });
           }
@@ -137,32 +137,40 @@ class OpenAIProvider implements AIProviderInterface {
       }
     }
 
-    const stream = await openai.chat.completions.create({
-      model: request.model,
-      messages,
-      temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens ?? 4096,
-      stream: true
-    });
+    try {
+      const stream = await openai.chat.completions.create({
+        model: request.model,
+        messages,
+        temperature: request.temperature ?? 0.7,
+        max_tokens: request.maxTokens ?? 4096,
+        stream: true
+      });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta;
-      const finishReason = chunk.choices[0]?.finish_reason;
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        const finishReason = chunk.choices[0]?.finish_reason;
 
-      if (delta?.content) {
-        yield {
-          content: delta.content,
-          done: false
-        };
+        if (delta?.content) {
+          yield {
+            content: delta.content,
+            done: false
+          };
+        }
+
+        if (finishReason) {
+          yield {
+            content: '',
+            done: true,
+            finishReason: finishReason as AIStreamChunk['finishReason']
+          };
+        }
       }
-
-      if (finishReason) {
-        yield {
-          content: '',
-          done: true,
-          finishReason: finishReason as AIStreamChunk['finishReason']
-        };
+    } catch (err) {
+      console.error('OpenAI API error:', err);
+      if (err instanceof Error) {
+        throw new Error(`OpenAI API error: ${err.message}`);
       }
+      throw err;
     }
   }
 
@@ -190,12 +198,11 @@ class OpenAIProvider implements AIProviderInterface {
 
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
+            // OpenAI supports both data URIs and public URLs
             content.push({
               type: 'image_url',
               image_url: {
-                url: attachment.url.startsWith('data:')
-                  ? attachment.url
-                  : `data:image/jpeg;base64,${attachment.url}`
+                url: attachment.url
               }
             });
           }
@@ -287,9 +294,14 @@ class AnthropicProvider implements AIProviderInterface {
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
             // Anthropic expects base64 without data URI prefix
-            const base64Data = attachment.url.startsWith('data:')
-              ? attachment.url.split(',')[1]
-              : attachment.url;
+            let base64Data: string;
+            if (attachment.url.startsWith('data:')) {
+              base64Data = attachment.url.split(',')[1];
+            } else {
+              // If not a data URI, skip this attachment (should have been converted already)
+              console.warn('Non-data URI image URL passed to Anthropic provider:', attachment.url);
+              continue;
+            }
 
             const mediaType = attachment.mimeType || 'image/jpeg';
             const validMediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' =
@@ -381,9 +393,13 @@ class AnthropicProvider implements AIProviderInterface {
 
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
-            const base64Data = attachment.url.startsWith('data:')
-              ? attachment.url.split(',')[1]
-              : attachment.url;
+            let base64Data: string;
+            if (attachment.url.startsWith('data:')) {
+              base64Data = attachment.url.split(',')[1];
+            } else {
+              console.warn('Non-data URI image URL passed to Anthropic provider:', attachment.url);
+              continue;
+            }
 
             const mediaType = attachment.mimeType || 'image/jpeg';
             const validMediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' =
