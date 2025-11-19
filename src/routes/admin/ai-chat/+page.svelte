@@ -12,6 +12,8 @@
   let messagesContainer: HTMLDivElement;
   let fileInput: HTMLInputElement;
   let selectedFiles: File[] = [];
+  let createdProduct: { id: string; name: string } | null = null;
+  let isCreatingProduct = false;
 
   // Auto-scroll to bottom when new messages arrive
   $: if (messages.length > 0) {
@@ -129,6 +131,11 @@
                 sessionId = data.sessionId;
               }
 
+              if (data.done && data.productCommand) {
+                // AI wants to create a product
+                await handleProductCreation(data.productCommand);
+              }
+
               if (!data.done) {
                 assistantMessage.content += data.content;
                 messages = [...messages];
@@ -143,6 +150,73 @@
       messages = [...messages];
     } finally {
       isStreaming = false;
+    }
+  }
+
+  async function handleProductCreation(productCommand: {
+    action: string;
+    product: Record<string, unknown>;
+  }) {
+    if (productCommand.action !== 'create_product') {
+      return;
+    }
+
+    isCreatingProduct = true;
+
+    try {
+      const response = await fetch('/api/ai-chat/create-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          product: productCommand.product
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create product');
+      }
+
+      const result = (await response.json()) as {
+        success: boolean;
+        product: {
+          id: string;
+          name: string;
+          description: string;
+          price: number;
+          category: string;
+          type: string;
+          stock: number;
+          tags: string[];
+          image: string;
+        };
+      };
+
+      createdProduct = {
+        id: result.product.id,
+        name: result.product.name
+      };
+
+      // Add success message to chat
+      const successMessage = {
+        role: 'assistant' as const,
+        content: `✅ Product "${result.product.name}" has been created successfully! You can view and edit it using the link below.`,
+        timestamp: Date.now()
+      };
+      messages = [...messages, successMessage];
+    } catch (error) {
+      console.error('Product creation error:', error);
+
+      // Add error message to chat
+      const errorMessage = {
+        role: 'assistant' as const,
+        content: `❌ Sorry, there was an error creating the product. Please try again or create it manually.`,
+        timestamp: Date.now()
+      };
+      messages = [...messages, errorMessage];
+    } finally {
+      isCreatingProduct = false;
     }
   }
 
@@ -308,6 +382,53 @@
         </div>
       {/if}
     </div>
+
+    <!-- Product Creation Status -->
+    {#if isCreatingProduct}
+      <div class="product-status creating">
+        <div class="status-content">
+          <div class="spinner"></div>
+          <span>Creating product...</span>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Product Created Success Banner -->
+    {#if createdProduct}
+      <div class="product-status success">
+        <div class="status-content">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M22 11.08V12a10 10 0 11-5.93-9.14"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <path
+              d="M22 4L12 14.01l-3-3"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          <div class="status-text">
+            <strong>Product created successfully!</strong>
+            <span>{createdProduct.name}</span>
+          </div>
+          <a href="/admin/products/{createdProduct.id}/edit" class="btn-view-product">
+            View Product
+          </a>
+          <button
+            type="button"
+            class="btn-dismiss"
+            on:click={() => (createdProduct = null)}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    {/if}
 
     <!-- Input Area -->
     <div class="input-container">
@@ -814,6 +935,114 @@
 
   .btn-primary:hover {
     background: var(--color-primary-hover);
+  }
+
+  /* Product Status Banners */
+  .product-status {
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0rem));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .product-status .status-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    min-width: 300px;
+    max-width: 90vw;
+  }
+
+  .product-status.creating .status-content {
+    background: rgba(100, 116, 139, 0.95);
+    color: white;
+  }
+
+  .product-status.success .status-content {
+    background: rgba(34, 197, 94, 0.95);
+    color: white;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .status-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .status-text strong {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .status-text span {
+    font-size: 0.85rem;
+    opacity: 0.9;
+  }
+
+  .btn-view-product {
+    padding: 0.5rem 1rem;
+    background: white;
+    color: #22c55e;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all var(--transition-normal);
+    white-space: nowrap;
+  }
+
+  .btn-view-product:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+  }
+
+  .btn-dismiss {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity var(--transition-normal);
+  }
+
+  .btn-dismiss:hover {
+    opacity: 1;
   }
 
   /* Mobile Optimizations */

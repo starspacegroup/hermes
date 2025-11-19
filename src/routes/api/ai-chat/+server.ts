@@ -5,6 +5,7 @@ import { getAISettings } from '$lib/server/db/ai-settings';
 import { getAISession, createAISession, addMessageToSession } from '$lib/server/db/ai-sessions';
 import { createAIProvider } from '$lib/server/ai/providers';
 import { PRODUCT_CREATION_SYSTEM_PROMPT } from '$lib/server/ai/prompts';
+import { parseProductCommand } from '$lib/server/ai/product-parser';
 import type { AIChatMessage } from '$lib/types/ai-chat';
 
 /**
@@ -131,10 +132,18 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
               };
               await addMessageToSession(db, siteId, session.id, assistantMessage);
 
-              // Send final chunk with session ID
+              // Check if response contains a product command
+              const productCommand = parseProductCommand(accumulatedResponse);
+
+              // Send final chunk with session ID and product command if present
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({ content: '', done: true, sessionId: session.id })}\n\n`
+                  `data: ${JSON.stringify({
+                    content: '',
+                    done: true,
+                    sessionId: session.id,
+                    productCommand: productCommand || undefined
+                  })}\n\n`
                 )
               );
             } else {
