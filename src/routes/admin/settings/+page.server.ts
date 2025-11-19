@@ -9,9 +9,11 @@ import {
   getTaxSettings,
   updateTaxSettings,
   getPaymentSettings,
+  updatePaymentSettings,
   getEmailSettings,
   updateEmailSettings,
-  getApiSettings
+  getApiSettings,
+  updateApiSettings
 } from '$lib/server/db/site-settings';
 import { createActivityLog } from '$lib/server/db/activity-logs';
 
@@ -207,6 +209,87 @@ export const actions: Actions = {
       return { success: true, message: 'Email settings updated successfully' };
     } catch (error) {
       console.error('Failed to update email settings:', error);
+      return fail(500, { error: 'Failed to update settings' });
+    }
+  },
+
+  updatePayment: async ({ request, platform, locals }) => {
+    const db = getDB(platform);
+    const siteId = locals.siteId || 'default-site';
+    const userId = locals.user?.id;
+
+    if (!userId) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    try {
+      const formData = await request.formData();
+      const settings = {
+        stripeEnabled: formData.get('stripeEnabled') === 'true',
+        stripeMode: formData.get('stripeMode')?.toString() as 'test' | 'live',
+        stripePublicKey: formData.get('stripePublicKey')?.toString() || '',
+        stripeSecretKey: formData.get('stripeSecretKey')?.toString() || '',
+        paypalEnabled: formData.get('paypalEnabled') === 'true',
+        paypalMode: formData.get('paypalMode')?.toString() as 'sandbox' | 'live',
+        paypalClientId: formData.get('paypalClientId')?.toString() || '',
+        paypalClientSecret: formData.get('paypalClientSecret')?.toString() || '',
+        testModeEnabled: formData.get('testModeEnabled') === 'true'
+      };
+
+      await updatePaymentSettings(db, siteId, settings);
+
+      // Log activity
+      await createActivityLog(db, siteId, {
+        user_id: userId,
+        action: 'Updated payment settings',
+        description: `Stripe ${settings.stripeEnabled ? 'enabled' : 'disabled'}, PayPal ${settings.paypalEnabled ? 'enabled' : 'disabled'}`,
+        entity_type: 'settings',
+        entity_id: 'payment',
+        severity: 'info'
+      });
+
+      return { success: true, message: 'Payment settings updated successfully' };
+    } catch (error) {
+      console.error('Failed to update payment settings:', error);
+      return fail(500, { error: 'Failed to update settings' });
+    }
+  },
+
+  updateApi: async ({ request, platform, locals }) => {
+    const db = getDB(platform);
+    const siteId = locals.siteId || 'default-site';
+    const userId = locals.user?.id;
+
+    if (!userId) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    try {
+      const formData = await request.formData();
+      const settings = {
+        restEnabled: formData.get('restEnabled') === 'true',
+        webhookOrderCreated: formData.get('webhookOrderCreated')?.toString() || '',
+        webhookOrderUpdated: formData.get('webhookOrderUpdated')?.toString() || '',
+        webhookProductUpdated: formData.get('webhookProductUpdated')?.toString() || '',
+        rateLimit: parseInt(formData.get('rateLimit')?.toString() || '100'),
+        rateLimitWindow: parseInt(formData.get('rateLimitWindow')?.toString() || '60')
+      };
+
+      await updateApiSettings(db, siteId, settings);
+
+      // Log activity
+      await createActivityLog(db, siteId, {
+        user_id: userId,
+        action: 'Updated API settings',
+        description: `REST API ${settings.restEnabled ? 'enabled' : 'disabled'}`,
+        entity_type: 'settings',
+        entity_id: 'api',
+        severity: 'info'
+      });
+
+      return { success: true, message: 'API settings updated successfully' };
+    } catch (error) {
+      console.error('Failed to update API settings:', error);
       return fail(500, { error: 'Failed to update settings' });
     }
   }

@@ -14,8 +14,8 @@
   $: recentOrders = data.recentOrders || [];
   $: topProducts = data.topProducts || [];
   $: lowStockProducts = data.lowStockProducts || [];
-  // salesData available for future sales chart widget
-  // $: salesData = data.salesData || [];
+  $: salesData = data.salesData || [];
+  $: activityLogs = data.activityLogs || [];
 
   let aiChatInput = '';
   let isMediaPickerOpen = false;
@@ -470,6 +470,63 @@
         </div>
       {/if}
     </div>
+  </div>
+
+  <!-- Sales Chart -->
+  <div class="dashboard-card">
+    <h2>Sales Overview (Last 30 Days)</h2>
+    {#if salesData.length > 0}
+      <div class="chart-container">
+        <div class="chart-bars">
+          {#each salesData as dataPoint}
+            {@const maxRevenue = Math.max(...salesData.map((d) => d.revenue))}
+            {@const barHeight = maxRevenue > 0 ? (dataPoint.revenue / maxRevenue) * 200 : 0}
+            <div class="chart-bar-wrapper">
+              <div class="chart-bar" style="height: {barHeight}px;">
+                <div class="chart-tooltip">
+                  {formatCurrency(dataPoint.revenue)}
+                  <br />
+                  {dataPoint.orders} orders
+                </div>
+              </div>
+              <div class="chart-label">{new Date(dataPoint.date).getDate()}</div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {:else}
+      <div class="empty-state">
+        <p>No sales data available</p>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Recent Activity Log -->
+  <div class="dashboard-card">
+    <h2>Recent Activity</h2>
+    {#if activityLogs.length > 0}
+      <div class="activity-list">
+        {#each activityLogs as log}
+          <div class="activity-item">
+            <div class="activity-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <div class="activity-content">
+              <div class="activity-action">{log.action}</div>
+              <div class="activity-description">{log.description}</div>
+              <div class="activity-time">{formatDate(log.created_at)}</div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="empty-state">
+        <p>No recent activity</p>
+      </div>
+    {/if}
   </div>
 
   <!-- Quick Actions -->
@@ -1179,5 +1236,134 @@
     .ai-chat-input {
       min-width: 300px;
     }
+  }
+
+  /* Sales Chart Styles */
+  .chart-container {
+    padding: 1rem 0;
+  }
+
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 4px;
+    height: 220px;
+    padding: 0 1rem;
+  }
+
+  .chart-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-bar {
+    width: 100%;
+    min-height: 4px;
+    background: var(--color-primary);
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    transition:
+      background-color var(--transition-normal),
+      opacity var(--transition-normal);
+    cursor: pointer;
+  }
+
+  .chart-bar:hover {
+    opacity: 0.8;
+  }
+
+  .chart-bar:hover .chart-tooltip {
+    display: block;
+  }
+
+  .chart-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    padding: 0.5rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px var(--color-shadow-light);
+    white-space: nowrap;
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+    z-index: 10;
+    border: 1px solid var(--color-border-secondary);
+  }
+
+  .chart-label {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    transition: color var(--transition-normal);
+  }
+
+  /* Activity Log Styles */
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .activity-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-tertiary);
+    border-radius: 8px;
+    transition: background-color var(--transition-normal);
+  }
+
+  .activity-item:hover {
+    background: var(--color-bg-secondary);
+  }
+
+  .activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--color-primary);
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .activity-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .activity-action {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem;
+    transition: color var(--transition-normal);
+  }
+
+  .activity-description {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--transition-normal);
+  }
+
+  .activity-time {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    transition: color var(--transition-normal);
   }
 </style>

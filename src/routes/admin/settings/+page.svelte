@@ -18,7 +18,9 @@
   $: generalSettings = data.settings.general;
   $: addressSettings = data.settings.address;
   $: taxSettings = data.settings.tax;
+  $: paymentSettings = data.settings.payment;
   $: emailSettings = data.settings.email;
+  $: apiSettings = data.settings.api;
 
   let activeTab = 'general';
   let isSubmitting = false;
@@ -53,8 +55,25 @@
     <button class="tab" class:active={activeTab === 'tax'} on:click={() => (activeTab = 'tax')}>
       Tax Settings
     </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'payment'}
+      on:click={() => (activeTab = 'payment')}
+    >
+      Payment
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'shipping'}
+      on:click={() => (activeTab = 'shipping')}
+    >
+      Shipping
+    </button>
     <button class="tab" class:active={activeTab === 'email'} on:click={() => (activeTab = 'email')}>
-      Email Settings
+      Email
+    </button>
+    <button class="tab" class:active={activeTab === 'api'} on:click={() => (activeTab = 'api')}>
+      API & Webhooks
     </button>
   </div>
 
@@ -325,6 +344,262 @@
               value={taxSettings.defaultRate}
             />
             <p class="help-text">Applied when specific tax rates aren't configured</p>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
+      </div>
+    {/if}
+
+    <!-- Payment Settings -->
+    {#if activeTab === 'payment'}
+      <div class="settings-card">
+        <h2>Payment Gateway Settings</h2>
+        <form
+          method="POST"
+          action="?/updatePayment"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-section">
+            <h3>Stripe</h3>
+
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="stripeEnabled"
+                  value="true"
+                  checked={paymentSettings.stripeEnabled}
+                />
+                <span>Enable Stripe</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="stripeMode">Mode</label>
+              <select id="stripeMode" name="stripeMode" value={paymentSettings.stripeMode}>
+                <option value="test">Test (Sandbox)</option>
+                <option value="live">Live (Production)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="stripePublicKey">Publishable Key</label>
+              <input
+                id="stripePublicKey"
+                name="stripePublicKey"
+                type="text"
+                value={paymentSettings.stripePublicKey}
+                placeholder="pk_test_..."
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="stripeSecretKey">Secret Key</label>
+              <input
+                id="stripeSecretKey"
+                name="stripeSecretKey"
+                type="password"
+                value={paymentSettings.stripeSecretKey}
+                placeholder="sk_test_..."
+                autocomplete="off"
+              />
+              <p class="help-text">⚠️ Keys are stored securely but handle with care</p>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>PayPal</h3>
+
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="paypalEnabled"
+                  value="true"
+                  checked={paymentSettings.paypalEnabled}
+                />
+                <span>Enable PayPal</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="paypalMode">Mode</label>
+              <select id="paypalMode" name="paypalMode" value={paymentSettings.paypalMode}>
+                <option value="sandbox">Sandbox</option>
+                <option value="live">Live</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="paypalClientId">Client ID</label>
+              <input
+                id="paypalClientId"
+                name="paypalClientId"
+                type="text"
+                value={paymentSettings.paypalClientId}
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="paypalClientSecret">Client Secret</label>
+              <input
+                id="paypalClientSecret"
+                name="paypalClientSecret"
+                type="password"
+                value={paymentSettings.paypalClientSecret}
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="testModeEnabled"
+                value="true"
+                checked={paymentSettings.testModeEnabled}
+              />
+              <span>Enable Test Mode for All Payments</span>
+            </label>
+            <p class="help-text">No real transactions will be processed</p>
+          </div>
+
+          <button type="submit" class="save-btn" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
+      </div>
+    {/if}
+
+    <!-- Shipping Settings -->
+    {#if activeTab === 'shipping'}
+      <div class="settings-card">
+        <h2>Shipping Methods</h2>
+        <p class="info-message">
+          Configure shipping options in the
+          <a href="/admin/settings/shipping">Shipping Options</a> page.
+        </p>
+        <div class="quick-nav">
+          <a href="/admin/settings/shipping" class="nav-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+            Manage Shipping Options
+          </a>
+        </div>
+      </div>
+    {/if}
+
+    <!-- API Settings -->
+    {#if activeTab === 'api'}
+      <div class="settings-card">
+        <h2>API & Webhook Settings</h2>
+        <form
+          method="POST"
+          action="?/updateApi"
+          use:enhance={() => {
+            isSubmitting = true;
+            return async ({ update }) => {
+              await update();
+              isSubmitting = false;
+            };
+          }}
+        >
+          <div class="form-group">
+            <label>
+              <input
+                type="checkbox"
+                name="restEnabled"
+                value="true"
+                checked={apiSettings.restEnabled}
+              />
+              <span>Enable REST API</span>
+            </label>
+            <p class="help-text">Allow external applications to access your store data</p>
+          </div>
+
+          <div class="form-section">
+            <h3>Webhooks</h3>
+
+            <div class="form-group">
+              <label for="webhookOrderCreated">Order Created Webhook URL</label>
+              <input
+                id="webhookOrderCreated"
+                name="webhookOrderCreated"
+                type="url"
+                value={apiSettings.webhookOrderCreated}
+                placeholder="https://example.com/webhook/order-created"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="webhookOrderUpdated">Order Updated Webhook URL</label>
+              <input
+                id="webhookOrderUpdated"
+                name="webhookOrderUpdated"
+                type="url"
+                value={apiSettings.webhookOrderUpdated}
+                placeholder="https://example.com/webhook/order-updated"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="webhookProductUpdated">Product Updated Webhook URL</label>
+              <input
+                id="webhookProductUpdated"
+                name="webhookProductUpdated"
+                type="url"
+                value={apiSettings.webhookProductUpdated}
+                placeholder="https://example.com/webhook/product-updated"
+              />
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Rate Limiting</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="rateLimit">Request Limit</label>
+                <input
+                  id="rateLimit"
+                  name="rateLimit"
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={apiSettings.rateLimit}
+                />
+                <p class="help-text">Max requests per window</p>
+              </div>
+
+              <div class="form-group">
+                <label for="rateLimitWindow">Window (seconds)</label>
+                <input
+                  id="rateLimitWindow"
+                  name="rateLimitWindow"
+                  type="number"
+                  min="1"
+                  max="3600"
+                  value={apiSettings.rateLimitWindow}
+                />
+                <p class="help-text">Time window for rate limit</p>
+              </div>
+            </div>
           </div>
 
           <button type="submit" class="save-btn" disabled={isSubmitting}>
@@ -651,6 +926,48 @@
     cursor: not-allowed;
   }
 
+  .info-message {
+    padding: 1rem;
+    background: var(--color-bg-tertiary);
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+    transition:
+      background-color var(--transition-normal),
+      color var(--transition-normal);
+  }
+
+  .info-message a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    transition: color var(--transition-normal);
+  }
+
+  .quick-nav {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition:
+      background-color var(--transition-normal),
+      transform var(--transition-normal);
+  }
+
+  .nav-btn:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-2px);
+  }
+
   @media (max-width: 768px) {
     h1 {
       font-size: 1.5rem;
@@ -658,6 +975,10 @@
 
     .settings-grid {
       grid-template-columns: 1fr;
+    }
+
+    .tabs {
+      overflow-x: auto;
     }
   }
 </style>
