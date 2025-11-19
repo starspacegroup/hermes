@@ -1,7 +1,10 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
+import { getDB } from '$lib/server/db/connection';
+import { getUserAISessions } from '$lib/server/db/ai-sessions';
+import type { AISession } from '$lib/types/ai-chat';
 
-export const load: LayoutServerLoad = async ({ cookies, url }) => {
+export const load: LayoutServerLoad = async ({ cookies, url, platform, locals }) => {
   // Allow login page to be accessed without authentication
   if (url.pathname === '/auth/login') {
     return {};
@@ -29,8 +32,27 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
       throw redirect(303, '/');
     }
 
+    // Load user's chat sessions if they're an admin
+    let sessions: AISession[] = [];
+    let archivedSessions: AISession[] = [];
+    if (locals.currentUser && platform?.env?.DB) {
+      const db = getDB(platform);
+      const siteId = locals.siteId;
+      const userId = locals.currentUser.id;
+      try {
+        // Load active sessions
+        sessions = await getUserAISessions(db, siteId, userId, 'active');
+        // Load archived sessions
+        archivedSessions = await getUserAISessions(db, siteId, userId, 'archived');
+      } catch (error) {
+        console.error('Failed to load AI sessions:', error);
+      }
+    }
+
     return {
-      user
+      user,
+      sessions,
+      archivedSessions
     };
   } catch (error) {
     // Check if it's a redirect error (which we want to throw)

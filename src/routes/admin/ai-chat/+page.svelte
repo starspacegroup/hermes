@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from 'svelte';
+  import { page } from '$app/stores';
   import type { PageData } from './$types';
-  import type { AIChatMessage } from '$lib/types/ai-chat';
+  import type { AIChatMessage, AISession } from '$lib/types/ai-chat';
   import MediaPicker from '$lib/components/MediaPicker.svelte';
 
   export let data: PageData;
@@ -28,6 +29,23 @@
   const UPDATE_THROTTLE_MS = 50; // Update UI at most every 50ms
   let textareaElement: HTMLTextAreaElement;
 
+  // Session state
+  let currentSessionTitle = 'New Conversation';
+
+  // Watch for URL parameter changes to load different sessions
+  $: {
+    const sessionParam = $page.url.searchParams.get('session');
+    if (sessionParam && sessionParam !== sessionId) {
+      loadSessionFromId(sessionParam);
+    } else if (!sessionParam && sessionId !== null) {
+      // URL cleared, reset to new conversation
+      messages = [];
+      sessionId = null;
+      currentSessionTitle = 'New Conversation';
+      createdProduct = null;
+    }
+  }
+
   // Scroll to bottom without blocking
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -35,6 +53,22 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     });
+  }
+
+  // Session management function
+  async function loadSessionFromId(id: string) {
+    // Find session in data
+    const session = data.sessions.find((s: AISession) => s.id === id);
+    if (session) {
+      messages = session.messages || [];
+      sessionId = session.id;
+      currentSessionTitle = session.title;
+      await tick();
+      scrollToBottom();
+      if (textareaElement) {
+        textareaElement.focus();
+      }
+    }
   }
 
   function handleMediaSelect(
@@ -218,6 +252,20 @@
 
               if (data.sessionId) {
                 sessionId = data.sessionId;
+                // Update session title if this is a new session and first message
+                if (messages.length === 2 && currentSessionTitle === 'New Conversation') {
+                  // Generate title from first user message
+                  const firstUserMsg = messages.find((m) => m.role === 'user')?.content || '';
+                  const autoTitle =
+                    firstUserMsg.slice(0, 50) + (firstUserMsg.length > 50 ? '...' : '');
+                  currentSessionTitle = autoTitle;
+                  // Update in database
+                  fetch(`/api/ai-chat/sessions?id=${sessionId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: autoTitle })
+                  });
+                }
               }
 
               if (data.done && data.productCommand) {
@@ -294,13 +342,41 @@
     isCreatingProduct = true;
 
     try {
+      // Collect all image attachments from user messages in this conversation
+      const allAttachments: Array<{
+        id: string;
+        type: 'image' | 'video';
+        url: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+      }> = [];
+
+      for (const msg of messages) {
+        if (msg.role === 'user' && msg.attachments && msg.attachments.length > 0) {
+          // Filter to only images (can add video support later)
+          const imageAttachments = msg.attachments
+            .filter((att) => att.type === 'image')
+            .map((att) => ({
+              id: att.id,
+              type: att.type,
+              url: att.url,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size
+            }));
+          allAttachments.push(...imageAttachments);
+        }
+      }
+
       const response = await fetch('/api/ai-chat/create-product', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          product: productCommand.product
+          product: productCommand.product,
+          attachments: allAttachments
         })
       });
 
@@ -358,6 +434,13 @@
   }
 
   onMount(async () => {
+    // Check for session ID in URL params
+    const sessionParam = $page.url.searchParams.get('session');
+    if (sessionParam) {
+      await loadSessionFromId(sessionParam);
+      return;
+    }
+
     // Check for initial message and media from dashboard
     const initialMessage = sessionStorage.getItem('aiChatInitialMessage');
     const initialMediaStr = sessionStorage.getItem('aiChatInitialMedia');
@@ -419,32 +502,13 @@
       </div>
     </div>
   {:else}
-    <!-- Chat Header -->
-    <header class="chat-header">
-      <div class="header-content">
-        <div class="header-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-        </div>
-        <div class="header-text">
-          <h1>Hermes AI</h1>
-          <p>Product Creation Assistant</p>
-        </div>
-      </div>
-    </header>
-
-    <!-- Messages Area -->
-    <div class="messages-container" bind:this={messagesContainer}>
-      {#if messages.length === 0}
-        <div class="welcome-screen">
-          <div class="welcome-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <!-- Main Chat Area -->
+    <div class="main-chat-area">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="header-content">
+          <div class="header-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path
                 d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
                 stroke-width="2"
@@ -453,53 +517,19 @@
               ></path>
             </svg>
           </div>
-          <h2>Welcome to Hermes AI</h2>
-          <p>I'm here to help you create amazing product listings effortlessly.</p>
-          <div class="suggestions">
-            <button
-              class="suggestion-chip"
-              on:click={() => {
-                inputText = 'I want to add a new product';
-                sendMessage();
-              }}
-            >
-              Add a new product
-            </button>
-            <button
-              class="suggestion-chip"
-              on:click={() => {
-                inputText = 'Help me create a product listing';
-                sendMessage();
-              }}
-            >
-              Get help with product listing
-            </button>
+          <div class="header-text">
+            <h1>{currentSessionTitle}</h1>
+            <p>Product Creation Assistant</p>
           </div>
         </div>
-      {/if}
+      </header>
 
-      {#each messages as message, i (message.timestamp + '-' + i)}
-        <div class="message {message.role}">
-          <div class="message-avatar">
-            {#if message.role === 'user'}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-                <circle
-                  cx="12"
-                  cy="7"
-                  r="4"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></circle>
-              </svg>
-            {:else}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <!-- Messages Area -->
+      <div class="messages-container" bind:this={messagesContainer}>
+        {#if messages.length === 0}
+          <div class="welcome-screen">
+            <div class="welcome-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path
                   d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
                   stroke-width="2"
@@ -507,170 +537,231 @@
                   stroke-linejoin="round"
                 ></path>
               </svg>
-            {/if}
+            </div>
+            <h2>Welcome to Hermes AI</h2>
+            <p>I'm here to help you create amazing product listings effortlessly.</p>
+            <div class="suggestions">
+              <button
+                class="suggestion-chip"
+                on:click={() => {
+                  inputText = 'I want to add a new product';
+                  sendMessage();
+                }}
+              >
+                Add a new product
+              </button>
+              <button
+                class="suggestion-chip"
+                on:click={() => {
+                  inputText = 'Help me create a product listing';
+                  sendMessage();
+                }}
+              >
+                Get help with product listing
+              </button>
+            </div>
           </div>
-          <div class="message-content">
-            {#if message.attachments && message.attachments.length > 0}
-              <div class="attachments-grid">
-                {#each message.attachments as attachment (attachment.id)}
-                  {#if attachment.type === 'image'}
-                    <img src={attachment.url} alt={attachment.filename} class="attachment-image" />
-                  {/if}
-                {/each}
-              </div>
-            {/if}
-            {#if message.content}
-              <div class="message-text">{message.content}</div>
-            {/if}
-          </div>
-        </div>
-      {/each}
+        {/if}
 
-      {#if isStreaming}
-        <div class="streaming-indicator">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
+        {#each messages as message, i (message.timestamp + '-' + i)}
+          <div class="message {message.role}">
+            <div class="message-avatar">
+              {#if message.role === 'user'}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <circle
+                    cx="12"
+                    cy="7"
+                    r="4"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></circle>
+                </svg>
+              {:else}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+              {/if}
+            </div>
+            <div class="message-content">
+              {#if message.attachments && message.attachments.length > 0}
+                <div class="attachments-grid">
+                  {#each message.attachments as attachment (attachment.id)}
+                    {#if attachment.type === 'image'}
+                      <img
+                        src={attachment.url}
+                        alt={attachment.filename}
+                        class="attachment-image"
+                      />
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+              {#if message.content}
+                <div class="message-text">{message.content}</div>
+              {/if}
+            </div>
+          </div>
+        {/each}
+
+        {#if isStreaming}
+          <div class="streaming-indicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Product Creation Status -->
+      {#if isCreatingProduct}
+        <div class="product-status creating">
+          <div class="status-content">
+            <div class="spinner"></div>
+            <span>Creating product...</span>
+          </div>
         </div>
       {/if}
-    </div>
 
-    <!-- Product Creation Status -->
-    {#if isCreatingProduct}
-      <div class="product-status creating">
-        <div class="status-content">
-          <div class="spinner"></div>
-          <span>Creating product...</span>
-        </div>
-      </div>
-    {/if}
-
-    <!-- Product Created Success Banner -->
-    {#if createdProduct}
-      <div class="product-status success">
-        <div class="status-content">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M22 11.08V12a10 10 0 11-5.93-9.14"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-            <path
-              d="M22 4L12 14.01l-3-3"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          <div class="status-text">
-            <strong>Product created successfully!</strong>
-            <span>{createdProduct.name}</span>
+      <!-- Product Created Success Banner -->
+      {#if createdProduct}
+        <div class="product-status success">
+          <div class="status-content">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                d="M22 11.08V12a10 10 0 11-5.93-9.14"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+              <path
+                d="M22 4L12 14.01l-3-3"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+            <div class="status-text">
+              <strong>Product created successfully!</strong>
+              <span>{createdProduct.name}</span>
+            </div>
+            <a href="/admin/products/{createdProduct.id}/edit" class="btn-view-product">
+              View Product
+            </a>
+            <button
+              type="button"
+              class="btn-dismiss"
+              on:click={() => (createdProduct = null)}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
           </div>
-          <a href="/admin/products/{createdProduct.id}/edit" class="btn-view-product">
-            View Product
-          </a>
+        </div>
+      {/if}
+
+      <!-- Input Area -->
+      <div class="input-container">
+        {#if selectedMedia.length > 0}
+          <div class="selected-files">
+            {#each selectedMedia as media, i}
+              <div class="file-chip">
+                {#if media.type === 'image'}
+                  <img src={media.url} alt={media.filename} class="file-preview" />
+                {:else}
+                  <div class="file-icon">🎥</div>
+                {/if}
+                <span class="file-name">{media.filename}</span>
+                <button
+                  type="button"
+                  class="remove-file"
+                  on:click={() => removeMedia(i)}
+                  aria-label="Remove media"
+                >
+                  ✕
+                </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <div class="input-bar">
           <button
             type="button"
-            class="btn-dismiss"
-            on:click={() => (createdProduct = null)}
-            aria-label="Dismiss"
+            class="attach-btn"
+            on:click={openMediaPicker}
+            disabled={isStreaming}
+            aria-label="Select media"
           >
-            ✕
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+                ry="2"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></rect>
+              <circle
+                cx="8.5"
+                cy="8.5"
+                r="1.5"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></circle>
+              <path
+                d="M21 15l-5-5L5 21"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+          </button>
+
+          <textarea
+            bind:this={textareaElement}
+            bind:value={inputText}
+            on:keydown={handleKeyDown}
+            placeholder="Describe your product or ask for help..."
+            rows="1"
+            disabled={isStreaming}
+          ></textarea>
+
+          <button
+            type="button"
+            class="send-btn"
+            on:click={sendMessage}
+            disabled={(!inputText.trim() && selectedMedia.length === 0) || isStreaming}
+            aria-label="Send message"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path
+                d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
           </button>
         </div>
       </div>
-    {/if}
-
-    <!-- Input Area -->
-    <div class="input-container">
-      {#if selectedMedia.length > 0}
-        <div class="selected-files">
-          {#each selectedMedia as media, i}
-            <div class="file-chip">
-              {#if media.type === 'image'}
-                <img src={media.url} alt={media.filename} class="file-preview" />
-              {:else}
-                <div class="file-icon">🎥</div>
-              {/if}
-              <span class="file-name">{media.filename}</span>
-              <button
-                type="button"
-                class="remove-file"
-                on:click={() => removeMedia(i)}
-                aria-label="Remove media"
-              >
-                ✕
-              </button>
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      <div class="input-bar">
-        <button
-          type="button"
-          class="attach-btn"
-          on:click={openMediaPicker}
-          disabled={isStreaming}
-          aria-label="Select media"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect
-              x="3"
-              y="3"
-              width="18"
-              height="18"
-              rx="2"
-              ry="2"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></rect>
-            <circle
-              cx="8.5"
-              cy="8.5"
-              r="1.5"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></circle>
-            <path
-              d="M21 15l-5-5L5 21"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-        </button>
-
-        <textarea
-          bind:this={textareaElement}
-          bind:value={inputText}
-          on:keydown={handleKeyDown}
-          placeholder="Describe your product or ask for help..."
-          rows="1"
-          disabled={isStreaming}
-        ></textarea>
-
-        <button
-          type="button"
-          class="send-btn"
-          on:click={sendMessage}
-          disabled={(!inputText.trim() && selectedMedia.length === 0) || isStreaming}
-          aria-label="Send message"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-        </button>
-      </div>
     </div>
+    <!-- End of main-chat-area -->
   {/if}
 </div>
 
@@ -691,7 +782,7 @@
 
   .chat-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
@@ -704,6 +795,21 @@
     .chat-container {
       height: calc(100vh - 76px); /* Subtract mobile header */
       height: calc(100dvh - 76px);
+    }
+  }
+
+  /* Main Chat Area */
+  .main-chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    .main-chat-area {
+      width: 100%;
     }
   }
 
@@ -1516,7 +1622,7 @@
   /* Desktop Optimizations */
   @media (min-width: 1025px) {
     .message-content {
-      max-width: 60%;
+      max-width: 80%;
     }
 
     .attachments-grid {
@@ -1524,20 +1630,24 @@
     }
 
     .suggestions {
-      max-width: 700px;
+      max-width: 1000px;
     }
   }
 
   /* Large Desktop */
   @media (min-width: 1440px) {
     .messages-container {
-      max-width: 1200px;
+      max-width: 2000px;
       margin: 0 auto;
     }
 
     .welcome-screen {
-      max-width: 1200px;
+      max-width: 2000px;
       margin: 0 auto;
+    }
+
+    .message-content {
+      max-width: 85%;
     }
   }
 

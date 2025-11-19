@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDB } from '$lib/server/db/connection';
 import { createProduct } from '$lib/server/db/products';
+import { createProductMedia } from '$lib/server/db/media';
 import { logActivity } from '$lib/server/activity-logger';
 import type { ProductCreationData } from '$lib/server/ai/product-parser';
 
@@ -25,8 +26,19 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
   const userId = locals.currentUser.id;
 
   try {
-    const body = (await request.json()) as { product: ProductCreationData['product'] };
+    const body = (await request.json()) as {
+      product: ProductCreationData['product'];
+      attachments?: Array<{
+        id: string;
+        type: 'image' | 'video';
+        url: string;
+        filename: string;
+        mimeType: string;
+        size: number;
+      }>;
+    };
     const productData = body.product;
+    const attachments = body.attachments || [];
 
     if (!productData) {
       throw error(400, 'Product data is required');
@@ -57,12 +69,39 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       image: productData.image || ''
     });
 
+    // Create product media entries for attachments
+    const createdMedia = [];
+    if (attachments.length > 0) {
+      for (let i = 0; i < attachments.length; i++) {
+        const attachment = attachments[i];
+
+        // Only process images for now (videos could be added later)
+        if (attachment.type === 'image') {
+          try {
+            const media = await createProductMedia(db, siteId, {
+              productId: product.id,
+              type: attachment.type,
+              url: attachment.url,
+              filename: attachment.filename,
+              size: attachment.size,
+              mimeType: attachment.mimeType,
+              displayOrder: i
+            });
+            createdMedia.push(media);
+          } catch (mediaError) {
+            console.error('Failed to create product media:', mediaError);
+            // Continue creating other media even if one fails
+          }
+        }
+      }
+    }
+
     // Log the activity
     await logActivity(db, {
       siteId,
       userId,
       action: 'Created product via AI chat',
-      description: `Created product "${product.name}" (ID: ${product.id}) using AI assistant`,
+      description: `Created product "${product.name}" (ID: ${product.id}) using AI assistant${createdMedia.length > 0 ? ` with ${createdMedia.length} image(s)` : ''}`,
       entityType: 'product',
       entityId: product.id,
       entityName: product.name
