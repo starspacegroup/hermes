@@ -51,7 +51,7 @@ export const actions: Actions = {
   updateGeneral: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });
@@ -96,7 +96,7 @@ export const actions: Actions = {
   updateAddress: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });
@@ -135,7 +135,7 @@ export const actions: Actions = {
   updateTax: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });
@@ -172,7 +172,7 @@ export const actions: Actions = {
   updateEmail: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });
@@ -216,7 +216,7 @@ export const actions: Actions = {
   updatePayment: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });
@@ -258,7 +258,7 @@ export const actions: Actions = {
   updateApi: async ({ request, platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
-    const userId = locals.user?.id;
+    const userId = locals.currentUser?.id;
 
     if (!userId) {
       return fail(401, { error: 'Unauthorized' });

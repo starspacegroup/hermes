@@ -120,7 +120,7 @@
     <header>
       <nav>
         <a href="/" class="logo">
-          <h1>Hermes</h1>
+          <h1>{data.storeName || 'Hermes eCommerce'}</h1>
         </a>
 
         <div class="nav-links">
@@ -337,7 +337,7 @@
       <div class="footer-content">
         <div class="footer-section">
           <div class="footer-logo">
-            <h3>Hermes</h3>
+            <h3>{data.storeName || 'Hermes eCommerce'}</h3>
             <p class="footer-tagline">Your Online Store, Simplified</p>
           </div>
           <p class="footer-description">
@@ -386,7 +386,7 @@
         </div>
 
         <div class="footer-section">
-          <h4>Why Hermes?</h4>
+          <h4>Why {data.storeName || 'Hermes eCommerce'}?</h4>
           <ul class="tech-stack">
             <li>✨ Beautiful Design</li>
             <li>📱 Mobile Friendly</li>
@@ -397,7 +397,10 @@
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; {currentYear} Hermes. Free to use and customize for your business.</p>
+        <p>
+          &copy; {currentYear}
+          {data.storeName || 'Hermes eCommerce'}. Free to use and customize for your business.
+        </p>
         <p class="footer-credit">
           Made with ❤️ by <a href="https://starspace.group" target="_blank">*Space</a>
         </p>

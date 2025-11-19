@@ -49,7 +49,7 @@
 </script>
 
 <svelte:head>
-  <title>{product.name} - Hermes</title>
+  <title>{product.name} - {data.storeName || 'Hermes eCommerce'}</title>
   <meta name="description" content={product.description} />
 </svelte:head>
 

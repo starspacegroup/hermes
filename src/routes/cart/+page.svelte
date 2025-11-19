@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { cartStore } from '../../lib/stores/cart.ts';
   import Button from '../../lib/components/Button.svelte';
 
@@ -24,7 +25,7 @@
 </script>
 
 <svelte:head>
-  <title>Shopping Cart - Hermes</title>
+  <title>Shopping Cart - {$page.data.storeName || 'Hermes eCommerce'}</title>
 </svelte:head>
 
 <div class="cart-header">

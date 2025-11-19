@@ -1,5 +1,6 @@
 import { getDB } from '$lib/server/db/connection';
 import * as colorThemes from '$lib/server/db/color-themes';
+import { getGeneralSettings } from '$lib/server/db/site-settings';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ platform, locals }) => {
@@ -8,7 +9,8 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
     return {
       themeColorsLight: null,
       themeColorsDark: null,
-      currentUser: locals.currentUser || null
+      currentUser: locals.currentUser || null,
+      storeName: 'Hermes eCommerce'
     };
   }
 
@@ -16,8 +18,9 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
     const db = getDB(platform);
     const siteId = locals.siteId || 'default-site';
 
-    // Get system default theme IDs
-    const [systemLightThemeId, systemDarkThemeId] = await Promise.all([
+    // Get general settings and system default theme IDs
+    const [generalSettings, systemLightThemeId, systemDarkThemeId] = await Promise.all([
+      getGeneralSettings(db, siteId),
       colorThemes.getThemePreference(db, siteId, 'system-light-theme'),
       colorThemes.getThemePreference(db, siteId, 'system-dark-theme')
     ]);
@@ -52,14 +55,16 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
     return {
       themeColorsLight: mapThemeColors(lightTheme as never),
       themeColorsDark: mapThemeColors(darkTheme as never),
-      currentUser: locals.currentUser || null
+      currentUser: locals.currentUser || null,
+      storeName: generalSettings.storeName || 'Hermes eCommerce'
     };
   } catch (error) {
     console.error('Error loading theme colors:', error);
     return {
       themeColorsLight: null,
       themeColorsDark: null,
-      currentUser: locals.currentUser || null
+      currentUser: locals.currentUser || null,
+      storeName: 'Hermes eCommerce'
     };
   }
 };

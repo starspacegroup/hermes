@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
   import { cartStore } from '../../../lib/stores/cart';
   import Button from '../../../lib/components/Button.svelte';
 
@@ -32,7 +33,7 @@
 </script>
 
 <svelte:head>
-  <title>Order Confirmation - Hermes</title>
+  <title>Order Confirmation - {$page.data.storeName || 'Hermes eCommerce'}</title>
 </svelte:head>
 
 <div class="checkout-success">

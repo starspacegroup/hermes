@@ -86,8 +86,8 @@
 </script>
 
 <svelte:head>
-  <title>Login - Hermes</title>
-  <meta name="description" content="Login to Hermes eCommerce Platform" />
+  <title>Login - {data.storeName || 'Hermes eCommerce'}</title>
+  <meta name="description" content="Login to {data.storeName || 'Hermes eCommerce'} Platform" />
 </svelte:head>
 
 <div class="login-container">
