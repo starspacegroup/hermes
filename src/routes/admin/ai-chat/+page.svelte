@@ -58,16 +58,33 @@
 
     // Convert files to base64 for attachments
     const attachments: AIChatMessage['attachments'] = [];
-    for (const file of selectedFiles) {
-      const base64 = await fileToBase64(file);
-      attachments.push({
-        id: crypto.randomUUID(),
-        type: file.type.startsWith('video/') ? 'video' : 'image',
-        url: base64,
-        filename: file.name,
-        mimeType: file.type,
-        size: file.size
-      });
+    const filesToProcess = [...selectedFiles];
+    selectedFiles = [];
+
+    try {
+      for (const file of filesToProcess) {
+        const base64 = await fileToBase64(file);
+        attachments.push({
+          id: crypto.randomUUID(),
+          type: file.type.startsWith('video/') ? 'video' : 'image',
+          url: base64,
+          filename: file.name,
+          mimeType: file.type,
+          size: file.size
+        });
+      }
+    } catch (fileError) {
+      console.error('Error reading files:', fileError);
+      // Add error message to chat
+      messages = [
+        ...messages,
+        {
+          role: 'assistant',
+          content: '❌ Sorry, there was an error reading one or more files. Please try again.',
+          timestamp: Date.now()
+        }
+      ];
+      return;
     }
 
     // Add user message to UI
@@ -78,7 +95,6 @@
       attachments
     };
     messages = [...messages, userMessage];
-    selectedFiles = [];
 
     // Stream AI response
     isStreaming = true;
@@ -106,20 +122,30 @@
         throw new Error('Failed to send message');
       }
 
-      const reader = response.body?.getReader();
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = JSON.parse(line.slice(6));
+        for (const line of lines) {
+          // Skip empty lines
+          if (!line.trim()) continue;
+
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+
+              const data = JSON.parse(jsonStr);
 
               if (data.error) {
                 assistantMessage.content = `Error: ${data.error}`;
@@ -136,10 +162,13 @@
                 await handleProductCreation(data.productCommand);
               }
 
-              if (!data.done) {
+              if (!data.done && data.content) {
                 assistantMessage.content += data.content;
                 messages = [...messages];
               }
+            } catch (parseError) {
+              console.error('Failed to parse SSE data:', line, parseError);
+              // Continue processing other lines
             }
           }
         }
@@ -157,6 +186,12 @@
     action: string;
     product: Record<string, unknown>;
   }) {
+    // Validate command structure
+    if (!productCommand || !productCommand.action || !productCommand.product) {
+      console.error('Invalid product command structure:', productCommand);
+      return;
+    }
+
     if (productCommand.action !== 'create_product') {
       return;
     }

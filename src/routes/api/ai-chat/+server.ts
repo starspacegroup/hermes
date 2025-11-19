@@ -147,11 +147,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
                 )
               );
             } else {
-              accumulatedResponse += chunk.content;
+              const content = chunk.content || '';
+              accumulatedResponse += content;
               // Send chunk to client
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({ content: chunk.content, done: false })}\n\n`
+                  `data: ${JSON.stringify({ content, done: false })}\n\n`
                 )
               );
             }
