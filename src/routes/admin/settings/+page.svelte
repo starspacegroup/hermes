@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { toastStore } from '$lib/stores/toast';
+  import ToggleSwitch from '$lib/components/ToggleSwitch.svelte';
   import type { PageData, ActionData } from './$types';
 
   export let data: PageData;
@@ -259,16 +260,12 @@
           </div>
 
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="geolocationEnabled"
-                value="true"
-                checked={addressSettings.geolocationEnabled}
-              />
-              <span>Enable Geolocation</span>
-            </label>
-            <p class="help-text">Allow customers to use their location for shipping estimates</p>
+            <ToggleSwitch
+              name="geolocationEnabled"
+              checked={addressSettings.geolocationEnabled}
+              label="Enable Geolocation"
+              description="Allow customers to use their location for shipping estimates"
+            />
           </div>
 
           <button type="submit" class="save-btn" disabled={isSubmitting}>
@@ -294,42 +291,30 @@
           }}
         >
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="calculationsEnabled"
-                value="true"
-                checked={taxSettings.calculationsEnabled}
-              />
-              <span>Enable Tax Calculations</span>
-            </label>
-            <p class="help-text">Automatically calculate taxes at checkout</p>
+            <ToggleSwitch
+              name="calculationsEnabled"
+              checked={taxSettings.calculationsEnabled}
+              label="Enable Tax Calculations"
+              description="Automatically calculate taxes at checkout"
+            />
           </div>
 
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="pricesIncludeTax"
-                value="true"
-                checked={taxSettings.pricesIncludeTax}
-              />
-              <span>Prices Include Tax</span>
-            </label>
-            <p class="help-text">Product prices already include tax</p>
+            <ToggleSwitch
+              name="pricesIncludeTax"
+              checked={taxSettings.pricesIncludeTax}
+              label="Prices Include Tax"
+              description="Product prices already include tax"
+            />
           </div>
 
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="displayPricesWithTax"
-                value="true"
-                checked={taxSettings.displayPricesWithTax}
-              />
-              <span>Display Prices With Tax</span>
-            </label>
-            <p class="help-text">Show tax-inclusive prices to customers</p>
+            <ToggleSwitch
+              name="displayPricesWithTax"
+              checked={taxSettings.displayPricesWithTax}
+              label="Display Prices With Tax"
+              description="Show tax-inclusive prices to customers"
+            />
           </div>
 
           <div class="form-group">
@@ -372,15 +357,11 @@
             <h3>Stripe</h3>
 
             <div class="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="stripeEnabled"
-                  value="true"
-                  checked={paymentSettings.stripeEnabled}
-                />
-                <span>Enable Stripe</span>
-              </label>
+              <ToggleSwitch
+                name="stripeEnabled"
+                checked={paymentSettings.stripeEnabled}
+                label="Enable Stripe"
+              />
             </div>
 
             <div class="form-group">
@@ -420,15 +401,11 @@
             <h3>PayPal</h3>
 
             <div class="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="paypalEnabled"
-                  value="true"
-                  checked={paymentSettings.paypalEnabled}
-                />
-                <span>Enable PayPal</span>
-              </label>
+              <ToggleSwitch
+                name="paypalEnabled"
+                checked={paymentSettings.paypalEnabled}
+                label="Enable PayPal"
+              />
             </div>
 
             <div class="form-group">
@@ -462,16 +439,12 @@
           </div>
 
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="testModeEnabled"
-                value="true"
-                checked={paymentSettings.testModeEnabled}
-              />
-              <span>Enable Test Mode for All Payments</span>
-            </label>
-            <p class="help-text">No real transactions will be processed</p>
+            <ToggleSwitch
+              name="testModeEnabled"
+              checked={paymentSettings.testModeEnabled}
+              label="Enable Test Mode for All Payments"
+              description="No real transactions will be processed"
+            />
           </div>
 
           <button type="submit" class="save-btn" disabled={isSubmitting}>
@@ -521,16 +494,12 @@
           }}
         >
           <div class="form-group">
-            <label>
-              <input
-                type="checkbox"
-                name="restEnabled"
-                value="true"
-                checked={apiSettings.restEnabled}
-              />
-              <span>Enable REST API</span>
-            </label>
-            <p class="help-text">Allow external applications to access your store data</p>
+            <ToggleSwitch
+              name="restEnabled"
+              checked={apiSettings.restEnabled}
+              label="Enable REST API"
+              description="Allow external applications to access your store data"
+            />
           </div>
 
           <div class="form-section">
@@ -645,15 +614,11 @@
               </div>
 
               <div class="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="smtpSecure"
-                    value="true"
-                    checked={emailSettings.smtpSecure}
-                  />
-                  <span>Use SSL/TLS</span>
-                </label>
+                <ToggleSwitch
+                  name="smtpSecure"
+                  checked={emailSettings.smtpSecure}
+                  label="Use SSL/TLS"
+                />
               </div>
             </div>
 
@@ -698,39 +663,27 @@
             <h3>Email Notifications</h3>
 
             <div class="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="newOrderEnabled"
-                  value="true"
-                  checked={emailSettings.newOrderEnabled}
-                />
-                <span>New Order Notifications</span>
-              </label>
+              <ToggleSwitch
+                name="newOrderEnabled"
+                checked={emailSettings.newOrderEnabled}
+                label="New Order Notifications"
+              />
             </div>
 
             <div class="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="orderStatusEnabled"
-                  value="true"
-                  checked={emailSettings.orderStatusEnabled}
-                />
-                <span>Order Status Change Notifications</span>
-              </label>
+              <ToggleSwitch
+                name="orderStatusEnabled"
+                checked={emailSettings.orderStatusEnabled}
+                label="Order Status Change Notifications"
+              />
             </div>
 
             <div class="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="customerWelcomeEnabled"
-                  value="true"
-                  checked={emailSettings.customerWelcomeEnabled}
-                />
-                <span>Customer Welcome Emails</span>
-              </label>
+              <ToggleSwitch
+                name="customerWelcomeEnabled"
+                checked={emailSettings.customerWelcomeEnabled}
+                label="Customer Welcome Emails"
+              />
             </div>
           </div>
 
@@ -863,18 +816,6 @@
   select:focus {
     outline: none;
     border-color: var(--color-primary);
-  }
-
-  input[type='checkbox'] {
-    width: auto;
-    margin-right: 0.5rem;
-  }
-
-  label:has(input[type='checkbox']) {
-    display: flex;
-    align-items: center;
-    font-weight: 500;
-    cursor: pointer;
   }
 
   .form-row {

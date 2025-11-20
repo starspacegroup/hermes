@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { toastStore } from '$lib/stores/toast';
+  import ToggleSwitch from '$lib/components/ToggleSwitch.svelte';
   import type { PageData, ActionData } from './$types';
   import type { OAuthProvider } from '$lib/types/oauth';
   import IconPicker from '$lib/components/admin/IconPicker.svelte';
@@ -471,11 +472,9 @@
               />
             </div>
 
-            <div class="form-group checkbox-group">
-              <label>
-                <input type="checkbox" name="enabled" value="true" bind:checked={newEnabled} />
-                <span>Enable this provider</span>
-              </label>
+            <div class="form-group">
+              <input type="hidden" name="enabled" value={newEnabled ? 'true' : 'false'} />
+              <ToggleSwitch bind:checked={newEnabled} label="Enable this provider" />
             </div>
           </div>
 
@@ -914,18 +913,6 @@
   .form-group input:focus {
     outline: none;
     border-color: var(--color-primary);
-  }
-
-  .checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-  }
-
-  .checkbox-group input[type='checkbox'] {
-    width: auto;
-    cursor: pointer;
   }
 
   .required {

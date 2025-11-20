@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { toastStore } from '$lib/stores/toast';
+  import ToggleSwitch from '$lib/components/ToggleSwitch.svelte';
   import type { ShippingOption } from '$lib/types/shipping';
 
   let shippingOptions: ShippingOption[] = [];
@@ -327,11 +328,8 @@
         />
       </div>
 
-      <div class="form-group checkbox">
-        <label>
-          <input type="checkbox" bind:checked={formIsActive} />
-          <span>Active</span>
-        </label>
+      <div class="form-group">
+        <ToggleSwitch bind:checked={formIsActive} label="Active" />
       </div>
 
       <div class="modal-actions">
@@ -637,18 +635,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-  }
-
-  .form-group.checkbox label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-  }
-
-  .form-group.checkbox input[type='checkbox'] {
-    width: auto;
-    margin: 0;
   }
 
   .modal-actions {

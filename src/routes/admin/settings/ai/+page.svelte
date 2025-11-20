@@ -2,6 +2,7 @@
   import { enhance } from '$app/forms';
   import { invalidate } from '$app/navigation';
   import { toastStore } from '$lib/stores/toast';
+  import ToggleSwitch from '$lib/components/ToggleSwitch.svelte';
   import type { PageData, ActionData } from './$types';
   import type { AIProvider } from '$lib/types/ai-chat';
 
@@ -114,28 +115,21 @@
           }}
         >
           <input type="hidden" name="enabled" value={aiChatEnabled ? 'true' : 'false'} />
-          <label class="toggle-switch">
-            <input
-              type="checkbox"
-              checked={aiChatEnabled}
-              on:change={(e) => {
-                const target = e.target;
-                if (target instanceof HTMLInputElement) {
-                  aiChatEnabled = target.checked;
-                  const form = target.closest('form');
-                  if (form) {
-                    // Update hidden input before submitting
-                    const hiddenInput = form.querySelector('input[name="enabled"]');
-                    if (hiddenInput instanceof HTMLInputElement) {
-                      hiddenInput.value = target.checked ? 'true' : 'false';
-                    }
-                    form.requestSubmit();
-                  }
+          <ToggleSwitch
+            checked={aiChatEnabled}
+            onChange={(checked) => {
+              aiChatEnabled = checked;
+              const form = document.querySelector('form[action="?/toggleEnabled"]');
+              if (form instanceof HTMLFormElement) {
+                // Update hidden input before submitting
+                const hiddenInput = form.querySelector('input[name="enabled"]');
+                if (hiddenInput instanceof HTMLInputElement) {
+                  hiddenInput.value = checked ? 'true' : 'false';
                 }
-              }}
-            />
-            <span class="toggle-slider"></span>
-          </label>
+                form.requestSubmit();
+              }
+            }}
+          />
         </form>
       </div>
     </div>
@@ -837,57 +831,6 @@
     font-size: 0.875rem;
     color: var(--color-text-secondary);
     margin: 0;
-  }
-
-  /* Toggle switch styles */
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 56px;
-    height: 32px;
-    cursor: pointer;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--color-border-secondary);
-    transition: 0.3s;
-    border-radius: 32px;
-  }
-
-  .toggle-slider:before {
-    position: absolute;
-    content: '';
-    height: 24px;
-    width: 24px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .toggle-slider {
-    background-color: var(--color-primary);
-  }
-
-  input:focus + .toggle-slider {
-    box-shadow: 0 0 0 3px var(--color-primary-alpha);
-  }
-
-  input:checked + .toggle-slider:before {
-    transform: translateX(24px);
   }
 
   @media (max-width: 768px) {
