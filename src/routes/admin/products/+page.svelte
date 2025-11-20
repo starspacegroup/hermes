@@ -140,7 +140,13 @@
     {#each filteredProducts as product (product.id)}
       <div class="product-card">
         <div class="product-image">
-          <img src={product.image} alt={product.name} />
+          {#if product.image && product.image.trim() !== ''}
+            <img src={product.image} alt={product.name} />
+          {:else}
+            <div class="image-placeholder">
+              <span>📦</span>
+            </div>
+          {/if}
           <div class="product-stock" class:low-stock={product.stock < 20}>
             {product.stock} in stock
           </div>
@@ -394,6 +400,21 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .product-image .image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+  }
+
+  .product-image .image-placeholder span {
+    font-size: 3rem;
   }
 
   .product-stock {

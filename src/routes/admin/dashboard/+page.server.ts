@@ -4,10 +4,8 @@ import {
   getDashboardMetrics,
   getRecentOrders,
   getTopProducts,
-  getLowStockProducts,
-  getSalesChartData
+  getLowStockProducts
 } from '$lib/server/db/dashboard';
-import { getActivityLogs } from '$lib/server/db/activity-logs';
 import { dev } from '$app/environment';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
@@ -16,23 +14,18 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 
   try {
     // Fetch all dashboard data from database
-    const [metrics, recentOrders, topProducts, lowStockProducts, salesData, activityLogs] =
-      await Promise.all([
-        getDashboardMetrics(db, siteId),
-        getRecentOrders(db, siteId, 10),
-        getTopProducts(db, siteId, 5),
-        getLowStockProducts(db, siteId, 10, 5),
-        getSalesChartData(db, siteId, 30),
-        getActivityLogs(db, siteId, { limit: 10 })
-      ]);
+    const [metrics, recentOrders, topProducts, lowStockProducts] = await Promise.all([
+      getDashboardMetrics(db, siteId),
+      getRecentOrders(db, siteId, 10),
+      getTopProducts(db, siteId, 5),
+      getLowStockProducts(db, siteId, 10, 5)
+    ]);
 
     return {
       metrics,
       recentOrders,
       topProducts,
-      lowStockProducts,
-      salesData,
-      activityLogs
+      lowStockProducts
     };
   } catch (error) {
     // If database is not available or not set up, return empty/default data
@@ -61,9 +54,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
       },
       recentOrders: [],
       topProducts: [],
-      lowStockProducts: [],
-      salesData: [],
-      activityLogs: []
+      lowStockProducts: []
     };
   }
 };
