@@ -331,5 +331,466 @@ describe('Shipping Options Database Functions', () => {
       expect(result).toBeDefined();
       expect(result['1']).toEqual([]);
     });
+
+    it('should apply price overrides from product-specific shipping options', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockProductOptions = {
+        results: [
+          {
+            id: 'pso-1',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-1',
+            is_default: 1,
+            price_override: 5.99,
+            threshold_override: null,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockShippingOption = {
+        id: 'ship-1',
+        site_id: siteId,
+        name: 'Standard',
+        description: 'Standard shipping',
+        price: 10.99,
+        estimated_days_min: 5,
+        estimated_days_max: 7,
+        carrier: 'USPS',
+        free_shipping_threshold: null,
+        is_active: 1,
+        created_at: 123,
+        updated_at: 123
+      };
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve(mockProductOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      const mockFirst = vi.fn().mockResolvedValue(mockShippingOption);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 50,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 50);
+
+      expect(result['product-1']).toBeDefined();
+      expect(result['product-1'].length).toBeGreaterThan(0);
+      expect(result['product-1'][0].price).toBe(5.99);
+    });
+
+    it('should apply threshold overrides from product-specific shipping options', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockProductOptions = {
+        results: [
+          {
+            id: 'pso-1',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-1',
+            is_default: 1,
+            price_override: null,
+            threshold_override: 25.0,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockShippingOption = {
+        id: 'ship-1',
+        site_id: siteId,
+        name: 'Standard',
+        description: 'Standard shipping',
+        price: 10.99,
+        estimated_days_min: 5,
+        estimated_days_max: 7,
+        carrier: 'USPS',
+        free_shipping_threshold: 100.0,
+        is_active: 1,
+        created_at: 123,
+        updated_at: 123
+      };
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve(mockProductOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      const mockFirst = vi.fn().mockResolvedValue(mockShippingOption);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 30,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 30);
+
+      expect(result['product-1']).toBeDefined();
+      expect(result['product-1'][0].isFreeShipping).toBe(true);
+      expect(result['product-1'][0].price).toBe(0);
+    });
+
+    it('should fall back to category shipping options when no product-specific options exist', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockCategoryOptions = {
+        results: [
+          {
+            id: 'cso-1',
+            site_id: siteId,
+            category: 'electronics',
+            shipping_option_id: 'ship-2',
+            is_default: 0,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockShippingOption = {
+        id: 'ship-2',
+        site_id: siteId,
+        name: 'Express',
+        description: 'Express shipping',
+        price: 15.99,
+        estimated_days_min: 2,
+        estimated_days_max: 3,
+        carrier: 'FedEx',
+        free_shipping_threshold: 50.0,
+        is_active: 1,
+        created_at: 123,
+        updated_at: 123
+      };
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve({ results: [], success: true });
+        if (callCount === 2) return Promise.resolve(mockCategoryOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      const mockFirst = vi.fn().mockResolvedValue(mockShippingOption);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 40,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 40);
+
+      expect(result['product-1']).toBeDefined();
+      expect(result['product-1'].length).toBeGreaterThan(0);
+      expect(result['product-1'][0].name).toBe('Express');
+    });
+
+    it('should apply free shipping when cart total exceeds threshold', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockCategoryOptions = {
+        results: [
+          {
+            id: 'cso-1',
+            site_id: siteId,
+            category: 'electronics',
+            shipping_option_id: 'ship-2',
+            is_default: 0,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockShippingOption = {
+        id: 'ship-2',
+        site_id: siteId,
+        name: 'Standard',
+        description: 'Standard shipping',
+        price: 8.99,
+        estimated_days_min: 5,
+        estimated_days_max: 7,
+        carrier: 'USPS',
+        free_shipping_threshold: 50.0,
+        is_active: 1,
+        created_at: 123,
+        updated_at: 123
+      };
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve({ results: [], success: true });
+        if (callCount === 2) return Promise.resolve(mockCategoryOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      const mockFirst = vi.fn().mockResolvedValue(mockShippingOption);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 60,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 60);
+
+      expect(result['product-1'][0].isFreeShipping).toBe(true);
+      expect(result['product-1'][0].price).toBe(0);
+    });
+
+    it('should sort shipping options by default first, then by price', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockProductOptions = {
+        results: [
+          {
+            id: 'pso-1',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-1',
+            is_default: 0,
+            price_override: 15.99,
+            threshold_override: null,
+            created_at: 123,
+            updated_at: 123
+          },
+          {
+            id: 'pso-2',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-2',
+            is_default: 1,
+            price_override: 10.99,
+            threshold_override: null,
+            created_at: 123,
+            updated_at: 123
+          },
+          {
+            id: 'pso-3',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-3',
+            is_default: 0,
+            price_override: 5.99,
+            threshold_override: null,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockShippingOptions = [
+        {
+          id: 'ship-1',
+          site_id: siteId,
+          name: 'Express',
+          description: null,
+          price: 15.99,
+          estimated_days_min: 2,
+          estimated_days_max: 3,
+          carrier: 'FedEx',
+          free_shipping_threshold: null,
+          is_active: 1,
+          created_at: 123,
+          updated_at: 123
+        },
+        {
+          id: 'ship-2',
+          site_id: siteId,
+          name: 'Standard',
+          description: null,
+          price: 10.99,
+          estimated_days_min: 5,
+          estimated_days_max: 7,
+          carrier: 'USPS',
+          free_shipping_threshold: null,
+          is_active: 1,
+          created_at: 123,
+          updated_at: 123
+        },
+        {
+          id: 'ship-3',
+          site_id: siteId,
+          name: 'Economy',
+          description: null,
+          price: 5.99,
+          estimated_days_min: 7,
+          estimated_days_max: 10,
+          carrier: 'USPS',
+          free_shipping_threshold: null,
+          is_active: 1,
+          created_at: 123,
+          updated_at: 123
+        }
+      ];
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve(mockProductOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      let firstCallCount = 0;
+      const mockFirst = vi.fn().mockImplementation(() => {
+        const option = mockShippingOptions[firstCallCount];
+        firstCallCount++;
+        return Promise.resolve(option);
+      });
+
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 50,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 50);
+
+      expect(result['product-1'][0].isDefault).toBe(true);
+      expect(result['product-1'][0].name).toBe('Standard');
+      expect(result['product-1'][1].price).toBe(5.99);
+      expect(result['product-1'][2].price).toBe(15.99);
+    });
+
+    it('should skip inactive shipping options', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockProductOptions = {
+        results: [
+          {
+            id: 'pso-1',
+            site_id: siteId,
+            product_id: 'product-1',
+            shipping_option_id: 'ship-1',
+            is_default: 1,
+            price_override: null,
+            threshold_override: null,
+            created_at: 123,
+            updated_at: 123
+          }
+        ],
+        success: true
+      };
+
+      const mockInactiveShippingOption = {
+        id: 'ship-1',
+        site_id: siteId,
+        name: 'Inactive',
+        description: null,
+        price: 10.99,
+        estimated_days_min: 5,
+        estimated_days_max: 7,
+        carrier: 'USPS',
+        free_shipping_threshold: null,
+        is_active: 0,
+        created_at: 123,
+        updated_at: 123
+      };
+
+      let callCount = 0;
+      const mockAll = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve(mockProductOptions);
+        return Promise.resolve({ results: [], success: true });
+      });
+
+      const mockFirst = vi.fn().mockResolvedValue(mockInactiveShippingOption);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        {
+          id: 'product-1',
+          type: 'physical' as const,
+          category: 'electronics',
+          price: 50,
+          quantity: 1
+        }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 50);
+
+      expect(result['product-1']).toEqual([]);
+    });
+
+    it('should filter out digital and service products from shipping calculation', async () => {
+      const { getShippingOptionsForProducts } = await import('./shipping-options.js');
+
+      const mockResults = { results: [], success: true };
+      const mockAll = vi.fn().mockResolvedValue(mockResults);
+      const mockFirst = vi.fn().mockResolvedValue(null);
+      const mockBind = vi.fn().mockReturnValue({ all: mockAll, first: mockFirst });
+      const mockPrepare = vi.fn().mockReturnValue({ bind: mockBind });
+      const mockDB = { prepare: mockPrepare } as unknown as D1Database;
+
+      const cartItems = [
+        { id: '1', type: 'digital' as const, price: 20, quantity: 1 },
+        { id: '2', type: 'service' as const, price: 50, quantity: 1 },
+        { id: '3', type: 'physical' as const, category: 'electronics', price: 30, quantity: 1 }
+      ];
+
+      const result = await getShippingOptionsForProducts(mockDB, siteId, cartItems, 100);
+
+      expect(result['1']).toBeUndefined();
+      expect(result['2']).toBeUndefined();
+      expect(result['3']).toBeDefined();
+    });
   });
 });

@@ -289,14 +289,12 @@ describe('Color Themes', () => {
       expect(result).toBe('#ff0000');
     });
 
-    it('should resolve theme: reference as CSS var when asCssVar is true', () => {
-      const result = resolveThemeColor('theme:primary', 'default-light', '', true);
-      expect(result).toBe('var(--theme-primary)');
-    });
+    it('should always convert theme: references to CSS vars', () => {
+      const resultTrue = resolveThemeColor('theme:primary', 'default-light', '', true);
+      expect(resultTrue).toBe('var(--theme-primary)');
 
-    it('should convert theme: reference even when asCssVar is false', () => {
-      const result = resolveThemeColor('theme:primary', 'default-light', '', false);
-      expect(result).toBe('var(--theme-primary)');
+      const resultFalse = resolveThemeColor('theme:primary', 'default-light', '', false);
+      expect(resultFalse).toBe('var(--theme-primary)');
     });
 
     it('should resolve object with theme-specific colors', () => {
