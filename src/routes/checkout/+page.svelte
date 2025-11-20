@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { cartStore } from '../../lib/stores/cart';
   import { checkoutStore } from '../../lib/stores/checkout';
   import ShippingAddressForm from '../../lib/components/ShippingAddressForm.svelte';
@@ -169,7 +170,7 @@
 </script>
 
 <svelte:head>
-  <title>Checkout - Hermes</title>
+  <title>Checkout - {$page.data.storeName || 'Hermes eCommerce'}</title>
 </svelte:head>
 
 <div class="checkout-container">

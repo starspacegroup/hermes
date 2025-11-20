@@ -9,8 +9,11 @@
   // Get hasAIChat from parent layout data
   $: hasAIChat = $page.data?.hasAIChat || false;
 
-  // Get metrics from server (real data from database)
-  const metrics = data.metrics;
+  // Get all data from server (real data from database)
+  $: metrics = data.metrics;
+  $: recentOrders = data.recentOrders || [];
+  $: topProducts = data.topProducts || [];
+  $: lowStockProducts = data.lowStockProducts || [];
 
   let aiChatInput = '';
   let isMediaPickerOpen = false;
@@ -23,30 +26,47 @@
     size: number;
   }> = [];
 
-  const recentOrders = [
-    { id: 'ORD-001', customer: 'John Doe', amount: 299.99, status: 'completed' },
-    { id: 'ORD-002', customer: 'Jane Smith', amount: 199.99, status: 'processing' },
-    { id: 'ORD-003', customer: 'Bob Johnson', amount: 89.99, status: 'pending' }
-  ];
-
   const siteStatus = {
     server: 'operational',
     database: 'operational',
     payment: 'operational'
   };
 
+  function formatDate(timestamp: number): string {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  function formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  }
+
   function getStatusColor(status: string): string {
     switch (status) {
       case 'operational':
       case 'completed':
+      case 'delivered':
         return 'var(--color-success)';
       case 'processing':
+      case 'shipped':
         return 'var(--color-warning)';
       case 'pending':
         return 'var(--color-secondary)';
-      default:
+      case 'cancelled':
         return 'var(--color-danger)';
+      default:
+        return 'var(--color-text-secondary)';
     }
+  }
+
+  function getStatusLabel(status: string): string {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   }
 
   function handleMediaSelect(
@@ -230,20 +250,26 @@
 
   <!-- Metrics Grid -->
   <div class="metrics-grid">
-    <a href="/admin/products" class="metric-card metric-card-link">
-      <div class="metric-icon" style="background: var(--color-bg-danger-light);">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)">
+    <div class="metric-card">
+      <div class="metric-icon" style="background: var(--color-bg-warning-light);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)">
           <path
-            d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+            d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
             stroke-width="2"
+            stroke-linecap="round"
           ></path>
         </svg>
       </div>
       <div class="metric-content">
-        <div class="metric-value">{metrics.totalProducts}</div>
-        <div class="metric-label">Total Products</div>
+        <div class="metric-value">{formatCurrency(metrics.totalRevenue)}</div>
+        <div class="metric-label">Total Revenue</div>
+        <div class="metric-subtext">
+          Today: {formatCurrency(metrics.revenueToday)} · Month: {formatCurrency(
+            metrics.revenueThisMonth
+          )}
+        </div>
       </div>
-    </a>
+    </div>
 
     <div class="metric-card">
       <div class="metric-icon" style="background: var(--color-bg-success-light);">
@@ -257,24 +283,27 @@
       <div class="metric-content">
         <div class="metric-value">{metrics.totalOrders}</div>
         <div class="metric-label">Total Orders</div>
+        <div class="metric-subtext">
+          Pending: {metrics.pendingOrders} · Processing: {metrics.processingOrders}
+        </div>
       </div>
     </div>
 
-    <div class="metric-card">
-      <div class="metric-icon" style="background: var(--color-bg-warning-light);">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)">
+    <a href="/admin/products" class="metric-card metric-card-link">
+      <div class="metric-icon" style="background: var(--color-bg-danger-light);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)">
           <path
-            d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+            d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
             stroke-width="2"
-            stroke-linecap="round"
           ></path>
         </svg>
       </div>
       <div class="metric-content">
-        <div class="metric-value">${metrics.revenue.toLocaleString()}</div>
-        <div class="metric-label">Total Revenue</div>
+        <div class="metric-value">{metrics.totalProducts}</div>
+        <div class="metric-label">Total Products</div>
+        <div class="metric-subtext">Out of stock: {metrics.outOfStockProducts}</div>
       </div>
-    </div>
+    </a>
 
     <div class="metric-card">
       <div class="metric-icon" style="background: var(--color-bg-info-light);">
@@ -287,8 +316,9 @@
         </svg>
       </div>
       <div class="metric-content">
-        <div class="metric-value">{metrics.activeUsers}</div>
-        <div class="metric-label">Active Users</div>
+        <div class="metric-value">{metrics.totalCustomers}</div>
+        <div class="metric-label">Total Customers</div>
+        <div class="metric-subtext">New this month: {metrics.newCustomersThisMonth}</div>
       </div>
     </div>
   </div>
@@ -299,30 +329,43 @@
     <div class="dashboard-card">
       <h2>Recent Orders</h2>
       <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each recentOrders as order}
+        {#if recentOrders.length > 0}
+          <table>
+            <thead>
               <tr>
-                <td class="order-id">{order.id}</td>
-                <td>{order.customer}</td>
-                <td class="amount">${order.amount}</td>
-                <td>
-                  <span class="status-badge" style="color: {getStatusColor(order.status)}">
-                    {order.status}
-                  </span>
-                </td>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each recentOrders as order}
+                <tr>
+                  <td class="order-id">{order.id.substring(0, 8)}</td>
+                  <td>
+                    <div class="customer-cell">
+                      <div class="customer-name">{order.customer_name}</div>
+                      <div class="customer-email">{order.customer_email}</div>
+                    </div>
+                  </td>
+                  <td class="amount">{formatCurrency(order.total)}</td>
+                  <td>
+                    <span class="status-badge" style="color: {getStatusColor(order.status)}">
+                      {getStatusLabel(order.status)}
+                    </span>
+                  </td>
+                  <td class="date-cell">{formatDate(order.created_at)}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+          <div class="empty-state">
+            <p>No orders yet</p>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -373,6 +416,69 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Top Products and Low Stock -->
+  <div class="dashboard-grid">
+    <!-- Top Products -->
+    <div class="dashboard-card">
+      <h2>Top Selling Products</h2>
+      {#if topProducts.length > 0}
+        <div class="product-list">
+          {#each topProducts as product}
+            <div class="product-item">
+              {#if product.image && product.image.trim() !== ''}
+                <img src={product.image} alt={product.name} class="product-thumb" />
+              {:else}
+                <div class="product-thumb product-thumb-placeholder">
+                  <span>📦</span>
+                </div>
+              {/if}
+              <div class="product-info">
+                <div class="product-name">{product.name}</div>
+                <div class="product-stats">
+                  {product.total_quantity} sold · {formatCurrency(product.total_revenue)}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="empty-state">
+          <p>No sales data available</p>
+        </div>
+      {/if}
+    </div>
+
+    <!-- Low Stock Alerts -->
+    <div class="dashboard-card">
+      <h2>Low Stock Alerts</h2>
+      {#if lowStockProducts.length > 0}
+        <div class="product-list">
+          {#each lowStockProducts as product}
+            <div class="product-item">
+              {#if product.image && product.image.trim() !== ''}
+                <img src={product.image} alt={product.name} class="product-thumb" />
+              {:else}
+                <div class="product-thumb product-thumb-placeholder">
+                  <span>📦</span>
+                </div>
+              {/if}
+              <div class="product-info">
+                <div class="product-name">{product.name}</div>
+                <div class="product-stats">
+                  <span class="stock-warning">{product.stock} remaining</span> · {product.category}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="empty-state">
+          <p>All products are well stocked</p>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -770,6 +876,13 @@
     transition: color var(--transition-normal);
   }
 
+  .metric-subtext {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    margin-top: 0.5rem;
+    transition: color var(--transition-normal);
+  }
+
   .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -842,6 +955,101 @@
     text-transform: capitalize;
   }
 
+  .customer-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .customer-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .customer-email {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+  }
+
+  .date-cell {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-tertiary);
+  }
+
+  .empty-state p {
+    margin: 0;
+  }
+
+  .product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .product-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--color-bg-tertiary);
+    border-radius: 8px;
+    transition: background-color var(--transition-normal);
+  }
+
+  .product-item:hover {
+    background: var(--color-bg-secondary);
+  }
+
+  .product-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .product-thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+  }
+
+  .product-thumb-placeholder span {
+    font-size: 1.5rem;
+  }
+
+  .product-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .product-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .product-stats {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  .stock-warning {
+    color: var(--color-danger);
+    font-weight: 600;
+  }
+
   .status-list {
     display: flex;
     flex-direction: column;
@@ -905,61 +1113,77 @@
     transform: translateY(-2px);
   }
 
+  /* Mobile-first responsive design */
   @media (max-width: 768px) {
+    .dashboard {
+      max-width: 100%;
+    }
+
+    .dashboard-header {
+      margin-bottom: 1.5rem;
+    }
+
     .dashboard-header h1 {
       font-size: 1.5rem;
     }
 
+    .dashboard-header p {
+      font-size: 0.875rem;
+    }
+
     .ai-chat-hero {
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     .ai-chat-container {
       flex-direction: column;
-      padding: 1.5rem;
+      padding: 1.25rem;
       text-align: center;
+      gap: 1rem;
     }
 
     .ai-chat-icon {
-      width: 56px;
-      height: 56px;
+      width: 52px;
+      height: 52px;
     }
 
     .ai-chat-icon svg {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
     }
 
     .ai-chat-content h2 {
-      font-size: 1.25rem;
-      margin-bottom: 0.875rem;
+      font-size: 1.125rem;
+      margin-bottom: 0.75rem;
     }
 
     .ai-chat-input-wrapper {
       flex-direction: column;
       gap: 0.625rem;
-      padding: 0.875rem;
+      padding: 0.75rem;
     }
 
     .ai-chat-input {
       font-size: 0.9375rem;
-      text-align: center;
+      padding: 0.625rem;
     }
 
     .ai-chat-submit {
       width: 100%;
-      height: 44px;
+      height: 42px;
     }
 
     .ai-chat-suggestions {
       justify-content: center;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .suggestion-label {
       width: 100%;
       text-align: center;
       margin-bottom: 0.25rem;
+      font-size: 0.75rem;
     }
 
     .suggestion-tag {
@@ -969,19 +1193,143 @@
 
     .metrics-grid {
       grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      padding: 1rem;
+    }
+
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+    }
+
+    .metric-label {
+      font-size: 0.8125rem;
+    }
+
+    .metric-subtext {
+      font-size: 0.6875rem;
     }
 
     .dashboard-grid {
       grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .dashboard-card {
+      padding: 1rem;
+    }
+
+    .dashboard-card h2 {
+      font-size: 1rem;
+    }
+
+    .dashboard-card table {
+      font-size: 0.875rem;
+    }
+
+    .dashboard-card th {
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.5rem;
+    }
+
+    .dashboard-card td {
+      font-size: 0.875rem;
+      padding: 0.75rem 0.5rem;
+    }
+
+    .customer-name {
+      font-size: 0.875rem;
+    }
+
+    .customer-email {
+      font-size: 0.75rem;
+    }
+
+    .status-badge {
+      font-size: 0.6875rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .status-item {
+      padding: 0.75rem;
+    }
+
+    .status-info span {
+      font-size: 0.875rem;
+    }
+
+    .status-indicator {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.75rem;
     }
 
     .quick-actions {
       flex-direction: column;
+      gap: 0.75rem;
     }
 
     .action-btn {
       width: 100%;
       justify-content: center;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9375rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .dashboard-header h1 {
+      font-size: 1.25rem;
+    }
+
+    .ai-chat-container {
+      padding: 1rem;
+    }
+
+    .ai-chat-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .ai-chat-content h2 {
+      font-size: 1rem;
+    }
+
+    .metrics-grid {
+      gap: 0.875rem;
+    }
+
+    .metric-card {
+      padding: 0.875rem;
+    }
+
+    .metric-icon {
+      width: 44px;
+      height: 44px;
+    }
+
+    .metric-value {
+      font-size: 1.375rem;
+    }
+
+    .dashboard-card {
+      padding: 0.875rem;
+    }
+
+    .dashboard-card h2 {
+      font-size: 0.9375rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
     }
   }
 

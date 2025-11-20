@@ -24,6 +24,79 @@ export interface SiteThemeColors {
   borderSecondary: string;
 }
 
+export interface GeneralSettings {
+  storeName: string;
+  tagline: string;
+  description: string;
+  storeEmail: string;
+  supportEmail: string;
+  contactPhone: string;
+  currency: string;
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  weightUnit: string;
+  dimensionUnit: string;
+}
+
+export interface AddressSettings {
+  street: string;
+  city: string;
+  state: string;
+  postcode: string;
+  country: string;
+  geolocationEnabled: boolean;
+}
+
+export interface TaxSettings {
+  calculationsEnabled: boolean;
+  pricesIncludeTax: boolean;
+  displayPricesWithTax: boolean;
+  defaultRate: number;
+  taxClasses: TaxClass[];
+}
+
+export interface TaxClass {
+  id: string;
+  name: string;
+  rate: number;
+}
+
+export interface PaymentSettings {
+  stripeEnabled: boolean;
+  stripeMode: 'test' | 'live';
+  stripePublicKey: string;
+  stripeSecretKey: string;
+  paypalEnabled: boolean;
+  paypalMode: 'sandbox' | 'live';
+  paypalClientId: string;
+  paypalClientSecret: string;
+  testModeEnabled: boolean;
+}
+
+export interface EmailSettings {
+  provider: 'sendmail' | 'smtp';
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUsername: string;
+  smtpPassword: string;
+  fromName: string;
+  fromAddress: string;
+  newOrderEnabled: boolean;
+  orderStatusEnabled: boolean;
+  customerWelcomeEnabled: boolean;
+}
+
+export interface ApiSettings {
+  restEnabled: boolean;
+  webhookOrderCreated: string;
+  webhookOrderUpdated: string;
+  webhookProductUpdated: string;
+  rateLimit: number;
+  rateLimitWindow: number;
+}
+
 /**
  * Get all site settings for a given site
  */
@@ -144,6 +217,310 @@ export async function updateThemeColors(
     if (value) {
       const dbKey = colorMap[key as keyof SiteThemeColors];
       await upsertSiteSetting(db, siteId, `${prefix}${dbKey}`, value);
+    }
+  }
+}
+
+/**
+ * Get general settings
+ */
+export async function getGeneralSettings(db: D1Database, siteId: string): Promise<GeneralSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  return {
+    storeName: settingsMap.get('general_store_name') || 'Hermes eCommerce',
+    tagline: settingsMap.get('general_tagline') || '',
+    description: settingsMap.get('general_description') || '',
+    storeEmail: settingsMap.get('general_store_email') || '',
+    supportEmail: settingsMap.get('general_support_email') || '',
+    contactPhone: settingsMap.get('general_contact_phone') || '',
+    currency: settingsMap.get('general_currency') || 'USD',
+    timezone: settingsMap.get('general_timezone') || 'UTC',
+    dateFormat: settingsMap.get('general_date_format') || 'MM/DD/YYYY',
+    timeFormat: settingsMap.get('general_time_format') || '12h',
+    weightUnit: settingsMap.get('general_weight_unit') || 'lb',
+    dimensionUnit: settingsMap.get('general_dimension_unit') || 'in'
+  };
+}
+
+/**
+ * Update general settings
+ */
+export async function updateGeneralSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<GeneralSettings>
+): Promise<void> {
+  const settingsMap: Record<keyof GeneralSettings, string> = {
+    storeName: 'general_store_name',
+    tagline: 'general_tagline',
+    description: 'general_description',
+    storeEmail: 'general_store_email',
+    supportEmail: 'general_support_email',
+    contactPhone: 'general_contact_phone',
+    currency: 'general_currency',
+    timezone: 'general_timezone',
+    dateFormat: 'general_date_format',
+    timeFormat: 'general_time_format',
+    weightUnit: 'general_weight_unit',
+    dimensionUnit: 'general_dimension_unit'
+  };
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      const dbKey = settingsMap[key as keyof GeneralSettings];
+      await upsertSiteSetting(db, siteId, dbKey, String(value));
+    }
+  }
+}
+
+/**
+ * Get address settings
+ */
+export async function getAddressSettings(db: D1Database, siteId: string): Promise<AddressSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  return {
+    street: settingsMap.get('address_street') || '',
+    city: settingsMap.get('address_city') || '',
+    state: settingsMap.get('address_state') || '',
+    postcode: settingsMap.get('address_postcode') || '',
+    country: settingsMap.get('address_country') || 'US',
+    geolocationEnabled: settingsMap.get('address_geolocation_enabled') === 'true'
+  };
+}
+
+/**
+ * Update address settings
+ */
+export async function updateAddressSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<AddressSettings>
+): Promise<void> {
+  const settingsMap: Record<keyof AddressSettings, string> = {
+    street: 'address_street',
+    city: 'address_city',
+    state: 'address_state',
+    postcode: 'address_postcode',
+    country: 'address_country',
+    geolocationEnabled: 'address_geolocation_enabled'
+  };
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      const dbKey = settingsMap[key as keyof AddressSettings];
+      await upsertSiteSetting(db, siteId, dbKey, String(value));
+    }
+  }
+}
+
+/**
+ * Get tax settings
+ */
+export async function getTaxSettings(db: D1Database, siteId: string): Promise<TaxSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  const taxClassesJson = settingsMap.get('tax_classes') || '[]';
+  let taxClasses: TaxClass[] = [];
+  try {
+    taxClasses = JSON.parse(taxClassesJson);
+  } catch {
+    taxClasses = [];
+  }
+
+  return {
+    calculationsEnabled: settingsMap.get('tax_calculations_enabled') === 'true',
+    pricesIncludeTax: settingsMap.get('tax_prices_include_tax') === 'true',
+    displayPricesWithTax: settingsMap.get('tax_display_prices_with_tax') === 'true',
+    defaultRate: parseFloat(settingsMap.get('tax_default_rate') || '0'),
+    taxClasses
+  };
+}
+
+/**
+ * Update tax settings
+ */
+export async function updateTaxSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<TaxSettings>
+): Promise<void> {
+  if (settings.calculationsEnabled !== undefined) {
+    await upsertSiteSetting(
+      db,
+      siteId,
+      'tax_calculations_enabled',
+      String(settings.calculationsEnabled)
+    );
+  }
+  if (settings.pricesIncludeTax !== undefined) {
+    await upsertSiteSetting(
+      db,
+      siteId,
+      'tax_prices_include_tax',
+      String(settings.pricesIncludeTax)
+    );
+  }
+  if (settings.displayPricesWithTax !== undefined) {
+    await upsertSiteSetting(
+      db,
+      siteId,
+      'tax_display_prices_with_tax',
+      String(settings.displayPricesWithTax)
+    );
+  }
+  if (settings.defaultRate !== undefined) {
+    await upsertSiteSetting(db, siteId, 'tax_default_rate', String(settings.defaultRate));
+  }
+  if (settings.taxClasses !== undefined) {
+    await upsertSiteSetting(db, siteId, 'tax_classes', JSON.stringify(settings.taxClasses));
+  }
+}
+
+/**
+ * Get payment settings
+ * Note: Sensitive values should be decrypted at application level
+ */
+export async function getPaymentSettings(db: D1Database, siteId: string): Promise<PaymentSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  return {
+    stripeEnabled: settingsMap.get('payment_stripe_enabled') === 'true',
+    stripeMode: (settingsMap.get('payment_stripe_mode') as 'test' | 'live') || 'test',
+    stripePublicKey: settingsMap.get('payment_stripe_public_key') || '',
+    stripeSecretKey: settingsMap.get('payment_stripe_secret_key') || '',
+    paypalEnabled: settingsMap.get('payment_paypal_enabled') === 'true',
+    paypalMode: (settingsMap.get('payment_paypal_mode') as 'sandbox' | 'live') || 'sandbox',
+    paypalClientId: settingsMap.get('payment_paypal_client_id') || '',
+    paypalClientSecret: settingsMap.get('payment_paypal_client_secret') || '',
+    testModeEnabled: settingsMap.get('payment_test_mode_enabled') === 'true'
+  };
+}
+
+/**
+ * Update payment settings
+ * Note: Sensitive values should be encrypted at application level before calling this
+ */
+export async function updatePaymentSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<PaymentSettings>
+): Promise<void> {
+  const settingsMap: Record<keyof PaymentSettings, string> = {
+    stripeEnabled: 'payment_stripe_enabled',
+    stripeMode: 'payment_stripe_mode',
+    stripePublicKey: 'payment_stripe_public_key',
+    stripeSecretKey: 'payment_stripe_secret_key',
+    paypalEnabled: 'payment_paypal_enabled',
+    paypalMode: 'payment_paypal_mode',
+    paypalClientId: 'payment_paypal_client_id',
+    paypalClientSecret: 'payment_paypal_client_secret',
+    testModeEnabled: 'payment_test_mode_enabled'
+  };
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      const dbKey = settingsMap[key as keyof PaymentSettings];
+      await upsertSiteSetting(db, siteId, dbKey, String(value));
+    }
+  }
+}
+
+/**
+ * Get email settings
+ */
+export async function getEmailSettings(db: D1Database, siteId: string): Promise<EmailSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  return {
+    provider: (settingsMap.get('email_provider') as 'sendmail' | 'smtp') || 'sendmail',
+    smtpHost: settingsMap.get('email_smtp_host') || '',
+    smtpPort: parseInt(settingsMap.get('email_smtp_port') || '587'),
+    smtpSecure: settingsMap.get('email_smtp_secure') === 'true',
+    smtpUsername: settingsMap.get('email_smtp_username') || '',
+    smtpPassword: settingsMap.get('email_smtp_password') || '',
+    fromName: settingsMap.get('email_from_name') || '',
+    fromAddress: settingsMap.get('email_from_address') || '',
+    newOrderEnabled: settingsMap.get('email_new_order_enabled') === 'true',
+    orderStatusEnabled: settingsMap.get('email_order_status_enabled') === 'true',
+    customerWelcomeEnabled: settingsMap.get('email_customer_welcome_enabled') === 'true'
+  };
+}
+
+/**
+ * Update email settings
+ */
+export async function updateEmailSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<EmailSettings>
+): Promise<void> {
+  const settingsMap: Record<keyof EmailSettings, string> = {
+    provider: 'email_provider',
+    smtpHost: 'email_smtp_host',
+    smtpPort: 'email_smtp_port',
+    smtpSecure: 'email_smtp_secure',
+    smtpUsername: 'email_smtp_username',
+    smtpPassword: 'email_smtp_password',
+    fromName: 'email_from_name',
+    fromAddress: 'email_from_address',
+    newOrderEnabled: 'email_new_order_enabled',
+    orderStatusEnabled: 'email_order_status_enabled',
+    customerWelcomeEnabled: 'email_customer_welcome_enabled'
+  };
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      const dbKey = settingsMap[key as keyof EmailSettings];
+      await upsertSiteSetting(db, siteId, dbKey, String(value));
+    }
+  }
+}
+
+/**
+ * Get API settings
+ */
+export async function getApiSettings(db: D1Database, siteId: string): Promise<ApiSettings> {
+  const settings = await getSiteSettings(db, siteId);
+  const settingsMap = new Map(settings.map((s) => [s.setting_key, s.setting_value]));
+
+  return {
+    restEnabled: settingsMap.get('api_rest_enabled') === 'true',
+    webhookOrderCreated: settingsMap.get('api_webhook_order_created') || '',
+    webhookOrderUpdated: settingsMap.get('api_webhook_order_updated') || '',
+    webhookProductUpdated: settingsMap.get('api_webhook_product_updated') || '',
+    rateLimit: parseInt(settingsMap.get('api_rate_limit') || '100'),
+    rateLimitWindow: parseInt(settingsMap.get('api_rate_limit_window') || '60')
+  };
+}
+
+/**
+ * Update API settings
+ */
+export async function updateApiSettings(
+  db: D1Database,
+  siteId: string,
+  settings: Partial<ApiSettings>
+): Promise<void> {
+  const settingsMap: Record<keyof ApiSettings, string> = {
+    restEnabled: 'api_rest_enabled',
+    webhookOrderCreated: 'api_webhook_order_created',
+    webhookOrderUpdated: 'api_webhook_order_updated',
+    webhookProductUpdated: 'api_webhook_product_updated',
+    rateLimit: 'api_rate_limit',
+    rateLimitWindow: 'api_rate_limit_window'
+  };
+
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== undefined) {
+      const dbKey = settingsMap[key as keyof ApiSettings];
+      await upsertSiteSetting(db, siteId, dbKey, String(value));
     }
   }
 }

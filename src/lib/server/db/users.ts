@@ -356,3 +356,49 @@ export async function deactivateExpiredUsers(
     .run();
   return result.meta?.changes || 0;
 }
+
+/**
+ * Get admin users (admin, user, platform_engineer roles only)
+ */
+export async function getAdminUsers(db: D1Database, siteId: string): Promise<DBUser[]> {
+  const result = await execute<DBUser>(
+    db,
+    `SELECT * FROM users 
+     WHERE site_id = ? 
+     AND role IN ('admin', 'user', 'platform_engineer')
+     ORDER BY created_at DESC`,
+    [siteId]
+  );
+  return result.results || [];
+}
+
+/**
+ * Get customer users (users with customer role or who have placed orders)
+ */
+export async function getCustomerUsers(db: D1Database, siteId: string): Promise<DBUser[]> {
+  const result = await execute<DBUser>(
+    db,
+    `SELECT DISTINCT u.* FROM users u
+     LEFT JOIN orders o ON u.id = o.user_id AND o.site_id = u.site_id
+     WHERE u.site_id = ? 
+     AND (u.role = 'customer' OR o.id IS NOT NULL)
+     ORDER BY u.created_at DESC`,
+    [siteId]
+  );
+  return result.results || [];
+}
+
+/**
+ * Get customers who have made purchases
+ */
+export async function getPurchasingCustomers(db: D1Database, siteId: string): Promise<DBUser[]> {
+  const result = await execute<DBUser>(
+    db,
+    `SELECT DISTINCT u.* FROM users u
+     INNER JOIN orders o ON u.id = o.user_id AND o.site_id = u.site_id
+     WHERE u.site_id = ?
+     ORDER BY u.created_at DESC`,
+    [siteId]
+  );
+  return result.results || [];
+}
