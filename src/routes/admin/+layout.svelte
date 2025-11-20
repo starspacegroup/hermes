@@ -497,6 +497,28 @@
         </a>
 
         <a
+          href="/admin/builder"
+          class:active={currentPath.startsWith('/admin/builder')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <path
+              d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          Builder
+        </a>
+
+        <a
           href="/admin/users"
           class:active={currentPath.startsWith('/admin/users') &&
             !currentPath.startsWith('/admin/settings/admin-users')}
