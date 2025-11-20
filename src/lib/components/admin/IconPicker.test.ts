@@ -10,7 +10,7 @@ describe('IconPicker', () => {
   });
 
   it('shows provider-relevant icons when opened', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(IconPicker, { props: { value: '', providerName: 'google' } });
 
     const trigger = screen.getByRole('button');
@@ -22,7 +22,7 @@ describe('IconPicker', () => {
   });
 
   it('selects an icon when clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(IconPicker, { props: { value: '', providerName: 'google' } });
 
     // Open picker
@@ -45,7 +45,7 @@ describe('IconPicker', () => {
   });
 
   it('filters icons based on search query', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(IconPicker, { props: { value: '', providerName: 'google' } });
 
     // Open picker

@@ -103,7 +103,7 @@ describe('EditorToolbar', () => {
     });
 
     it('calls publish event when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const publishSpy = vi.fn();
 
       render(EditorToolbar, {
@@ -202,7 +202,7 @@ describe('EditorToolbar', () => {
     });
 
     it('calls saveDraft event when clicked with unsaved changes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const saveDraftSpy = vi.fn();
 
       render(EditorToolbar, {

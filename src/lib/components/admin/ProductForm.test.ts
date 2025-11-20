@@ -92,7 +92,7 @@ describe('ProductForm - Draft Saving for New Products', () => {
   });
 
   it('enables "Save Draft" button when all required fields are filled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(ProductForm, {
       props: {
         product: null,
@@ -121,7 +121,7 @@ describe('ProductForm - Draft Saving for New Products', () => {
   });
 
   it('enables "Publish" button when all required fields are filled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(ProductForm, {
       props: {
         product: null,
@@ -150,7 +150,7 @@ describe('ProductForm - Draft Saving for New Products', () => {
   });
 
   it('disables buttons when price is negative', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(ProductForm, {
       props: {
         product: null,
@@ -181,7 +181,7 @@ describe('ProductForm - Draft Saving for New Products', () => {
   });
 
   it('saves draft successfully when "Save Draft" clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { toastStore } = await import('$lib/stores/toast');
 
     mockFetch.mockImplementation((url: string, options?: RequestInit) => {
@@ -245,7 +245,7 @@ describe('ProductForm - Draft Saving for New Products', () => {
   });
 
   it('publishes product successfully when "Publish" clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { toastStore } = await import('$lib/stores/toast');
 
     mockFetch.mockImplementation((url: string, options?: RequestInit) => {
