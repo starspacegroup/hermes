@@ -191,7 +191,7 @@
           <path d="M3 12h18M3 6h18M3 18h18" stroke-width="2" stroke-linecap="round"></path>
         </svg>
       </button>
-      <h1>Hermes Admin</h1>
+      <h1>{$page.data?.storeName || 'Hermes eCommerce'} Admin</h1>
       <div class="header-actions">
         <NotificationCenter {notifications} {unreadCount} />
         <a
@@ -216,7 +216,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" class:open={isSidebarOpen}>
       <div class="sidebar-header">
-        <h2>Hermes Admin</h2>
+        <h2>{$page.data?.storeName || 'Hermes eCommerce'} Admin</h2>
         <button class="close-sidebar" on:click={closeSidebar} aria-label="Close menu">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"></path>
@@ -496,6 +496,30 @@
           Pages
         </a>
 
+        <a
+          href="/admin/users"
+          class:active={currentPath.startsWith('/admin/users') &&
+            !currentPath.startsWith('/admin/settings/admin-users')}
+          on:click={closeSidebar}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+            <circle cx="9" cy="7" r="4" stroke-width="2"></circle>
+            <path
+              d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            ></path>
+          </svg>
+          Users
+        </a>
+
         <!-- Settings with submenu -->
         <div class="menu-item-with-submenu">
           <button
@@ -632,32 +656,119 @@
                 </svg>
                 AI
               </a>
+              <a
+                href="/admin/settings/admin-users"
+                class:active={currentPath.startsWith('/admin/settings/admin-users')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <circle cx="9" cy="7" r="4" stroke-width="2"></circle>
+                  <path
+                    d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Admin Users
+              </a>
+              <a
+                href="/admin/settings/tax"
+                class:active={currentPath.startsWith('/admin/settings/tax')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Tax
+              </a>
+              <a
+                href="/admin/settings/payment"
+                class:active={currentPath.startsWith('/admin/settings/payment')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="1"
+                    y="4"
+                    width="22"
+                    height="16"
+                    rx="2"
+                    ry="2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <path d="M1 10h22" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+                Payment
+              </a>
+              <a
+                href="/admin/settings/email"
+                class:active={currentPath.startsWith('/admin/settings/email')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path d="M22 6l-10 7L2 6" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+                Email
+              </a>
+              <a
+                href="/admin/settings/api"
+                class:active={currentPath.startsWith('/admin/settings/api')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M16 18l6-6-6-6M8 6l-6 6 6 6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                API
+              </a>
+              <a
+                href="/admin/settings"
+                class:active={currentPath === '/admin/settings'}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path
+                    d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Site
+              </a>
             </div>
           {/if}
         </div>
-
-        <a
-          href="/admin/users"
-          class:active={currentPath.startsWith('/admin/users')}
-          on:click={closeSidebar}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-            <circle cx="9" cy="7" r="4" stroke-width="2"></circle>
-            <path
-              d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-          Users
-        </a>
 
         <a
           href="/admin/activity-logs"

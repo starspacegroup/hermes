@@ -1,26 +1,40 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { invalidateAll } from '$app/navigation';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
+  // Configuration
+  const EXPIRATION_WARNING_DAYS = 7;
+  const EXPIRATION_WARNING_THRESHOLD = EXPIRATION_WARNING_DAYS * 86400; // 7 days in seconds
+
+  let filterRole = 'all';
   let filterStatus = 'all';
   let searchTerm = '';
-
-  $: activeTab = data.activeTab;
-
-  function switchTab(tab: string) {
-    goto(`/admin/users?tab=${tab}`);
-  }
 
   $: filteredUsers = data.users.filter((user) => {
     const matchesSearch =
       searchTerm === '' ||
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesRole && matchesStatus;
   });
+
+  function getRoleBadgeClass(role: string): string {
+    switch (role) {
+      case 'platform_engineer':
+        return 'role-badge-engineer';
+      case 'admin':
+        return 'role-badge-admin';
+      case 'user':
+        return 'role-badge-user';
+      default:
+        return 'role-badge-customer';
+    }
+  }
 
   function getStatusBadgeClass(status: string): string {
     switch (status) {
@@ -46,34 +60,50 @@
     if (!timestamp) return 'Never';
     return new Date(timestamp * 1000).toLocaleString();
   }
+
+  async function deleteUser(userId: string, userName: string) {
+    if (
+      !confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Invalidate and reload data without full page refresh
+        await invalidateAll();
+      } else {
+        const result = (await response.json()) as { error?: string };
+        alert(`Failed to delete user: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert(`Error deleting user: ${error}`);
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Users - Hermes Admin</title>
+  <title>Admin Users - Hermes Admin</title>
 </svelte:head>
 
 <div class="users-page">
   <div class="page-header">
     <div class="header-content">
-      <h1>Users</h1>
-      <p class="subtitle">View and manage customer accounts</p>
+      <h1>Admin Users</h1>
+      <p class="subtitle">Manage admin accounts, roles, and permissions</p>
     </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <button
-      class="tab"
-      class:active={activeTab === 'customers'}
-      on:click={() => switchTab('customers')}
-    >
-      Customers
-      <span class="tab-count">{data.purchasingCustomersCount}</span>
-    </button>
-    <button class="tab" class:active={activeTab === 'all'} on:click={() => switchTab('all')}>
-      All
-      <span class="tab-count">{data.customersCount}</span>
-    </button>
+    {#if data.currentUser.canWrite}
+      <button class="btn-primary" on:click={() => goto('/admin/settings/admin-users/create')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        Add Admin User
+      </button>
+    {/if}
   </div>
 
   <div class="filters-section">
@@ -83,6 +113,17 @@
         <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"></path>
       </svg>
       <input type="text" bind:value={searchTerm} placeholder="Search by name or email..." />
+    </div>
+
+    <div class="filter-group">
+      <label for="filter-role">Role:</label>
+      <select id="filter-role" bind:value={filterRole}>
+        <option value="all">All Roles</option>
+        <option value="platform_engineer">Platform Engineer</option>
+        <option value="admin">Admin</option>
+        <option value="user">User</option>
+        <option value="customer">Customer</option>
+      </select>
     </div>
 
     <div class="filter-group">
@@ -107,11 +148,10 @@
         <tr>
           <th>Name</th>
           <th>Email</th>
+          <th>Role</th>
           <th>Status</th>
+          <th>Expiration</th>
           <th>Last Login</th>
-          {#if activeTab === 'customers'}
-            <th>Orders</th>
-          {/if}
           <th>Actions</th>
         </tr>
       </thead>
@@ -126,6 +166,11 @@
             </td>
             <td>{user.email}</td>
             <td>
+              <span class="role-badge {getRoleBadgeClass(user.role)}">
+                {user.role.replace('_', ' ')}
+              </span>
+            </td>
+            <td>
               <span class="status-badge {getStatusBadgeClass(user.status)}">
                 {user.status}
                 {#if !user.isActive}
@@ -134,24 +179,27 @@
               </span>
             </td>
             <td>
+              {#if user.expiration_date}
+                <span
+                  class:expiring-soon={user.expiration_date <
+                    Date.now() / 1000 + EXPIRATION_WARNING_THRESHOLD}
+                >
+                  {formatDate(user.expiration_date)}
+                </span>
+              {:else}
+                <span class="no-expiration">No expiration</span>
+              {/if}
+            </td>
+            <td>
               <span title={formatDateTime(user.last_login_at)}>
                 {formatDate(user.last_login_at)}
               </span>
             </td>
-            {#if activeTab === 'customers'}
-              <td>
-                {#if user.hasPurchased}
-                  <span class="has-orders-badge">✓ Has Orders</span>
-                {:else}
-                  <span class="no-orders-text">No orders</span>
-                {/if}
-              </td>
-            {/if}
             <td>
               <div class="action-buttons">
                 <button
                   class="btn-icon"
-                  on:click={() => goto(`/admin/users/${user.id}`)}
+                  on:click={() => goto(`/admin/settings/admin-users/${user.id}`)}
                   title="View details"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -159,19 +207,72 @@
                     <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
                   </svg>
                 </button>
+                {#if user.id === data.currentUser.id}
+                  <span class="current-user-badge" title="This is your account">
+                    ✨ Hey it's me!
+                  </span>
+                {:else if user.isSystemUser}
+                  <span class="system-user-badge" title="System user - Cannot be edited">
+                    🔒 System User
+                  </span>
+                {:else}
+                  {#if data.currentUser.canWrite}
+                    <button
+                      class="btn-icon"
+                      on:click={() => goto(`/admin/settings/admin-users/${user.id}/edit`)}
+                      title="Edit user"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        ></path>
+                        <path
+                          d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+                  {/if}
+                  {#if data.currentUser.canDelete}
+                    <button
+                      class="btn-icon btn-danger"
+                      on:click={() => deleteUser(user.id, user.name)}
+                      title="Delete user"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path
+                          d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+                  {/if}
+                {/if}
               </div>
             </td>
           </tr>
         {:else}
           <tr>
-            <td colspan={activeTab === 'customers' ? 6 : 5} class="no-results">
-              <p>
-                {#if activeTab === 'customers'}
-                  No customers with purchases found matching your filters.
-                {:else}
-                  No customers found matching your filters.
-                {/if}
-              </p>
+            <td colspan="7" class="no-results">
+              <p>No users found matching your filters.</p>
             </td>
           </tr>
         {/each}
@@ -191,7 +292,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     gap: 2rem;
   }
 
@@ -206,55 +307,23 @@
     color: var(--color-text-secondary);
   }
 
-  .tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid var(--color-border);
-  }
-
-  .tab {
-    display: flex;
+  .btn-primary {
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: transparent;
+    background: var(--color-primary);
+    color: white;
     border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
+    border-radius: 0.5rem;
     font-size: 1rem;
     font-weight: 500;
-    color: var(--color-text-secondary);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s;
   }
 
-  .tab:hover {
-    color: var(--color-text);
-    background: var(--color-background-hover);
-  }
-
-  .tab.active {
-    color: var(--color-primary);
-    border-bottom-color: var(--color-primary);
-  }
-
-  .tab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.5rem;
-    height: 1.5rem;
-    padding: 0 0.5rem;
-    background: var(--color-background-secondary);
-    border-radius: 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .tab.active .tab-count {
-    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
-    color: var(--color-primary);
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
   }
 
   .filters-section {
@@ -381,6 +450,7 @@
     font-weight: 500;
   }
 
+  .role-badge,
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -391,6 +461,26 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .role-badge-engineer {
+    background: var(--color-engineer-gradient-end);
+    color: white;
+  }
+
+  .role-badge-admin {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .role-badge-user {
+    background: var(--color-success);
+    color: white;
+  }
+
+  .role-badge-customer {
+    background: var(--color-secondary);
+    color: white;
   }
 
   .status-badge-active {
@@ -417,19 +507,12 @@
     font-size: 0.875rem;
   }
 
-  .has-orders-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    background: color-mix(in srgb, var(--color-success) 15%, transparent);
-    color: var(--color-success-hover);
-    border-radius: 1rem;
-    font-size: 0.75rem;
+  .expiring-soon {
+    color: var(--color-danger-hover);
     font-weight: 600;
   }
 
-  .no-orders-text {
+  .no-expiration {
     color: var(--color-text-secondary);
     font-style: italic;
   }
@@ -462,6 +545,34 @@
     background: color-mix(in srgb, var(--color-danger) 15%, transparent);
     border-color: var(--color-danger-hover);
     color: var(--color-danger-hover);
+  }
+
+  .system-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .current-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border: 1px solid var(--color-primary);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    white-space: nowrap;
   }
 
   .no-results {

@@ -9,6 +9,7 @@
 
   $: quantity = cartStore.getItemQuantity($cartItems, product.id);
   $: totalStock = calculateTotalStock(product.fulfillmentOptions);
+  $: hasImage = product.image && product.image.trim() !== '';
 
   let isImageLoaded = false;
   let imageError = false;
@@ -38,7 +39,7 @@
 
   // Check if image is already loaded (cached)
   onMount(() => {
-    if (imgElement && imgElement.complete) {
+    if (hasImage && imgElement && imgElement.complete) {
       if (imgElement.naturalHeight !== 0) {
         handleImageLoad();
       } else {
@@ -50,23 +51,30 @@
 
 <div class="product-card">
   <div class="image-container">
-    {#if !isImageLoaded}
-      <div class="image-skeleton"></div>
-    {/if}
-    {#if imageError}
+    {#if !hasImage}
       <div class="image-placeholder">
         <span>📦</span>
-        <p>Image unavailable</p>
+        <p>No image</p>
       </div>
     {:else}
-      <img
-        bind:this={imgElement}
-        src={product.image}
-        alt={product.name}
-        class:loaded={isImageLoaded}
-        on:load={handleImageLoad}
-        on:error={handleImageError}
-      />
+      {#if !isImageLoaded}
+        <div class="image-skeleton"></div>
+      {/if}
+      {#if imageError}
+        <div class="image-placeholder">
+          <span>📦</span>
+          <p>Image unavailable</p>
+        </div>
+      {:else}
+        <img
+          bind:this={imgElement}
+          src={product.image}
+          alt={product.name}
+          class:loaded={isImageLoaded}
+          on:load={handleImageLoad}
+          on:error={handleImageError}
+        />
+      {/if}
     {/if}
     <div class="image-overlay">
       <Button variant="primary" on:click={() => (window.location.href = `/product/${product.id}`)}>

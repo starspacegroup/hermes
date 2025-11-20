@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getDB, getAllUsers } from '$lib/server/db';
+import { getDB, getAllUsers, getPurchasingCustomers } from '$lib/server/db';
 import {
   canPerformAction,
   isUserAccountActive,
@@ -8,7 +8,7 @@ import {
 } from '$lib/server/permissions';
 import { error } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ platform, cookies, locals }) => {
+export const load: PageServerLoad = async ({ platform, cookies, locals, url }) => {
   // Check authentication
   const userSession = cookies.get('user_session');
   if (!userSession) {
@@ -25,27 +25,53 @@ export const load: PageServerLoad = async ({ platform, cookies, locals }) => {
   const db = getDB(platform);
   const siteId = locals.siteId;
 
-  // Get all users
-  const users = await getAllUsers(db, siteId);
+  // Get the active tab from URL params (default to 'customers')
+  const activeTab = url.searchParams.get('tab') || 'customers';
+
+  // Get all users and customers with purchases
+  const [allUsers, purchasingCustomers] = await Promise.all([
+    getAllUsers(db, siteId),
+    getPurchasingCustomers(db, siteId)
+  ]);
+
+  // Filter to only customer role users for the customers tab
+  const customerUsers = allUsers.filter((user) => user.role === 'customer');
 
   // Sanitize users (remove password hashes) and add computed fields
-  const sanitizedUsers = await Promise.all(
-    users.map(async (user) => {
-      const { password_hash: _password_hash, ...userWithoutPassword } = user;
-      const isSystem = isSystemUser(user.id);
-      return {
-        ...userWithoutPassword,
-        isActive: isUserAccountActive(user),
-        permissions: isSystem
-          ? await getUserAllPermissions(db, user)
-          : JSON.parse(user.permissions),
-        isSystemUser: isSystem
-      };
-    })
-  );
+  const sanitizeUsers = async (users: typeof allUsers) => {
+    return Promise.all(
+      users.map(async (user) => {
+        const { password_hash: _password_hash, ...userWithoutPassword } = user;
+        const isSystem = isSystemUser(user.id);
+        const hasPurchased = purchasingCustomers.some((pc) => pc.id === user.id);
+        return {
+          ...userWithoutPassword,
+          isActive: isUserAccountActive(user),
+          permissions: isSystem
+            ? await getUserAllPermissions(db, user)
+            : JSON.parse(user.permissions),
+          isSystemUser: isSystem,
+          hasPurchased
+        };
+      })
+    );
+  };
+
+  const sanitizedAllUsers = await sanitizeUsers(allUsers);
+  const sanitizedCustomerUsers = await sanitizeUsers(customerUsers);
+
+  // Filter based on active tab
+  const displayUsers =
+    activeTab === 'customers'
+      ? sanitizedCustomerUsers.filter((u) => u.hasPurchased)
+      : sanitizedCustomerUsers;
 
   return {
-    users: sanitizedUsers,
+    users: displayUsers,
+    allUsersCount: sanitizedAllUsers.length,
+    customersCount: sanitizedCustomerUsers.length,
+    purchasingCustomersCount: sanitizedCustomerUsers.filter((u) => u.hasPurchased).length,
+    activeTab,
     currentUser: {
       id: currentUser.id,
       role: currentUser.role,

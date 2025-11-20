@@ -33,7 +33,7 @@
 </script>
 
 <svelte:head>
-  <title>{page.title} - Hermes</title>
+  <title>{page.title} - {data.storeName || 'Hermes eCommerce'}</title>
 </svelte:head>
 
 {#if isPreview && page.status === 'draft'}
