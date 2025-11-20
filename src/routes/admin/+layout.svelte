@@ -679,6 +679,73 @@
                 Admin Users
               </a>
               <a
+                href="/admin/settings/tax"
+                class:active={currentPath.startsWith('/admin/settings/tax')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Tax
+              </a>
+              <a
+                href="/admin/settings/payment"
+                class:active={currentPath.startsWith('/admin/settings/payment')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="1"
+                    y="4"
+                    width="22"
+                    height="16"
+                    rx="2"
+                    ry="2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <path d="M1 10h22" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+                Payment
+              </a>
+              <a
+                href="/admin/settings/email"
+                class:active={currentPath.startsWith('/admin/settings/email')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path d="M22 6l-10 7L2 6" stroke-width="2" stroke-linecap="round"></path>
+                </svg>
+                Email
+              </a>
+              <a
+                href="/admin/settings/api"
+                class:active={currentPath.startsWith('/admin/settings/api')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M16 18l6-6-6-6M8 6l-6 6 6 6"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                API
+              </a>
+              <a
                 href="/admin/settings"
                 class:active={currentPath === '/admin/settings'}
                 on:click={closeSidebar}

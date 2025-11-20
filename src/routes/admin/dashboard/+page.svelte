@@ -1113,61 +1113,77 @@
     transform: translateY(-2px);
   }
 
+  /* Mobile-first responsive design */
   @media (max-width: 768px) {
+    .dashboard {
+      max-width: 100%;
+    }
+
+    .dashboard-header {
+      margin-bottom: 1.5rem;
+    }
+
     .dashboard-header h1 {
       font-size: 1.5rem;
     }
 
+    .dashboard-header p {
+      font-size: 0.875rem;
+    }
+
     .ai-chat-hero {
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     .ai-chat-container {
       flex-direction: column;
-      padding: 1.5rem;
+      padding: 1.25rem;
       text-align: center;
+      gap: 1rem;
     }
 
     .ai-chat-icon {
-      width: 56px;
-      height: 56px;
+      width: 52px;
+      height: 52px;
     }
 
     .ai-chat-icon svg {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
     }
 
     .ai-chat-content h2 {
-      font-size: 1.25rem;
-      margin-bottom: 0.875rem;
+      font-size: 1.125rem;
+      margin-bottom: 0.75rem;
     }
 
     .ai-chat-input-wrapper {
       flex-direction: column;
       gap: 0.625rem;
-      padding: 0.875rem;
+      padding: 0.75rem;
     }
 
     .ai-chat-input {
       font-size: 0.9375rem;
-      text-align: center;
+      padding: 0.625rem;
     }
 
     .ai-chat-submit {
       width: 100%;
-      height: 44px;
+      height: 42px;
     }
 
     .ai-chat-suggestions {
       justify-content: center;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .suggestion-label {
       width: 100%;
       text-align: center;
       margin-bottom: 0.25rem;
+      font-size: 0.75rem;
     }
 
     .suggestion-tag {
@@ -1177,19 +1193,143 @@
 
     .metrics-grid {
       grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      padding: 1rem;
+    }
+
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+    }
+
+    .metric-label {
+      font-size: 0.8125rem;
+    }
+
+    .metric-subtext {
+      font-size: 0.6875rem;
     }
 
     .dashboard-grid {
       grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .dashboard-card {
+      padding: 1rem;
+    }
+
+    .dashboard-card h2 {
+      font-size: 1rem;
+    }
+
+    .dashboard-card table {
+      font-size: 0.875rem;
+    }
+
+    .dashboard-card th {
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.5rem;
+    }
+
+    .dashboard-card td {
+      font-size: 0.875rem;
+      padding: 0.75rem 0.5rem;
+    }
+
+    .customer-name {
+      font-size: 0.875rem;
+    }
+
+    .customer-email {
+      font-size: 0.75rem;
+    }
+
+    .status-badge {
+      font-size: 0.6875rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .status-item {
+      padding: 0.75rem;
+    }
+
+    .status-info span {
+      font-size: 0.875rem;
+    }
+
+    .status-indicator {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.75rem;
     }
 
     .quick-actions {
       flex-direction: column;
+      gap: 0.75rem;
     }
 
     .action-btn {
       width: 100%;
       justify-content: center;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9375rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .dashboard-header h1 {
+      font-size: 1.25rem;
+    }
+
+    .ai-chat-container {
+      padding: 1rem;
+    }
+
+    .ai-chat-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .ai-chat-content h2 {
+      font-size: 1rem;
+    }
+
+    .metrics-grid {
+      gap: 0.875rem;
+    }
+
+    .metric-card {
+      padding: 0.875rem;
+    }
+
+    .metric-icon {
+      width: 44px;
+      height: 44px;
+    }
+
+    .metric-value {
+      font-size: 1.375rem;
+    }
+
+    .dashboard-card {
+      padding: 0.875rem;
+    }
+
+    .dashboard-card h2 {
+      font-size: 0.9375rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
     }
   }
 
