@@ -663,7 +663,6 @@
             onUpdate={(config) => {
               if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
             }}
-            onClose={() => (selectedWidget = null)}
           />
         </div>
       {/if}

@@ -11,6 +11,7 @@
   import { themeStore } from '../lib/stores/theme';
 
   import '../app.css';
+  import { browser } from '$app/environment';
   import { page } from '$app/stores';
   import { goto, beforeNavigate } from '$app/navigation';
   import type { LayoutData } from './$types';
@@ -25,7 +26,7 @@
   });
 
   $: totalItems = cartStore.getTotalItems($cartStore);
-  $: isAdminPage = $page.url.pathname.startsWith('/admin');
+  $: isAdminPage = browser && $page.url.pathname.startsWith('/admin');
   $: canAccessAdmin =
     $authState.isAuthenticated &&
     ($authState.user?.role === 'admin' || $authState.user?.role === 'platform_engineer');

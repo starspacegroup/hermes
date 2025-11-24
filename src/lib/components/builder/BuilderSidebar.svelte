@@ -1,15 +1,28 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { Plus, X, Search, Layout, Type, Image, Box, ShoppingCart } from 'lucide-svelte';
+  import {
+    Plus,
+    X,
+    Search,
+    Layout,
+    Type,
+    Image,
+    Box,
+    ShoppingCart,
+    ChevronDown
+  } from 'lucide-svelte';
   import type { PageWidget, WidgetType } from '$lib/types/pages';
 
   export let widgets: PageWidget[];
-  export let selectedWidget: PageWidget | null;
+  export let title: string;
+  export let slug: string;
 
   const dispatch = createEventDispatcher();
 
   let searchQuery = '';
   let activeCategory: string = 'all';
+  let pageSettingsExpanded = true;
+  let componentsExpanded = true;
 
   // Widget library organized by category
   const widgetLibrary = {
@@ -54,7 +67,10 @@
     { id: 'commerce', name: 'Commerce', icon: ShoppingCart }
   ];
 
-  function getFilteredWidgets() {
+  // Reactive filtered widgets based on search and category
+  $: filteredWidgets = (() => {
+    // Using any here because widgetLibrary has complex union types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let allWidgets: any[] = [];
     if (activeCategory === 'all') {
       Object.values(widgetLibrary).forEach((category) => {
@@ -64,22 +80,24 @@
       allWidgets = widgetLibrary[activeCategory as keyof typeof widgetLibrary] || [];
     }
 
-    if (searchQuery) {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
       allWidgets = allWidgets.filter(
         (w) =>
-          w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          w.description.toLowerCase().includes(searchQuery.toLowerCase())
+          w.name.toLowerCase().includes(query) ||
+          w.description.toLowerCase().includes(query) ||
+          w.type.toLowerCase().includes(query)
       );
     }
 
     return allWidgets;
-  }
+  })();
 
-  function addWidget(type: WidgetType) {
+  function addWidget(type: string) {
     const newWidget: PageWidget = {
       id: `temp-${Date.now()}`,
-      type,
-      config: getDefaultConfig(type),
+      type: type as WidgetType,
+      config: getDefaultConfig(type as WidgetType),
       position: widgets.length,
       page_id: '',
       created_at: Date.now(),
@@ -88,100 +106,298 @@
     dispatch('addWidget', newWidget);
   }
 
-  function getDefaultConfig(type: WidgetType) {
+  function getDefaultConfig(type: WidgetType): Record<string, unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const defaults: Record<WidgetType, any> = {
       hero: {
-        heading: 'Welcome to our site',
-        text: 'Discover amazing products',
-        heroHeight: { desktop: '400px', tablet: '350px', mobile: '300px' }
+        // Content
+        title: 'Welcome to Our Site',
+        subtitle: 'Discover amazing products and services',
+        ctaText: 'Get Started',
+        ctaLink: '#',
+        secondaryCtaText: '',
+        secondaryCtaLink: '',
+        // Background
+        backgroundColor: 'theme:primary',
+        backgroundImage: '',
+        overlay: false,
+        overlayOpacity: 50,
+        // Layout
+        contentAlign: 'center',
+        heroHeight: { desktop: '500px', tablet: '400px', mobile: '300px' },
+        // Text colors
+        titleColor: 'theme:text',
+        subtitleColor: 'theme:textSecondary'
       },
-      text: { text: 'Enter your text here', alignment: 'left' },
-      image: { src: '', alt: 'Image', imageWidth: '100%' },
-      heading: { heading: 'Heading', level: 2 },
-      button: { buttonText: 'Click me', buttonUrl: '#', buttonStyle: 'primary' },
-      spacer: { space: { desktop: 40, tablet: 30, mobile: 20 } },
-      columns: { columnCount: { desktop: 3, tablet: 2, mobile: 1 }, columnGap: { desktop: 20 } },
-      divider: { thickness: 1, color: '#e5e7eb' },
-      single_product: { productId: '' },
-      product_list: { category: '', limit: 12, sortBy: 'created_at' },
-      features: { title: 'Features', items: [] },
-      pricing: { title: 'Pricing', plans: [] },
-      cta: { heading: 'Ready to get started?', buttonText: 'Get Started', buttonUrl: '#' }
+      text: {
+        text: 'Enter your text here',
+        alignment: 'left',
+        fontSize: { desktop: 16, tablet: 16, mobile: 14 },
+        color: 'var(--color-text-primary)'
+      },
+      image: {
+        src: '',
+        alt: 'Image',
+        imageWidth: '100%',
+        borderRadius: 0,
+        objectFit: 'cover'
+      },
+      heading: {
+        heading: 'Heading',
+        level: 2,
+        alignment: 'left',
+        color: 'var(--color-text-primary)'
+      },
+      button: {
+        label: 'Click Me',
+        url: '#',
+        variant: 'primary',
+        openInNewTab: false,
+        fullWidth: { desktop: false, tablet: false, mobile: false },
+        buttonAlign: 'left'
+      },
+      spacer: {
+        space: { desktop: 40, tablet: 30, mobile: 20 }
+      },
+      columns: {
+        columnCount: { desktop: 3, tablet: 2, mobile: 1 },
+        columnGap: { desktop: 20, tablet: 16, mobile: 12 },
+        columns: []
+      },
+      divider: {
+        thickness: 1,
+        color: 'theme:border',
+        dividerWidth: '100%',
+        dividerSpacing: { desktop: 32, tablet: 24, mobile: 16 }
+      },
+      single_product: {
+        productId: '',
+        layout: 'card',
+        showPrice: true,
+        showDescription: true
+      },
+      product_list: {
+        category: '',
+        limit: 12,
+        sortBy: 'created_at',
+        productListColumns: { desktop: 3, tablet: 2, mobile: 1 },
+        productGap: { desktop: 24, tablet: 20, mobile: 16 }
+      },
+      features: {
+        title: 'Features',
+        subtitle: '',
+        features: [
+          {
+            icon: '🎯',
+            title: 'Feature One',
+            description: 'Describe what makes this feature great'
+          },
+          {
+            icon: '✨',
+            title: 'Feature Two',
+            description: 'Explain the benefits of this feature'
+          },
+          {
+            icon: '🚀',
+            title: 'Feature Three',
+            description: 'Tell users why they need this'
+          }
+        ],
+        cardBackground: 'var(--color-bg-primary)',
+        cardBorderColor: 'var(--color-border-secondary)',
+        cardBorderRadius: 12,
+        featuresColumns: { desktop: 3, tablet: 2, mobile: 1 },
+        featuresGap: { desktop: 32, tablet: 24, mobile: 16 }
+      },
+      pricing: {
+        title: 'Pricing',
+        subtitle: '',
+        plans: []
+      },
+      cta: {
+        heading: 'Ready to Get Started?',
+        subheading: 'Join thousands of satisfied customers',
+        buttonText: 'Get Started',
+        buttonUrl: '#',
+        backgroundColor: 'var(--color-bg-secondary)',
+        textColor: 'var(--color-text-primary)'
+      }
     };
     return defaults[type] || {};
   }
 </script>
 
 <aside class="builder-sidebar">
-  <div class="sidebar-header">
-    <h3>Components</h3>
-    <button class="btn-close" on:click={() => dispatch('close')} aria-label="Close sidebar">
-      <X size={18} />
+  <div class="page-settings-section">
+    <button
+      class="section-header"
+      on:click={() => {
+        pageSettingsExpanded = !pageSettingsExpanded;
+      }}
+    >
+      <h4>Page Settings</h4>
+      <div class="chevron" class:expanded={pageSettingsExpanded}>
+        <ChevronDown size={16} />
+      </div>
     </button>
+    {#if pageSettingsExpanded}
+      <div class="section-content">
+        <div class="setting-group">
+          <label for="page-title" class="setting-label">Title</label>
+          <input
+            id="page-title"
+            type="text"
+            class="setting-input"
+            value={title}
+            on:input={(e) => dispatch('updateTitle', e.currentTarget.value)}
+            placeholder="Page title"
+          />
+        </div>
+        <div class="setting-group">
+          <label for="page-slug" class="setting-label">URL Slug</label>
+          <input
+            id="page-slug"
+            type="text"
+            class="setting-input"
+            value={slug}
+            on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
+            placeholder="/page-url"
+          />
+        </div>
+        <button class="btn-properties" on:click={() => dispatch('showPageProperties')}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+            />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span>Properties</span>
+        </button>
+      </div>
+    {/if}
   </div>
 
-  <div class="search-box">
-    <Search size={16} />
-    <input
-      type="text"
-      bind:value={searchQuery}
-      placeholder="Search components..."
-      class="search-input"
-    />
-  </div>
-
-  <div class="categories">
-    {#each categories as category}
+  <div class="components-section">
+    <div class="sidebar-header">
       <button
-        class="category-btn"
-        class:active={activeCategory === category.id}
+        class="section-header-inline"
         on:click={() => {
-          activeCategory = category.id;
+          componentsExpanded = !componentsExpanded;
         }}
       >
-        <svelte:component this={category.icon} size={16} />
-        <span>{category.name}</span>
-      </button>
-    {/each}
-  </div>
-
-  <div class="widget-list">
-    {#each getFilteredWidgets() as widget}
-      <button class="widget-item" on:click={() => addWidget(widget.type)}>
-        <div class="widget-icon">
-          <svelte:component this={widget.icon} size={20} />
-        </div>
-        <div class="widget-info">
-          <div class="widget-name">{widget.name}</div>
-          <div class="widget-description">{widget.description}</div>
-        </div>
-        <div class="widget-add">
-          <Plus size={16} />
+        <h3>Components</h3>
+        <div class="chevron" class:expanded={componentsExpanded}>
+          <ChevronDown size={16} />
         </div>
       </button>
-    {/each}
-  </div>
-
-  <div class="layers-section">
-    <h4>Layers ({widgets.length})</h4>
-    <div class="layers-list">
-      {#each widgets as widget, index}
-        <button
-          class="layer-item"
-          class:selected={selectedWidget?.id === widget.id}
-          on:click={() => dispatch('selectWidget', widget)}
-        >
-          <span class="layer-index">{index + 1}</span>
-          <span class="layer-type">{widget.type}</span>
-        </button>
-      {/each}
+      <button class="btn-close" on:click={() => dispatch('close')} aria-label="Close sidebar">
+        <X size={18} />
+      </button>
     </div>
+
+    {#if componentsExpanded}
+      <div class="search-box">
+        <div class="search-icon">
+          <Search size={16} />
+        </div>
+        <input
+          type="text"
+          bind:value={searchQuery}
+          placeholder="Search components..."
+          class="search-input"
+        />
+        {#if searchQuery}
+          <button
+            class="btn-clear-search"
+            on:click={() => {
+              searchQuery = '';
+            }}
+            aria-label="Clear search"
+            title="Clear search"
+          >
+            <X size={14} />
+          </button>
+        {/if}
+      </div>
+
+      <div class="categories">
+        {#each categories as category}
+          <button
+            class="category-btn"
+            class:active={activeCategory === category.id}
+            on:click={() => {
+              activeCategory = category.id;
+            }}
+            title={category.name}
+          >
+            <svelte:component this={category.icon} size={16} />
+            <span>{category.name}</span>
+          </button>
+        {/each}
+      </div>
+
+      {#if searchQuery || activeCategory !== 'all'}
+        <div class="filter-status">
+          <span class="result-count"
+            >{filteredWidgets.length} component{filteredWidgets.length !== 1 ? 's' : ''}</span
+          >
+          {#if searchQuery || activeCategory !== 'all'}
+            <button
+              class="btn-clear-filters"
+              on:click={() => {
+                searchQuery = '';
+                activeCategory = 'all';
+              }}
+            >
+              Clear filters
+            </button>
+          {/if}
+        </div>
+      {/if}
+
+      <div class="widget-list">
+        {#if filteredWidgets.length === 0}
+          <div class="no-results">
+            <p>No components found</p>
+            {#if searchQuery.trim()}
+              <p class="hint">Try a different search term</p>
+            {/if}
+          </div>
+        {:else}
+          {#each filteredWidgets as widget}
+            <button class="widget-item" on:click={() => addWidget(widget.type)}>
+              <div class="widget-icon">
+                <svelte:component this={widget.icon} size={20} />
+              </div>
+              <div class="widget-info">
+                <div class="widget-name">{widget.name}</div>
+                <div class="widget-description">{widget.description}</div>
+              </div>
+              <div class="widget-add">
+                <Plus size={16} />
+              </div>
+            </button>
+          {/each}
+        {/if}
+      </div>
+    {/if}
   </div>
 </aside>
 
 <style>
   .builder-sidebar {
     width: 280px;
+    height: 100%;
     background: var(--color-bg-primary);
     border-right: 1px solid var(--color-border-secondary);
     display: flex;
@@ -189,19 +405,142 @@
     overflow: hidden;
   }
 
+  .page-settings-section {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .components-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-bottom: 1px solid var(--color-border-secondary);
+    overflow: hidden;
+  }
+
+  .page-settings-section {
+    background: var(--color-bg-secondary);
+  }
+
+  .section-header,
+  .section-header-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: left;
+  }
+
+  .section-header:hover,
+  .section-header-inline:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .section-header h4,
+  .section-header-inline h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .chevron {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+    transition: transform 0.2s;
+    transform: rotate(-90deg);
+  }
+
+  .chevron.expanded {
+    transform: rotate(0deg);
+  }
+
+  .section-content {
+    padding: 0 1rem 1rem 1rem;
+  }
+
+  .setting-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .setting-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .setting-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .setting-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+
+  .setting-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .btn-properties {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-properties:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-properties:active {
+    transform: translateY(0);
+  }
+
+  .btn-properties svg {
+    flex-shrink: 0;
+  }
+
   .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
     border-bottom: 1px solid var(--color-border-secondary);
   }
 
-  .sidebar-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
+  .section-header-inline {
+    flex: 1;
+    padding: 1rem;
   }
 
   .btn-close {
@@ -226,62 +565,167 @@
     gap: 0.5rem;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--color-border-secondary);
+    position: relative;
+  }
+
+  .search-icon {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
   }
 
   .search-input {
     flex: 1;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 4px;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     font-size: 0.875rem;
+    transition: all 0.2s;
   }
 
   .search-input:focus {
     outline: none;
     border-color: var(--color-primary);
+    background: var(--color-bg-primary);
+  }
+
+  .btn-clear-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-clear-search:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
   }
 
   .categories {
     display: flex;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.75rem;
     border-bottom: 1px solid var(--color-border-secondary);
-    overflow-x: auto;
   }
 
   .category-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-bg-secondary);
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    background: transparent;
     border: 1px solid var(--color-border-secondary);
-    border-radius: 6px;
-    color: var(--color-text-secondary);
-    font-size: 0.75rem;
+    border-radius: 999px;
+    color: var(--color-text-primary);
+    font-size: 0.6875rem;
     font-weight: 500;
+    line-height: 1.2;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .category-btn:hover {
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
+  .category-btn:hover:not(.active) {
+    background: var(--color-bg-secondary);
+    border-color: var(--color-text-secondary);
   }
 
   .category-btn.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .filter-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .result-count {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+  }
+
+  .btn-clear-filters {
+    padding: 0.25rem 0.5rem;
+    background: none;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-clear-filters:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border-color: var(--color-text-secondary);
   }
 
   .widget-list {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 0.5rem;
+    scrollbar-width: thin;
+  }
+
+  .widget-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .widget-list::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+  }
+
+  .widget-list::-webkit-scrollbar-thumb {
+    background: var(--color-border-secondary);
+    border-radius: 3px;
+  }
+
+  .widget-list::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary);
+  }
+
+  .no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+
+  .no-results p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .no-results .hint {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    opacity: 0.7;
   }
 
   .widget-item {
@@ -333,71 +777,6 @@
 
   .widget-add {
     color: var(--color-text-secondary);
-  }
-
-  .layers-section {
-    border-top: 1px solid var(--color-border-secondary);
-    padding: 1rem;
-  }
-
-  .layers-section h4 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .layers-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .layer-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background: var(--color-bg-secondary);
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: var(--color-text-primary);
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-  }
-
-  .layer-item:hover {
-    background: var(--color-bg-tertiary);
-    border-color: var(--color-border-secondary);
-  }
-
-  .layer-item.selected {
-    background: var(--color-primary);
-    color: white;
-  }
-
-  .layer-index {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: var(--color-bg-tertiary);
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .layer-item.selected .layer-index {
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .layer-type {
-    text-transform: capitalize;
   }
 
   @media (max-width: 768px) {

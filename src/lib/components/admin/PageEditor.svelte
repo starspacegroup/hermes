@@ -59,6 +59,9 @@
   let colorTheme: ColorTheme | undefined = initialColorTheme;
   let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
 
+  // Sorted widgets for rendering - always keep in position order
+  $: sortedWidgets = [...widgets].sort((a, b) => a.position - b.position);
+
   // UI state
   let selectedWidget: PageWidget | null = null;
   let currentBreakpoint: Breakpoint = 'desktop';
@@ -318,15 +321,28 @@
   }
 
   function moveWidgetUp(widgetId: string) {
-    const index = widgets.findIndex((w) => w.id === widgetId);
-    if (index <= 0) return;
+    // Sort widgets to get current display order
+    const sorted = [...widgets].sort((a, b) => a.position - b.position);
+    const index = sorted.findIndex((w) => w.id === widgetId);
+    if (index <= 0) return; // Can't move first widget up
 
-    const newWidgets = [...widgets];
-    const temp = newWidgets[index - 1];
-    newWidgets[index - 1] = newWidgets[index];
-    newWidgets[index] = temp;
-    widgets = newWidgets;
-    updateWidgetPositions();
+    // Get the IDs of widgets to swap
+    const currentId = sorted[index].id;
+    const aboveId = sorted[index - 1].id;
+    const currentPos = sorted[index].position;
+    const abovePos = sorted[index - 1].position;
+
+    // Create new array with swapped positions - completely new objects
+    widgets = widgets.map((w) => {
+      if (w.id === currentId) {
+        return { ...w, position: abovePos };
+      }
+      if (w.id === aboveId) {
+        return { ...w, position: currentPos };
+      }
+      return w;
+    });
+
     historyManager.saveState(widgets);
     updateHistoryState();
 
@@ -336,15 +352,28 @@
   }
 
   function moveWidgetDown(widgetId: string) {
-    const index = widgets.findIndex((w) => w.id === widgetId);
-    if (index >= widgets.length - 1) return;
+    // Sort widgets to get current display order
+    const sorted = [...widgets].sort((a, b) => a.position - b.position);
+    const index = sorted.findIndex((w) => w.id === widgetId);
+    if (index < 0 || index >= sorted.length - 1) return; // Can't move last widget down
 
-    const newWidgets = [...widgets];
-    const temp = newWidgets[index];
-    newWidgets[index] = newWidgets[index + 1];
-    newWidgets[index + 1] = temp;
-    widgets = newWidgets;
-    updateWidgetPositions();
+    // Get the IDs of widgets to swap
+    const currentId = sorted[index].id;
+    const belowId = sorted[index + 1].id;
+    const currentPos = sorted[index].position;
+    const belowPos = sorted[index + 1].position;
+
+    // Create new array with swapped positions - completely new objects
+    widgets = widgets.map((w) => {
+      if (w.id === currentId) {
+        return { ...w, position: belowPos };
+      }
+      if (w.id === belowId) {
+        return { ...w, position: currentPos };
+      }
+      return w;
+    });
+
     historyManager.saveState(widgets);
     updateHistoryState();
 
@@ -628,7 +657,7 @@
 
     <!-- Center Canvas -->
     <EditorCanvas
-      {widgets}
+      widgets={sortedWidgets}
       selectedWidgetId={selectedWidget?.id || null}
       {currentBreakpoint}
       {colorTheme}
@@ -660,7 +689,6 @@
           onUpdate={(config) => {
             if (selectedWidget) updateWidgetConfig(selectedWidget.id, config);
           }}
-          onClose={() => (selectedWidget = null)}
         />
       {/if}
     </EditorSidebar>

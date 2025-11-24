@@ -1,6 +1,5 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { authStore } from '$lib/stores/auth';
 
@@ -28,7 +27,7 @@
     <p>Loading builder...</p>
   </div>
 {:else}
-  <div class="builder-layout">
+  <div class="builder-layout-wrapper">
     <slot />
   </div>
 {/if}
@@ -60,10 +59,20 @@
     }
   }
 
-  .builder-layout {
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .builder-layout-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
     background: var(--color-bg-primary);
+    z-index: 9999;
   }
 </style>

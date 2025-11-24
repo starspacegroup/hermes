@@ -9,7 +9,6 @@
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let onUpdate: (config: WidgetConfig) => void;
-  export let onClose: () => void;
 
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
   let lastWidgetId = widget.id;
@@ -27,6 +26,9 @@
   let draggedIndex: number | null = null;
   let dragOverIndex: number | null = null;
   let dropPosition: 'before' | 'after' | null = null;
+
+  // Debounce timer for handleUpdate
+  let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Initialize config with defaults only for missing properties (not empty strings)
   function initConfig(widgetConfig: WidgetConfig, applyDefaults: boolean = false): WidgetConfig {
@@ -90,18 +92,18 @@
     return newConfig;
   }
 
-  let config: WidgetConfig = initConfig(widget.config, true);
-  let lastConfigString = JSON.stringify(widget.config);
-  let isLocalUpdate = false;
+  let config: WidgetConfig = initConfig(widget.config, false);
+  let _lastConfigString = JSON.stringify(widget.config);
+  let _isLocalUpdate = false;
 
   // Only sync when switching widgets
   $: if (widget.id !== lastWidgetId) {
     lastWidgetId = widget.id;
-    config = initConfig(widget.config, true); // Apply defaults on widget switch
-    lastConfigString = JSON.stringify(widget.config);
+    config = initConfig(widget.config, false); // Don't apply defaults, just copy existing config
+    _lastConfigString = JSON.stringify(widget.config);
     showMediaBrowser = false;
     selectedMediaItems = [];
-    isLocalUpdate = false;
+    _isLocalUpdate = false;
 
     // Collapse all feature cards by default when switching to a features widget
     if (widget.type === 'features' && config.features) {
@@ -111,32 +113,88 @@
     }
   }
 
-  // For same widget, sync widget.config TO config (canvas edits)
-  // Watch the widget prop itself to trigger on any change
-  $: if (widget && widget.id === lastWidgetId && !isLocalUpdate) {
+  // Sync external widget config changes to local config (e.g., from contenteditable)
+  $: {
     const currentConfigString = JSON.stringify(widget.config);
-    if (currentConfigString !== lastConfigString) {
-      // External change detected (canvas edit)
-      lastConfigString = currentConfigString;
-      config = initConfig(widget.config, false); // Don't apply defaults, just copy
+    if (currentConfigString !== _lastConfigString) {
+      // If it's not a local update, or if the change came from outside (like contenteditable)
+      // we should sync it to the local config
+      if (!_isLocalUpdate) {
+        // Update individual properties to maintain bind:value reactivity
+        Object.keys(widget.config).forEach((key) => {
+          (config as Record<string, unknown>)[key] = (widget.config as Record<string, unknown>)[
+            key
+          ];
+        });
+        _lastConfigString = currentConfigString;
+      } else {
+        // Even if it's marked as local update, if the external config differs significantly,
+        // it means another component (like contenteditable) made the change, so sync it
+        // Check if the difference is in a field we care about
+        const currentConfig = widget.config;
+        const hasExternalChange =
+          currentConfig.title !== config.title ||
+          currentConfig.subtitle !== config.subtitle ||
+          currentConfig.heading !== config.heading ||
+          currentConfig.text !== config.text;
+
+        if (hasExternalChange) {
+          // Update individual properties to maintain bind:value reactivity
+          if (currentConfig.title !== config.title) config.title = currentConfig.title;
+          if (currentConfig.subtitle !== config.subtitle) config.subtitle = currentConfig.subtitle;
+          if (currentConfig.heading !== config.heading) config.heading = currentConfig.heading;
+          if (currentConfig.text !== config.text) config.text = currentConfig.text;
+          _lastConfigString = currentConfigString;
+          _isLocalUpdate = false; // Reset the flag since this was an external change
+        }
+      }
     }
   }
 
   function handleUpdate() {
-    // Mark as local update to prevent sync back
-    isLocalUpdate = true;
-    lastConfigString = JSON.stringify(config);
+    // Mark as local update IMMEDIATELY to prevent sync back during debounce
+    _isLocalUpdate = true;
+    _lastConfigString = JSON.stringify(config);
+
+    // Clear any existing debounce timer
+    if (updateDebounceTimer) {
+      clearTimeout(updateDebounceTimer);
+    }
+
+    // Debounce updates to avoid excessive calls while typing
+    updateDebounceTimer = setTimeout(() => {
+      // Send the updated config to parent
+      onUpdate(config);
+      // Reset flag after a brief delay
+      setTimeout(() => {
+        _isLocalUpdate = false;
+      }, 100);
+    }, 100); // 100ms debounce delay (reduced from 150ms)
+  }
+
+  // Immediate update without debouncing (for select changes, buttons, etc.)
+  function handleImmediateUpdate() {
+    // Mark as local update FIRST to prevent sync back
+    _isLocalUpdate = true;
+    _lastConfigString = JSON.stringify(config);
+
+    // Clear any pending debounced update
+    if (updateDebounceTimer) {
+      clearTimeout(updateDebounceTimer);
+      updateDebounceTimer = null;
+    }
+
     // Send the updated config to parent
     onUpdate(config);
     // Reset flag after a brief delay
     setTimeout(() => {
-      isLocalUpdate = false;
-    }, 50);
+      _isLocalUpdate = false;
+    }, 100);
   }
 
   function handleMediaUploaded(media: MediaLibraryItem) {
     config.backgroundImage = media.url;
-    handleUpdate();
+    handleImmediateUpdate();
   }
 
   function handleMediaSelected(media: MediaLibraryItem[]) {
@@ -151,7 +209,7 @@
       config.backgroundImage = selectedMediaItems[0].url;
       selectedMediaItems = [];
       showMediaBrowser = false;
-      handleUpdate();
+      handleImmediateUpdate();
     }
   }
 
@@ -227,7 +285,7 @@
 
     features.splice(insertIndex, 0, draggedItem);
     config.features = features;
-    handleUpdate();
+    handleImmediateUpdate();
 
     draggedIndex = null;
     dragOverIndex = null;
@@ -239,37 +297,9 @@
     dragOverIndex = null;
     dropPosition = null;
   }
-
-  function getWidgetLabel(type: string): string {
-    const labels: Record<string, string> = {
-      text: 'Text',
-      heading: 'Heading',
-      image: 'Image',
-      hero: 'Hero Section',
-      button: 'Button',
-      spacer: 'Spacer',
-      divider: 'Divider',
-      columns: 'Columns',
-      single_product: 'Product Card',
-      product_list: 'Product Grid'
-    };
-    return labels[type] || type;
-  }
 </script>
 
 <div class="properties-panel">
-  <div class="panel-header">
-    <div class="panel-title">
-      <h3>{getWidgetLabel(widget.type)}</h3>
-      <span class="widget-id">ID: {widget.id.slice(-8)}</span>
-    </div>
-    <button type="button" class="close-btn" on:click={onClose} title="Close">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
-      </svg>
-    </button>
-  </div>
-
   <div class="panel-tabs">
     <button
       type="button"
@@ -307,7 +337,7 @@
             <input
               type="text"
               bind:value={config.anchorName}
-              on:blur={handleUpdate}
+              on:input={handleUpdate}
               placeholder="e.g., about-us, contact"
               pattern="[a-z0-9-]+"
               title="Use lowercase letters, numbers, and hyphens only"
@@ -319,1145 +349,1140 @@
         </div>
 
         {#if widget.type === 'text'}
-          <div class="form-group">
-            <label>
-              <span>Text Content</span>
-              <textarea
-                bind:value={config.text}
-                on:blur={handleUpdate}
-                rows="6"
-                placeholder="Enter your text..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Text Alignment</span>
-              <select bind:value={config.alignment} on:change={handleUpdate}>
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-                <option value="justify">Justify</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.textColor}
-              currentTheme={colorTheme}
-              label="Text Color"
-              onChange={(newValue) => {
-                config.textColor = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Font Size (px)</span>
-              <input
-                type="number"
-                bind:value={config.fontSize}
-                on:blur={handleUpdate}
-                min="8"
-                max="72"
-                placeholder="16"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Line Height</span>
-              <input
-                type="number"
-                bind:value={config.lineHeight}
-                on:blur={handleUpdate}
-                min="1"
-                max="3"
-                step="0.1"
-                placeholder="1.6"
-              />
-            </label>
+          <div class="section">
+            <h4>Content</h4>
+            <div class="form-group">
+              <label>
+                <span>Text Content</span>
+                <textarea
+                  bind:value={config.text}
+                  on:input={handleUpdate}
+                  rows="6"
+                  placeholder="Enter your text..."
+                />
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'heading'}
-          <div class="form-group">
-            <label>
-              <span>Heading Text</span>
-              <input
-                type="text"
-                bind:value={config.heading}
-                on:blur={handleUpdate}
-                placeholder="Enter heading..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Heading Level</span>
-              <select bind:value={config.level} on:change={handleUpdate}>
-                <option value={1}>H1 (Largest)</option>
-                <option value={2}>H2</option>
-                <option value={3}>H3</option>
-                <option value={4}>H4</option>
-                <option value={5}>H5</option>
-                <option value={6}>H6 (Smallest)</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.textColor}
-              currentTheme={colorTheme}
-              label="Text Color"
-              onChange={(newValue) => {
-                config.textColor = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Text Alignment</span>
-              <select bind:value={config.alignment} on:change={handleUpdate}>
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </label>
+          <div class="section">
+            <h4>Content</h4>
+            <div class="form-group">
+              <label>
+                <span>Heading Text</span>
+                <input
+                  type="text"
+                  bind:value={config.heading}
+                  on:input={handleUpdate}
+                  placeholder="Enter heading..."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Heading Level</span>
+                <select bind:value={config.level} on:change={handleImmediateUpdate}>
+                  <option value={1}>H1 (Largest)</option>
+                  <option value={2}>H2</option>
+                  <option value={3}>H3</option>
+                  <option value={4}>H4</option>
+                  <option value={5}>H5</option>
+                  <option value={6}>H6 (Smallest)</option>
+                </select>
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'image'}
-          <div class="form-group">
-            <label>
-              <span>Image URL</span>
-              <input
-                type="url"
-                bind:value={config.src}
-                on:blur={handleUpdate}
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Alt Text</span>
-              <input
-                type="text"
-                bind:value={config.alt}
-                on:blur={handleUpdate}
-                placeholder="Describe the image..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Width</span>
-              <input
-                type="text"
-                bind:value={config.imageWidth}
-                on:blur={handleUpdate}
-                placeholder="100%, 500px, etc."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Height</span>
-              <input
-                type="text"
-                bind:value={config.imageHeight}
-                on:blur={handleUpdate}
-                placeholder="auto, 300px, etc."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Object Fit</span>
-              <select bind:value={config.objectFit} on:change={handleUpdate}>
-                <option value="cover">Cover</option>
-                <option value="contain">Contain</option>
-                <option value="fill">Fill</option>
-                <option value="none">None</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Link URL (optional)</span>
-              <input
-                type="url"
-                bind:value={config.link}
-                on:blur={handleUpdate}
-                placeholder="https://..."
-              />
-            </label>
+          <div class="section">
+            <h4>Image</h4>
+            <div class="form-group">
+              <label>
+                <span>Image URL</span>
+                <input
+                  type="url"
+                  bind:value={config.src}
+                  on:input={handleUpdate}
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Alt Text</span>
+                <input
+                  type="text"
+                  bind:value={config.alt}
+                  on:input={handleUpdate}
+                  placeholder="Describe the image..."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Link URL (optional)</span>
+                <input
+                  type="url"
+                  bind:value={config.link}
+                  on:input={handleUpdate}
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'hero'}
-          <div class="form-group">
-            <label>
-              <span>Title</span>
-              <input
-                type="text"
-                bind:value={config.title}
-                on:input={handleUpdate}
-                placeholder="Hero title..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Subtitle</span>
-              <textarea
-                bind:value={config.subtitle}
-                on:input={handleUpdate}
-                rows="3"
-                placeholder="Hero subtitle..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label for="background-image">
-              <span>Background Image</span>
-            </label>
-            {#if config.backgroundImage}
-              <div class="media-preview">
-                <img src={config.backgroundImage} alt="Background" />
-                <button
-                  type="button"
-                  class="btn-remove"
-                  on:click={() => {
-                    config.backgroundImage = '';
-                    handleUpdate();
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
-            {/if}
-            <div class="media-actions">
-              <MediaUpload onMediaUploaded={handleMediaUploaded} />
-              <button
-                type="button"
-                class="btn-secondary"
-                on:click={() => (showMediaBrowser = !showMediaBrowser)}
-              >
-                {showMediaBrowser ? 'Hide' : 'Browse'} Library
-              </button>
-            </div>
-            {#if showMediaBrowser}
-              <div
-                class="media-browser-modal"
-                role="button"
-                tabindex="0"
-                on:click|self={handleCancelMediaBrowser}
-                on:keydown={(e) => e.key === 'Escape' && handleCancelMediaBrowser()}
-              >
-                <div class="media-browser-content">
-                  <div class="media-browser-header">
-                    <h3>Media Library</h3>
-                    <div class="header-actions">
-                      {#if selectedMediaItems.length > 0}
-                        <span class="selection-count">
-                          {selectedMediaItems.length} selected
-                        </span>
-                      {/if}
-                      <button
-                        type="button"
-                        class="modal-close-btn"
-                        on:click={handleCancelMediaBrowser}
-                        title="Close"
-                      >
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="media-browser-body">
-                    <MediaBrowser
-                      onSelect={handleMediaSelected}
-                      selectedIds={selectedMediaItems.map((item) => item.id)}
-                      showFooter={false}
-                    />
-                  </div>
-                  <div class="media-browser-footer">
-                    <button type="button" class="btn-cancel" on:click={handleCancelMediaBrowser}>
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-add"
-                      disabled={selectedMediaItems.length === 0}
-                      on:click={handleAddSelectedMedia}
-                    >
-                      Add Selected ({selectedMediaItems.length})
-                    </button>
-                  </div>
-                </div>
-              </div>
-            {/if}
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.backgroundColor}
-              currentTheme={colorTheme}
-              label="Background Color"
-              onChange={(newValue) => {
-                config.backgroundColor = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Content Alignment</span>
-              <select bind:value={config.contentAlign} on:change={handleUpdate}>
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" bind:checked={config.overlay} on:change={handleUpdate} />
-              <span>Add Dark Overlay</span>
-            </label>
-          </div>
-          {#if config.overlay}
+          <div class="section">
+            <h4>Text Content</h4>
             <div class="form-group">
               <label>
-                <span>Overlay Opacity ({config.overlayOpacity || 50}%)</span>
-                <input
-                  type="range"
-                  bind:value={config.overlayOpacity}
-                  on:input={handleUpdate}
-                  min="0"
-                  max="100"
-                />
-              </label>
-            </div>
-          {/if}
-          <div class="form-group">
-            <label>
-              <span>CTA Button Text</span>
-              <input
-                type="text"
-                bind:value={config.ctaText}
-                on:input={handleUpdate}
-                placeholder="Get Started"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>CTA Button Link</span>
-              <input
-                type="url"
-                bind:value={config.ctaLink}
-                on:input={handleUpdate}
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-          {#if config.ctaText}
-            <div class="form-group">
-              <ThemeColorInput
-                value={config.ctaBackgroundColor}
-                currentTheme={colorTheme}
-                label="CTA Background Color"
-                onChange={(newValue) => {
-                  config.ctaBackgroundColor = newValue;
-                  handleUpdate();
-                }}
-              />
-            </div>
-            <div class="form-group">
-              <ThemeColorInput
-                value={config.ctaTextColor}
-                currentTheme={colorTheme}
-                label="CTA Text Color"
-                onChange={(newValue) => {
-                  config.ctaTextColor = newValue;
-                  handleUpdate();
-                }}
-              />
-            </div>
-            <div class="form-group">
-              <label>
-                <span>CTA Font Size</span>
+                <span>Title</span>
                 <input
                   type="text"
-                  bind:value={config.ctaFontSize}
+                  bind:value={config.title}
                   on:input={handleUpdate}
-                  placeholder="16px"
+                  placeholder="Hero title..."
                 />
               </label>
             </div>
             <div class="form-group">
               <label>
-                <span>CTA Font Weight</span>
-                <select bind:value={config.ctaFontWeight} on:change={handleUpdate}>
-                  <option value="400">Normal (400)</option>
-                  <option value="500">Medium (500)</option>
-                  <option value="600">Semi-bold (600)</option>
-                  <option value="700">Bold (700)</option>
-                </select>
+                <span>Subtitle</span>
+                <textarea
+                  bind:value={config.subtitle}
+                  on:input={handleUpdate}
+                  rows="3"
+                  placeholder="Hero subtitle..."
+                />
               </label>
             </div>
-          {/if}
-          <div class="form-group">
-            <label>
-              <span>Secondary CTA Text (Optional)</span>
-              <input
-                type="text"
-                bind:value={config.secondaryCtaText}
-                on:input={handleUpdate}
-                placeholder="Learn More"
-              />
-            </label>
           </div>
-          <div class="form-group">
-            <label>
-              <span>Secondary CTA Link</span>
-              <input
-                type="url"
-                bind:value={config.secondaryCtaLink}
-                on:input={handleUpdate}
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-          {#if config.secondaryCtaText}
-            <div class="form-group">
-              <ThemeColorInput
-                value={config.secondaryCtaBackgroundColor}
-                currentTheme={colorTheme}
-                label="Secondary CTA Background Color"
-                onChange={(newValue) => {
-                  config.secondaryCtaBackgroundColor = newValue;
-                  handleUpdate();
-                }}
-              />
-            </div>
-            <div class="form-group">
-              <ThemeColorInput
-                value={config.secondaryCtaTextColor}
-                currentTheme={colorTheme}
-                label="Secondary CTA Text Color"
-                onChange={(newValue) => {
-                  config.secondaryCtaTextColor = newValue;
-                  handleUpdate();
-                }}
-              />
-            </div>
-            <div class="form-group">
-              <ThemeColorInput
-                value={config.secondaryCtaBorderColor}
-                currentTheme={colorTheme}
-                label="Secondary CTA Border Color"
-                onChange={(newValue) => {
-                  config.secondaryCtaBorderColor = newValue;
-                  handleUpdate();
-                }}
-              />
-            </div>
+          <div class="section">
+            <h4>Primary Call to Action</h4>
             <div class="form-group">
               <label>
-                <span>Secondary CTA Font Size</span>
+                <span>Button Text</span>
                 <input
                   type="text"
-                  bind:value={config.secondaryCtaFontSize}
+                  bind:value={config.ctaText}
                   on:input={handleUpdate}
-                  placeholder="16px"
+                  placeholder="Get Started"
                 />
               </label>
             </div>
             <div class="form-group">
               <label>
-                <span>Secondary CTA Font Weight</span>
-                <select bind:value={config.secondaryCtaFontWeight} on:change={handleUpdate}>
-                  <option value="400">Normal (400)</option>
-                  <option value="500">Medium (500)</option>
-                  <option value="600">Semi-bold (600)</option>
-                  <option value="700">Bold (700)</option>
-                </select>
+                <span>Button Link</span>
+                <input
+                  type="url"
+                  bind:value={config.ctaLink}
+                  on:input={handleUpdate}
+                  placeholder="https://..."
+                />
               </label>
             </div>
-          {/if}
+          </div>
+          <div class="section">
+            <h4>Secondary Call to Action (Optional)</h4>
+            <div class="form-group">
+              <label>
+                <span>Button Text</span>
+                <input
+                  type="text"
+                  bind:value={config.secondaryCtaText}
+                  on:input={handleUpdate}
+                  placeholder="Learn More"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Button Link</span>
+                <input
+                  type="url"
+                  bind:value={config.secondaryCtaLink}
+                  on:input={handleUpdate}
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
+          </div>
         {:else if widget.type === 'button'}
-          <div class="form-group">
-            <label>
-              <span>Button Label</span>
-              <input
-                type="text"
-                bind:value={config.label}
-                on:blur={handleUpdate}
-                placeholder="Click here"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Link URL</span>
-              <input
-                type="url"
-                bind:value={config.url}
-                on:blur={handleUpdate}
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Button Style</span>
-              <select bind:value={config.variant} on:change={handleUpdate}>
-                <option value="primary">Primary</option>
-                <option value="secondary">Secondary</option>
-                <option value="outline">Outline</option>
-                <option value="text">Text</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Button Size</span>
-              <select bind:value={config.size} on:change={handleUpdate}>
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" bind:checked={config.openInNewTab} on:change={handleUpdate} />
-              <span>Open in new tab</span>
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              {#if typeof config.fullWidth === 'object'}
+          <div class="section">
+            <h4>Button Content</h4>
+            <div class="form-group">
+              <label>
+                <span>Button Label</span>
+                <input
+                  type="text"
+                  bind:value={config.label}
+                  on:input={handleUpdate}
+                  placeholder="Click here"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Link URL</span>
+                <input
+                  type="url"
+                  bind:value={config.url}
+                  on:input={handleUpdate}
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
                 <input
                   type="checkbox"
-                  bind:checked={config.fullWidth.desktop}
-                  on:change={handleUpdate}
+                  bind:checked={config.openInNewTab}
+                  on:change={handleImmediateUpdate}
                 />
-              {:else}
-                <input type="checkbox" bind:checked={config.fullWidth} on:change={handleUpdate} />
-              {/if}
-              <span>Full width</span>
-            </label>
-            <p class="field-hint">Use the Responsive tab for per-device full width control.</p>
+                <span>Open in new tab</span>
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'divider'}
-          <div class="form-group">
-            <label>
-              <span>Thickness (px)</span>
-              <input
-                type="number"
-                bind:value={config.thickness}
-                on:blur={handleUpdate}
-                min="1"
-                max="10"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.dividerColor}
-              currentTheme={colorTheme}
-              label="Color"
-              onChange={(newValue) => {
-                config.dividerColor = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Style</span>
-              <select bind:value={config.dividerStyle} on:change={handleUpdate}>
-                <option value="solid">Solid</option>
-                <option value="dashed">Dashed</option>
-                <option value="dotted">Dotted</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Spacing (pixels)</span>
-              {#if typeof config.spacing === 'object'}
-                <input
-                  type="number"
-                  bind:value={config.spacing.desktop}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="20"
-                />
-              {:else}
-                <input
-                  type="number"
-                  bind:value={config.spacing}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="20"
-                />
-              {/if}
-            </label>
-            <p class="field-hint">Vertical spacing above and below the divider.</p>
-          </div>
+          <p class="tab-info">All divider settings are in the Style tab.</p>
         {:else if widget.type === 'single_product'}
-          <div class="form-group">
-            <label>
-              <span>Product ID</span>
-              <input
-                type="text"
-                bind:value={config.productId}
-                on:blur={handleUpdate}
-                placeholder="Enter product ID..."
-              />
-            </label>
+          <div class="section">
+            <h4>Product Selection</h4>
+            <div class="form-group">
+              <label>
+                <span>Product ID</span>
+                <input
+                  type="text"
+                  bind:value={config.productId}
+                  on:input={handleUpdate}
+                  placeholder="Enter product ID..."
+                />
+              </label>
+            </div>
           </div>
-          <div class="form-group">
-            <label>
-              <span>Layout</span>
-              <select bind:value={config.layout} on:change={handleUpdate}>
-                <option value="card">Card</option>
-                <option value="inline">Inline</option>
-                <option value="detailed">Detailed</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" bind:checked={config.showPrice} on:change={handleUpdate} />
-              <span>Show Price</span>
-            </label>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                bind:checked={config.showDescription}
-                on:change={handleUpdate}
-              />
-              <span>Show Description</span>
-            </label>
+          <div class="section">
+            <h4>Display Options</h4>
+            <div class="form-group">
+              <label>
+                <span>Layout</span>
+                <select bind:value={config.layout} on:change={handleImmediateUpdate}>
+                  <option value="card">Card</option>
+                  <option value="inline">Inline</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showPrice}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Price</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showDescription}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Description</span>
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'product_list'}
-          <div class="form-group">
-            <label>
-              <span>Category (optional)</span>
-              <input
-                type="text"
-                bind:value={config.category}
-                on:blur={handleUpdate}
-                placeholder="Enter category..."
-              />
-            </label>
+          <div class="section">
+            <h4>Products</h4>
+            <div class="form-group">
+              <label>
+                <span>Category (optional)</span>
+                <input
+                  type="text"
+                  bind:value={config.category}
+                  on:input={handleUpdate}
+                  placeholder="Enter category..."
+                />
+              </label>
+              <p class="field-hint">Leave empty to show products from all categories.</p>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Number of Products</span>
+                <input
+                  type="number"
+                  bind:value={config.limit}
+                  on:input={handleUpdate}
+                  min="1"
+                  max="24"
+                />
+              </label>
+            </div>
           </div>
-          <div class="form-group">
-            <label>
-              <span>Number of Products</span>
-              <input
-                type="number"
-                bind:value={config.limit}
-                on:blur={handleUpdate}
-                min="1"
-                max="24"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Sort By</span>
-              <select bind:value={config.sortBy} on:change={handleUpdate}>
-                <option value="name">Name</option>
-                <option value="price">Price</option>
-                <option value="created_at">Date Created</option>
-              </select>
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Sort Order</span>
-              <select bind:value={config.sortOrder} on:change={handleUpdate}>
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
-            </label>
+          <div class="section">
+            <h4>Sorting</h4>
+            <div class="form-group">
+              <label>
+                <span>Sort By</span>
+                <select bind:value={config.sortBy} on:change={handleImmediateUpdate}>
+                  <option value="name">Name</option>
+                  <option value="price">Price</option>
+                  <option value="created_at">Date Created</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Sort Order</span>
+                <select bind:value={config.sortOrder} on:change={handleImmediateUpdate}>
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'spacer'}
-          <div class="form-group">
-            <label>
-              <span>Space (pixels)</span>
-              {#if typeof config.space === 'object'}
-                <input
-                  type="number"
-                  bind:value={config.space.desktop}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="40"
-                />
-              {:else}
-                <input
-                  type="number"
-                  bind:value={config.space}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="40"
-                />
-              {/if}
-            </label>
-            <p class="field-hint">Use the Responsive tab to set different spacing per device.</p>
+          <div class="section">
+            <h4>Spacing</h4>
+            <div class="form-group">
+              <label>
+                <span>Space (pixels)</span>
+                {#if typeof config.space === 'object'}
+                  <input
+                    type="number"
+                    bind:value={config.space.desktop}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="40"
+                  />
+                {:else}
+                  <input
+                    type="number"
+                    bind:value={config.space}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="40"
+                  />
+                {/if}
+              </label>
+              <p class="field-hint">Use the Responsive tab to set different spacing per device.</p>
+            </div>
           </div>
         {:else if widget.type === 'columns'}
-          <div class="form-group">
-            <label>
-              <span>Number of Columns</span>
-              {#if typeof config.columnCount === 'object'}
-                <input
-                  type="number"
-                  bind:value={config.columnCount.desktop}
-                  on:blur={handleUpdate}
-                  min="1"
-                  max="6"
-                />
-              {:else}
-                <input
-                  type="number"
-                  bind:value={config.columnCount}
-                  on:blur={handleUpdate}
-                  min="1"
-                  max="6"
-                />
-              {/if}
-            </label>
-            <p class="field-hint">Use the Responsive tab to set different columns per device.</p>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Gap Between Columns (pixels)</span>
-              {#if typeof config.gap === 'object'}
-                <input
-                  type="number"
-                  bind:value={config.gap.desktop}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="20"
-                />
-              {:else}
-                <input
-                  type="number"
-                  bind:value={config.gap}
-                  on:blur={handleUpdate}
-                  min="0"
-                  placeholder="20"
-                />
-              {/if}
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Vertical Alignment</span>
-              <select bind:value={config.verticalAlign} on:change={handleUpdate}>
-                <option value="stretch">Stretch (default)</option>
-                <option value="start">Top</option>
-                <option value="center">Center</option>
-                <option value="end">Bottom</option>
-              </select>
-            </label>
+          <div class="section">
+            <h4>Layout</h4>
+            <div class="form-group">
+              <label>
+                <span>Number of Columns</span>
+                {#if typeof config.columnCount === 'object'}
+                  <input
+                    type="number"
+                    bind:value={config.columnCount.desktop}
+                    on:input={handleUpdate}
+                    min="1"
+                    max="6"
+                  />
+                {:else}
+                  <input
+                    type="number"
+                    bind:value={config.columnCount}
+                    on:input={handleUpdate}
+                    min="1"
+                    max="6"
+                  />
+                {/if}
+              </label>
+              <p class="field-hint">Use the Responsive tab to set different columns per device.</p>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Vertical Alignment</span>
+                <select bind:value={config.verticalAlign} on:change={handleImmediateUpdate}>
+                  <option value="stretch">Stretch (default)</option>
+                  <option value="start">Top</option>
+                  <option value="center">Center</option>
+                  <option value="end">Bottom</option>
+                </select>
+              </label>
+            </div>
           </div>
         {:else if widget.type === 'features'}
-          <div class="form-group">
-            <label>
-              <span>Section Title</span>
-              <input
-                type="text"
-                bind:value={config.title}
-                on:blur={handleUpdate}
-                placeholder="Features"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Section Subtitle</span>
-              <textarea
-                bind:value={config.subtitle}
-                on:blur={handleUpdate}
-                placeholder="Describe what makes your product special..."
-                rows="2"
-              />
-            </label>
-          </div>
-          <div class="form-group">
-            <div class="section-header">
-              <span>Feature Cards</span>
-              <button
-                type="button"
-                class="btn-add-item"
-                on:click={() => {
-                  if (!config.features) config.features = [];
-                  const newIndex = config.features.length;
-                  config.features = [
-                    ...config.features,
-                    { icon: '✨', title: 'New Feature', description: 'Describe this feature...' }
-                  ];
-                  // Collapse the newly added feature by default
-                  collapsedFeatures.add(newIndex);
-                  collapsedFeatures = collapsedFeatures; // Trigger reactivity
-                  handleUpdate();
-                }}
-              >
-                + Add Feature
-              </button>
+          <div class="section">
+            <h4>Section Header</h4>
+            <div class="form-group">
+              <label>
+                <span>Title</span>
+                <input
+                  type="text"
+                  bind:value={config.title}
+                  on:input={handleUpdate}
+                  placeholder="Features"
+                />
+              </label>
             </div>
-            <div class="items-list">
-              {#if config.features && config.features.length > 0}
-                {#each config.features as feature, index}
-                  <div
-                    class="item-card"
-                    class:collapsed={collapsedFeatures.has(index)}
-                    class:dragging={draggedIndex === index}
-                    class:drag-over-before={dragOverIndex === index && dropPosition === 'before'}
-                    class:drag-over-after={dragOverIndex === index && dropPosition === 'after'}
-                    role="listitem"
-                    draggable="true"
-                    on:dragstart={(e) => handleDragStart(e, index)}
-                    on:dragover={(e) => handleDragOver(e, index)}
-                    on:dragleave={handleDragLeave}
-                    on:drop={(e) => handleDrop(e, index)}
-                    on:dragend={handleDragEnd}
-                  >
-                    <div class="item-header">
-                      <div class="item-header-left">
-                        <button type="button" class="drag-handle" title="Drag to reorder">
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+            <div class="form-group">
+              <label>
+                <span>Subtitle</span>
+                <textarea
+                  bind:value={config.subtitle}
+                  on:input={handleUpdate}
+                  placeholder="Describe what makes your product special..."
+                  rows="2"
+                />
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Feature Cards</h4>
+            <div class="form-group">
+              <div class="section-header">
+                <span>Feature Cards</span>
+                <button
+                  type="button"
+                  class="btn-add-item"
+                  on:click={() => {
+                    if (!config.features) config.features = [];
+                    const newIndex = config.features.length;
+                    config.features = [
+                      ...config.features,
+                      { icon: '✨', title: 'New Feature', description: 'Describe this feature...' }
+                    ];
+                    // Collapse the newly added feature by default
+                    collapsedFeatures.add(newIndex);
+                    collapsedFeatures = collapsedFeatures; // Trigger reactivity
+                    handleImmediateUpdate();
+                  }}
+                >
+                  + Add Feature
+                </button>
+              </div>
+              <div class="items-list">
+                {#if config.features && config.features.length > 0}
+                  {#each config.features as feature, index}
+                    <div
+                      class="item-card"
+                      class:collapsed={collapsedFeatures.has(index)}
+                      class:dragging={draggedIndex === index}
+                      class:drag-over-before={dragOverIndex === index && dropPosition === 'before'}
+                      class:drag-over-after={dragOverIndex === index && dropPosition === 'after'}
+                      role="listitem"
+                      draggable="true"
+                      on:dragstart={(e) => handleDragStart(e, index)}
+                      on:dragover={(e) => handleDragOver(e, index)}
+                      on:dragleave={handleDragLeave}
+                      on:drop={(e) => handleDrop(e, index)}
+                      on:dragend={handleDragEnd}
+                    >
+                      <div class="item-header">
+                        <div class="item-header-left">
+                          <button type="button" class="drag-handle" title="Drag to reorder">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <line
+                                x1="4"
+                                y1="8"
+                                x2="20"
+                                y2="8"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                              />
+                              <line
+                                x1="4"
+                                y1="16"
+                                x2="20"
+                                y2="16"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                              />
+                            </svg>
+                          </button>
+                          <span class="item-title">
+                            {feature.icon}
+                            {feature.title || `Feature ${index + 1}`}
+                          </span>
+                        </div>
+                        <div class="item-header-right">
+                          <button
+                            type="button"
+                            class="btn-collapse"
+                            on:click={() => toggleFeatureCollapse(index)}
+                            title={collapsedFeatures.has(index) ? 'Expand' : 'Collapse'}
                           >
-                            <line
-                              x1="4"
-                              y1="8"
-                              x2="20"
-                              y2="8"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                            />
-                            <line
-                              x1="4"
-                              y1="16"
-                              x2="20"
-                              y2="16"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                            />
-                          </svg>
-                        </button>
-                        <span class="item-title">
-                          {feature.icon}
-                          {feature.title || `Feature ${index + 1}`}
-                        </span>
-                      </div>
-                      <div class="item-header-right">
-                        <button
-                          type="button"
-                          class="btn-collapse"
-                          on:click={() => toggleFeatureCollapse(index)}
-                          title={collapsedFeatures.has(index) ? 'Expand' : 'Collapse'}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <polyline
+                                points="6 9 12 15 18 9"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-remove-item"
+                            on:click={() => {
+                              if (config.features) {
+                                config.features = config.features.filter((_, i) => i !== index);
+                                handleImmediateUpdate();
+                              }
+                            }}
                           >
-                            <polyline
-                              points="6 9 12 15 18 9"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          class="btn-remove-item"
-                          on:click={() => {
-                            if (config.features) {
-                              config.features = config.features.filter((_, i) => i !== index);
-                              handleUpdate();
-                            }
-                          }}
-                        >
-                          ✕
-                        </button>
+                            ✕
+                          </button>
+                        </div>
                       </div>
+                      {#if !collapsedFeatures.has(index)}
+                        <div class="item-fields">
+                          <label>
+                            <span>Icon/Emoji</span>
+                            <input
+                              type="text"
+                              bind:value={feature.icon}
+                              on:input={handleUpdate}
+                              placeholder="🎯"
+                              maxlength="4"
+                            />
+                          </label>
+                          <label>
+                            <span>Title</span>
+                            <input
+                              type="text"
+                              bind:value={feature.title}
+                              on:input={handleUpdate}
+                              placeholder="Feature title"
+                            />
+                          </label>
+                          <label>
+                            <span>Description</span>
+                            <textarea
+                              bind:value={feature.description}
+                              on:input={handleUpdate}
+                              placeholder="Describe this feature..."
+                              rows="3"
+                            />
+                          </label>
+                        </div>
+                      {/if}
                     </div>
-                    {#if !collapsedFeatures.has(index)}
-                      <div class="item-fields">
-                        <label>
-                          <span>Icon/Emoji</span>
-                          <input
-                            type="text"
-                            bind:value={feature.icon}
-                            on:input={handleUpdate}
-                            placeholder="🎯"
-                            maxlength="4"
-                          />
-                        </label>
-                        <label>
-                          <span>Title</span>
-                          <input
-                            type="text"
-                            bind:value={feature.title}
-                            on:input={handleUpdate}
-                            placeholder="Feature title"
-                          />
-                        </label>
-                        <label>
-                          <span>Description</span>
-                          <textarea
-                            bind:value={feature.description}
-                            on:input={handleUpdate}
-                            placeholder="Describe this feature..."
-                            rows="3"
-                          />
-                        </label>
-                      </div>
-                    {/if}
-                  </div>
-                {/each}
-              {:else}
-                <p class="empty-state">No features yet. Click "Add Feature" to get started.</p>
-              {/if}
+                  {/each}
+                {:else}
+                  <p class="empty-state">No features yet. Click "Add Feature" to get started.</p>
+                {/if}
+              </div>
             </div>
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.cardBackground}
-              currentTheme={colorTheme}
-              label="Card Background Color"
-              onChange={(newValue) => {
-                config.cardBackground = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <ThemeColorInput
-              value={config.cardBorderColor}
-              currentTheme={colorTheme}
-              label="Card Border Color"
-              onChange={(newValue) => {
-                config.cardBorderColor = newValue;
-                handleUpdate();
-              }}
-            />
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Card Border Radius (px)</span>
-              <input
-                type="number"
-                bind:value={config.cardBorderRadius}
-                on:blur={handleUpdate}
-                min="0"
-                placeholder="12"
-              />
-            </label>
           </div>
         {/if}
       </div>
     {:else if activeTab === 'style'}
       <div class="style-tab">
-        <div class="section">
-          <h4>Theme Color Overrides</h4>
-          <p class="help-text">
-            Override the page theme colors for this specific widget. Leave empty to use theme
-            defaults.
-          </p>
-
-          <div class="form-group">
-            <label>
-              <span>Primary Color</span>
-              <input
-                type="color"
-                value={config.themeOverrides?.primary || ''}
-                on:input={(e) => {
-                  const value = e.currentTarget.value;
-                  config.themeOverrides = { ...config.themeOverrides, primary: value };
-                  handleUpdate();
-                }}
-              />
-              {#if config.themeOverrides?.primary}
+        <!-- Widget-Specific Style Settings -->
+        {#if widget.type === 'hero'}
+          <div class="section">
+            <h4>Layout</h4>
+            <div class="form-group">
+              <label>
+                <span>Content Alignment</span>
+                <select bind:value={config.contentAlign} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Background</h4>
+            <div class="form-group">
+              <label for="background-image">
+                <span>Background Image</span>
+              </label>
+              {#if config.backgroundImage}
+                <div class="media-preview">
+                  <img src={config.backgroundImage} alt="Background" />
+                  <button
+                    type="button"
+                    class="btn-remove"
+                    on:click={() => {
+                      config.backgroundImage = '';
+                      handleImmediateUpdate();
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              {/if}
+              <div class="media-actions">
+                <MediaUpload onMediaUploaded={handleMediaUploaded} />
                 <button
                   type="button"
-                  class="clear-btn"
-                  on:click={() => {
-                    if (config.themeOverrides) {
-                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                      const { primary, ...rest } = config.themeOverrides;
-                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
-                      handleUpdate();
-                    }
-                  }}
+                  class="btn-secondary"
+                  on:click={() => (showMediaBrowser = !showMediaBrowser)}
                 >
-                  Clear
+                  {showMediaBrowser ? 'Hide' : 'Browse'} Library
                 </button>
+              </div>
+              {#if showMediaBrowser}
+                <div
+                  class="media-browser-modal"
+                  role="button"
+                  tabindex="0"
+                  on:click|self={handleCancelMediaBrowser}
+                  on:keydown={(e) => e.key === 'Escape' && handleCancelMediaBrowser()}
+                >
+                  <div class="media-browser-content">
+                    <div class="media-browser-header">
+                      <h3>Media Library</h3>
+                      <div class="header-actions">
+                        {#if selectedMediaItems.length > 0}
+                          <span class="selection-count">
+                            {selectedMediaItems.length} selected
+                          </span>
+                        {/if}
+                        <button
+                          type="button"
+                          class="modal-close-btn"
+                          on:click={handleCancelMediaBrowser}
+                          title="Close"
+                        >
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M18 6L6 18M6 6l12 12"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="media-browser-body">
+                      <MediaBrowser
+                        onSelect={handleMediaSelected}
+                        selectedIds={selectedMediaItems.map((item) => item.id)}
+                        showFooter={false}
+                      />
+                    </div>
+                    <div class="media-browser-footer">
+                      <button type="button" class="btn-cancel" on:click={handleCancelMediaBrowser}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-add"
+                        disabled={selectedMediaItems.length === 0}
+                        on:click={handleAddSelectedMedia}
+                      >
+                        Add Selected ({selectedMediaItems.length})
+                      </button>
+                    </div>
+                  </div>
+                </div>
               {/if}
-            </label>
-          </div>
-
-          <div class="form-group">
-            <label>
-              <span>Secondary Color</span>
-              <input
-                type="color"
-                value={config.themeOverrides?.secondary || ''}
-                on:input={(e) => {
-                  const value = e.currentTarget.value;
-                  config.themeOverrides = { ...config.themeOverrides, secondary: value };
-                  handleUpdate();
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.backgroundColor}
+                currentTheme={colorTheme}
+                label="Background Color"
+                defaultValue="theme:primary"
+                onChange={(newValue) => {
+                  config.backgroundColor = newValue;
+                  handleImmediateUpdate();
                 }}
               />
-              {#if config.themeOverrides?.secondary}
-                <button
-                  type="button"
-                  class="clear-btn"
-                  on:click={() => {
-                    if (config.themeOverrides) {
-                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                      const { secondary, ...rest } = config.themeOverrides;
-                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
-                      handleUpdate();
-                    }
-                  }}
-                >
-                  Clear
-                </button>
-              {/if}
-            </label>
+            </div>
           </div>
-
-          <div class="form-group">
-            <label>
-              <span>Accent Color</span>
-              <input
-                type="color"
-                value={config.themeOverrides?.accent || ''}
-                on:input={(e) => {
-                  const value = e.currentTarget.value;
-                  config.themeOverrides = { ...config.themeOverrides, accent: value };
-                  handleUpdate();
+          <div class="section">
+            <h4>Overlay</h4>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.overlay}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Add Dark Overlay</span>
+              </label>
+            </div>
+            {#if config.overlay}
+              <div class="form-group">
+                <label>
+                  <span>Overlay Opacity ({config.overlayOpacity || 50}%)</span>
+                  <input
+                    type="range"
+                    bind:value={config.overlayOpacity}
+                    on:input={handleUpdate}
+                    min="0"
+                    max="100"
+                  />
+                </label>
+              </div>
+            {/if}
+          </div>
+          <div class="section">
+            <h4>Text Styling</h4>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.titleColor}
+                currentTheme={colorTheme}
+                label="Title Color"
+                defaultValue="theme:text"
+                onChange={(newValue) => {
+                  config.titleColor = newValue;
+                  handleImmediateUpdate();
                 }}
               />
-              {#if config.themeOverrides?.accent}
-                <button
-                  type="button"
-                  class="clear-btn"
-                  on:click={() => {
-                    if (config.themeOverrides) {
-                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                      const { accent, ...rest } = config.themeOverrides;
-                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
-                      handleUpdate();
-                    }
-                  }}
-                >
-                  Clear
-                </button>
-              {/if}
-            </label>
-          </div>
-
-          <div class="form-group">
-            <label>
-              <span>Background Color</span>
-              <input
-                type="color"
-                value={config.themeOverrides?.background || ''}
-                on:input={(e) => {
-                  const value = e.currentTarget.value;
-                  config.themeOverrides = { ...config.themeOverrides, background: value };
-                  handleUpdate();
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.subtitleColor}
+                currentTheme={colorTheme}
+                label="Subtitle Color"
+                defaultValue="theme:textSecondary"
+                onChange={(newValue) => {
+                  config.subtitleColor = newValue;
+                  handleImmediateUpdate();
                 }}
               />
-              {#if config.themeOverrides?.background}
-                <button
-                  type="button"
-                  class="clear-btn"
-                  on:click={() => {
-                    if (config.themeOverrides) {
-                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                      const { background, ...rest } = config.themeOverrides;
-                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
-                      handleUpdate();
-                    }
-                  }}
-                >
-                  Clear
-                </button>
-              {/if}
-            </label>
+            </div>
           </div>
+        {/if}
 
-          <div class="form-group">
-            <label>
-              <span>Text Color</span>
-              <input
-                type="color"
-                value={config.themeOverrides?.text || ''}
-                on:input={(e) => {
-                  const value = e.currentTarget.value;
-                  config.themeOverrides = { ...config.themeOverrides, text: value };
-                  handleUpdate();
+        {#if widget.type === 'text'}
+          <div class="section">
+            <h4>Alignment</h4>
+            <div class="form-group">
+              <label>
+                <span>Text Alignment</span>
+                <select bind:value={config.alignment} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                  <option value="justify">Justify</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Typography & Color</h4>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.textColor}
+                currentTheme={colorTheme}
+                label="Text Color"
+                defaultValue="theme:text"
+                onChange={(newValue) => {
+                  config.textColor = newValue;
+                  handleImmediateUpdate();
                 }}
               />
-              {#if config.themeOverrides?.text}
-                <button
-                  type="button"
-                  class="clear-btn"
-                  on:click={() => {
-                    if (config.themeOverrides) {
-                      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                      const { text, ...rest } = config.themeOverrides;
-                      config.themeOverrides = Object.keys(rest).length > 0 ? rest : undefined;
-                      handleUpdate();
-                    }
-                  }}
-                >
-                  Clear
-                </button>
-              {/if}
-            </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Font Size (px)</span>
+                <input
+                  type="number"
+                  bind:value={config.fontSize}
+                  on:input={handleUpdate}
+                  min="8"
+                  max="72"
+                  placeholder="16"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Line Height</span>
+                <input
+                  type="number"
+                  bind:value={config.lineHeight}
+                  on:input={handleUpdate}
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  placeholder="1.6"
+                />
+              </label>
+            </div>
           </div>
-
-          {#if config.themeOverrides && Object.keys(config.themeOverrides).length > 0}
-            <button
-              type="button"
-              class="btn-secondary"
-              on:click={() => {
-                config.themeOverrides = undefined;
-                handleUpdate();
-              }}
-            >
-              Reset All Overrides
-            </button>
+        {:else if widget.type === 'heading'}
+          <div class="section">
+            <h4>Styling</h4>
+            <div class="form-group">
+              <label>
+                <span>Text Alignment</span>
+                <select bind:value={config.alignment} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.textColor}
+                currentTheme={colorTheme}
+                label="Text Color"
+                defaultValue="theme:text"
+                onChange={(newValue) => {
+                  config.textColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+          </div>
+        {:else if widget.type === 'image'}
+          <div class="section">
+            <h4>Dimensions</h4>
+            <div class="form-group">
+              <label>
+                <span>Width</span>
+                <input
+                  type="text"
+                  bind:value={config.imageWidth}
+                  on:input={handleUpdate}
+                  placeholder="100%, 500px, etc."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Height</span>
+                <input
+                  type="text"
+                  bind:value={config.imageHeight}
+                  on:input={handleUpdate}
+                  placeholder="auto, 300px, etc."
+                />
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Display</h4>
+            <div class="form-group">
+              <label>
+                <span>Object Fit</span>
+                <select bind:value={config.objectFit} on:change={handleImmediateUpdate}>
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        {:else if widget.type === 'hero'}
+          {#if config.ctaText}
+            <div class="section">
+              <h4>Primary Button Styling</h4>
+              <div class="form-group">
+                <ThemeColorInput
+                  value={config.ctaBackgroundColor}
+                  currentTheme={colorTheme}
+                  label="Button Background Color"
+                  defaultValue="theme:primary"
+                  onChange={(newValue) => {
+                    config.ctaBackgroundColor = newValue;
+                    handleImmediateUpdate();
+                  }}
+                />
+              </div>
+              <div class="form-group">
+                <ThemeColorInput
+                  value={config.ctaTextColor}
+                  currentTheme={colorTheme}
+                  label="Button Text Color"
+                  defaultValue="theme:background"
+                  onChange={(newValue) => {
+                    config.ctaTextColor = newValue;
+                    handleImmediateUpdate();
+                  }}
+                />
+              </div>
+              <div class="form-group">
+                <label>
+                  <span>Font Size</span>
+                  <input
+                    type="text"
+                    bind:value={config.ctaFontSize}
+                    on:input={handleUpdate}
+                    placeholder="16px"
+                  />
+                </label>
+              </div>
+              <div class="form-group">
+                <label>
+                  <span>Font Weight</span>
+                  <select bind:value={config.ctaFontWeight} on:change={handleImmediateUpdate}>
+                    <option value="400">Normal (400)</option>
+                    <option value="500">Medium (500)</option>
+                    <option value="600">Semi-bold (600)</option>
+                    <option value="700">Bold (700)</option>
+                  </select>
+                </label>
+              </div>
+            </div>
           {/if}
-        </div>
+          {#if config.secondaryCtaText}
+            <div class="section">
+              <h4>Secondary Button Styling</h4>
+              <div class="form-group">
+                <ThemeColorInput
+                  value={config.secondaryCtaBackgroundColor}
+                  currentTheme={colorTheme}
+                  label="Button Background Color"
+                  defaultValue="theme:secondary"
+                  onChange={(newValue) => {
+                    config.secondaryCtaBackgroundColor = newValue;
+                    handleImmediateUpdate();
+                  }}
+                />
+              </div>
+              <div class="form-group">
+                <ThemeColorInput
+                  value={config.secondaryCtaTextColor}
+                  currentTheme={colorTheme}
+                  label="Button Text Color"
+                  defaultValue="theme:text"
+                  onChange={(newValue) => {
+                    config.secondaryCtaTextColor = newValue;
+                    handleImmediateUpdate();
+                  }}
+                />
+              </div>
+              <div class="form-group">
+                <ThemeColorInput
+                  value={config.secondaryCtaBorderColor}
+                  currentTheme={colorTheme}
+                  label="Button Border Color"
+                  defaultValue="theme:border"
+                  onChange={(newValue) => {
+                    config.secondaryCtaBorderColor = newValue;
+                    handleImmediateUpdate();
+                  }}
+                />
+              </div>
+              <div class="form-group">
+                <label>
+                  <span>Font Size</span>
+                  <input
+                    type="text"
+                    bind:value={config.secondaryCtaFontSize}
+                    on:input={handleUpdate}
+                    placeholder="16px"
+                  />
+                </label>
+              </div>
+              <div class="form-group">
+                <label>
+                  <span>Font Weight</span>
+                  <select
+                    bind:value={config.secondaryCtaFontWeight}
+                    on:change={handleImmediateUpdate}
+                  >
+                    <option value="400">Normal (400)</option>
+                    <option value="500">Medium (500)</option>
+                    <option value="600">Semi-bold (600)</option>
+                    <option value="700">Bold (700)</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          {/if}
+        {:else if widget.type === 'button'}
+          <div class="section">
+            <h4>Style</h4>
+            <div class="form-group">
+              <label>
+                <span>Button Variant</span>
+                <select bind:value={config.variant} on:change={handleImmediateUpdate}>
+                  <option value="primary">Primary</option>
+                  <option value="secondary">Secondary</option>
+                  <option value="outline">Outline</option>
+                  <option value="text">Text</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Button Size</span>
+                <select bind:value={config.size} on:change={handleImmediateUpdate}>
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Layout</h4>
+            <div class="form-group">
+              <label class="checkbox-label">
+                {#if typeof config.fullWidth === 'object'}
+                  <input
+                    type="checkbox"
+                    bind:checked={config.fullWidth.desktop}
+                    on:change={handleImmediateUpdate}
+                  />
+                {:else}
+                  <input
+                    type="checkbox"
+                    bind:checked={config.fullWidth}
+                    on:change={handleImmediateUpdate}
+                  />
+                {/if}
+                <span>Full width</span>
+              </label>
+              <p class="field-hint">Use the Responsive tab for per-device full width control.</p>
+            </div>
+          </div>
+        {:else if widget.type === 'divider'}
+          <div class="section">
+            <h4>Styling</h4>
+            <div class="form-group">
+              <label>
+                <span>Thickness (px)</span>
+                <input
+                  type="number"
+                  bind:value={config.thickness}
+                  on:input={handleUpdate}
+                  min="1"
+                  max="10"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Style</span>
+                <select bind:value={config.dividerStyle} on:change={handleImmediateUpdate}>
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.dividerColor}
+                currentTheme={colorTheme}
+                label="Divider Color"
+                defaultValue="theme:border"
+                onChange={(newValue) => {
+                  config.dividerColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Vertical Spacing (pixels)</span>
+                {#if typeof config.spacing === 'object'}
+                  <input
+                    type="number"
+                    bind:value={config.spacing.desktop}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="20"
+                  />
+                {:else}
+                  <input
+                    type="number"
+                    bind:value={config.spacing}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="20"
+                  />
+                {/if}
+              </label>
+              <p class="field-hint">
+                Vertical spacing above and below the divider. Use Responsive tab for per-device
+                spacing.
+              </p>
+            </div>
+          </div>
+        {:else if widget.type === 'columns'}
+          <div class="section">
+            <h4>Spacing</h4>
+            <div class="form-group">
+              <label>
+                <span>Gap Between Columns (pixels)</span>
+                {#if typeof config.gap === 'object'}
+                  <input
+                    type="number"
+                    bind:value={config.gap.desktop}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="20"
+                  />
+                {:else}
+                  <input
+                    type="number"
+                    bind:value={config.gap}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="20"
+                  />
+                {/if}
+              </label>
+              <p class="field-hint">Use Responsive tab for per-device gap control.</p>
+            </div>
+          </div>
+        {:else if widget.type === 'features'}
+          <div class="section">
+            <h4>Card Styling</h4>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.cardBackground}
+                currentTheme={colorTheme}
+                label="Card Background Color"
+                defaultValue="theme:surface"
+                onChange={(newValue) => {
+                  config.cardBackground = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.cardBorderColor}
+                currentTheme={colorTheme}
+                label="Card Border Color"
+                defaultValue="theme:border"
+                onChange={(newValue) => {
+                  config.cardBorderColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Border Radius (px)</span>
+                <input
+                  type="number"
+                  bind:value={config.cardBorderRadius}
+                  on:input={handleUpdate}
+                  min="0"
+                  placeholder="12"
+                />
+              </label>
+            </div>
+          </div>
+        {/if}
       </div>
     {:else if activeTab === 'responsive'}
       <div class="responsive-tab">
@@ -1475,7 +1500,7 @@
               <input
                 type="number"
                 bind:value={config.space[currentBreakpoint]}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 min="0"
                 placeholder="px"
               />
@@ -1488,7 +1513,7 @@
               <input
                 type="number"
                 bind:value={config.spacing[currentBreakpoint]}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 min="0"
                 placeholder="px"
               />
@@ -1501,7 +1526,7 @@
               <input
                 type="text"
                 bind:value={config.heroHeight[currentBreakpoint]}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 placeholder="500px, 50vh, etc."
               />
             </label>
@@ -1520,7 +1545,7 @@
                 <input
                   type="number"
                   bind:value={config.columns[currentBreakpoint]}
-                  on:blur={handleUpdate}
+                  on:input={handleUpdate}
                   min="1"
                   max="6"
                 />
@@ -1534,7 +1559,7 @@
                 <input
                   type="number"
                   bind:value={config.columnCount[currentBreakpoint]}
-                  on:blur={handleUpdate}
+                  on:input={handleUpdate}
                   min="1"
                   max="6"
                 />
@@ -1554,7 +1579,7 @@
                 <input
                   type="number"
                   bind:value={config.gap[currentBreakpoint]}
-                  on:blur={handleUpdate}
+                  on:input={handleUpdate}
                   min="0"
                   placeholder="20"
                 />
@@ -1567,7 +1592,7 @@
               <input
                 type="checkbox"
                 bind:checked={config.fullWidth[currentBreakpoint]}
-                on:change={handleUpdate}
+                on:change={handleImmediateUpdate}
               />
               <span>Full Width on {currentBreakpoint}</span>
             </label>
@@ -1585,7 +1610,7 @@
               <input
                 type="number"
                 bind:value={config.featuresColumns[currentBreakpoint]}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 min="1"
               />
             </label>
@@ -1605,7 +1630,7 @@
               <input
                 type="number"
                 bind:value={config.featuresGap[currentBreakpoint]}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 min="0"
                 placeholder="32"
               />
@@ -1630,7 +1655,7 @@
                     config.featuresLimit[currentBreakpoint] = parseInt(val);
                   }
                 }}
-                on:blur={handleUpdate}
+                on:input={handleUpdate}
                 min="1"
                 placeholder="Show all"
               />
@@ -1654,41 +1679,6 @@
     display: flex;
     flex-direction: column;
     background: var(--color-bg-primary);
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-border-secondary);
-  }
-
-  .panel-title h3 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--color-text-primary);
-  }
-
-  .widget-id {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--color-text-secondary);
-    font-family: monospace;
-  }
-
-  .close-btn {
-    padding: 0.25rem;
-    background: transparent;
-    border: none;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.2s;
-  }
-
-  .close-btn:hover {
-    background: var(--color-bg-secondary);
   }
 
   .panel-tabs {
@@ -1766,14 +1756,6 @@
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     font-size: 0.875rem;
-  }
-
-  .form-group input[type='color'] {
-    width: 100%;
-    height: 40px;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 6px;
-    cursor: pointer;
   }
 
   .form-group input[type='range'] {
@@ -1863,6 +1845,7 @@
 
   .media-actions {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1rem;
   }
@@ -2260,28 +2243,51 @@
     border-radius: 8px;
   }
 
-  .clear-btn {
-    margin-left: 0.5rem;
-    padding: 0.25rem 0.75rem;
-    background: transparent;
-    border: 1px solid var(--color-border-secondary);
-    border-radius: 4px;
-    color: var(--color-text-secondary);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .clear-btn:hover {
-    background: var(--color-bg-secondary);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-
   .help-text {
     font-size: 0.8rem;
     color: var(--color-text-tertiary);
     margin-bottom: 1rem;
     line-height: 1.5;
+  }
+
+  /* Content Tab Sections */
+  .content-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Style Tab Sections */
+  .style-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Responsive Tab */
+  .responsive-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .section {
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+  }
+
+  .section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .section .form-group:last-child {
+    margin-bottom: 0;
   }
 </style>

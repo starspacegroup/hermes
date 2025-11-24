@@ -1,7 +1,13 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getPageById, getPageWidgets } from '$lib/server/db/pages';
-import { getPageRevisions } from '$lib/server/db/revisions';
+import { getPageById } from '$lib/server/db/pages';
+import {
+  buildRevisionTree,
+  getPublishedRevision,
+  getMostRecentDraftRevision
+} from '$lib/server/db/revisions';
+import { normalizeWidgetPositions, needsPositionNormalization } from '$lib/utils/widgetPositions';
+import { getAllColorThemes } from '$lib/server/db/color-themes';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -11,12 +17,17 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     throw error(500, 'Database connection not available');
   }
 
+  // Load color themes for the site
+  const colorThemes = await getAllColorThemes(db, siteId);
+
   // If no pageId, return empty state for new page creation
   if (!params.pageId) {
     return {
       page: null,
-      widgets: [] as any[],
-      revisions: [] as any[],
+      widgets: [],
+      revisions: [],
+      colorThemes,
+      userName: locals.currentUser?.name || locals.currentUser?.email,
       isNewPage: true
     };
   }
@@ -27,13 +38,36 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     throw error(404, 'Page not found');
   }
 
-  const widgets = await getPageWidgets(db, params.pageId);
-  const revisions = await getPageRevisions(db, siteId, params.pageId);
+  const revisions = await buildRevisionTree(db, siteId, params.pageId);
 
-  // Find the current published revision
-  const publishedRevision = revisions.find((r) => r.status === 'published');
-  const currentRevisionId = publishedRevision?.id || null;
-  const currentRevisionIsPublished = !!publishedRevision;
+  // Try to load the published revision first
+  let currentRevision = await getPublishedRevision(db, siteId, params.pageId);
+  let currentRevisionIsPublished = true;
+
+  // If no published revision, load the most recent draft
+  if (!currentRevision) {
+    currentRevision = await getMostRecentDraftRevision(db, siteId, params.pageId);
+    currentRevisionIsPublished = false;
+  }
+
+  // Use widgets from the selected revision, or empty array if no revision exists
+  let widgets = currentRevision?.widgets || [];
+  const currentRevisionId = currentRevision?.id || null;
+
+  // Normalize widget positions if needed (fixes duplicate positions bug)
+  if (needsPositionNormalization(widgets)) {
+    console.log('[Builder Load] Normalizing widget positions due to duplicates or gaps');
+    widgets = normalizeWidgetPositions(widgets);
+  }
+
+  console.log('[Builder Load] Loaded revision data:', {
+    pageId: params.pageId,
+    hasRevision: !!currentRevision,
+    revisionId: currentRevisionId,
+    isPublished: currentRevisionIsPublished,
+    widgetCount: widgets.length,
+    widgets: widgets
+  });
 
   return {
     page,
@@ -41,6 +75,8 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     revisions,
     currentRevisionId,
     currentRevisionIsPublished,
+    colorThemes,
+    userName: locals.currentUser?.name || locals.currentUser?.email,
     isNewPage: false
   };
 };

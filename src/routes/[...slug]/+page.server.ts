@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as pagesDb from '$lib/server/db/pages';
+import { getPublishedRevision } from '$lib/server/db/revisions';
 import type { PageServerLoad } from './$types';
 import { logPageAction } from '$lib/server/activity-logger';
 
@@ -37,14 +38,9 @@ export const load: PageServerLoad = async ({
       }
     }
 
-    // Fetch widgets for this page
-    const dbWidgets = await pagesDb.getPageWidgets(db, page.id);
-
-    // Parse widget configs
-    const widgets = dbWidgets.map((w) => ({
-      ...w,
-      config: JSON.parse(w.config)
-    }));
+    // Fetch widgets from published revision (Builder content)
+    const publishedRevision = await getPublishedRevision(db, siteId, page.id);
+    const widgets = publishedRevision?.widgets || [];
 
     // Log page view (only for published pages, not previews)
     if (!isPreview && page.status === 'published') {

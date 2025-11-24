@@ -1,8 +1,9 @@
 import type { PageServerLoad } from './$types';
 import { getDB, getAllProducts, getProductFulfillmentOptions } from '$lib/server/db';
 import * as pagesDb from '$lib/server/db/pages';
+import { getPublishedRevision } from '$lib/server/db/revisions';
 import * as colorThemes from '$lib/server/db/color-themes';
-import type { WidgetConfig } from '$lib/types/pages';
+import type { PageWidget } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   // If platform is not available (development without D1), fall back to empty array
@@ -30,22 +31,11 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     // Check if a page exists for the home route '/'
     const page = await pagesDb.getPageBySlug(db, siteId, '/');
 
-    let widgets: Array<{
-      id: string;
-      page_id: string;
-      type: string;
-      config: WidgetConfig;
-      position: number;
-      created_at: number;
-      updated_at: number;
-    }> = [];
+    let widgets: PageWidget[] = [];
     if (page && page.status === 'published') {
-      // Fetch widgets for the home page
-      const dbWidgets = await pagesDb.getPageWidgets(db, page.id);
-      widgets = dbWidgets.map((w) => ({
-        ...w,
-        config: JSON.parse(w.config)
-      }));
+      // Fetch widgets from published revision (Builder content)
+      const publishedRevision = await getPublishedRevision(db, siteId, page.id);
+      widgets = publishedRevision?.widgets || [];
     }
 
     // Fetch products from D1 database

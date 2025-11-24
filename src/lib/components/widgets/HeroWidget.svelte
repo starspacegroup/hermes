@@ -40,6 +40,8 @@
   $: textColor =
     resolveThemeColor(config.textColor, colorTheme, '', true) ||
     (overlay || backgroundImage ? '#ffffff' : 'var(--theme-text)');
+  $: titleColor = resolveThemeColor(config.titleColor, colorTheme, '', true) || textColor;
+  $: subtitleColor = resolveThemeColor(config.subtitleColor, colorTheme, '', true) || textColor;
   $: heroHeight = config.heroHeight || '500px';
   $: contentAlign = config.contentAlign || 'center';
   $: overlay = config.overlay ?? false;
@@ -62,9 +64,9 @@
     <div class="hero-overlay" style="opacity: {overlayOpacity / 100}" />
   {/if}
   <div class="hero-content" style="color: {textColor};">
-    <h1>{title}</h1>
+    <h1 style="color: {titleColor};">{title}</h1>
     {#if subtitle}
-      <p>{subtitle}</p>
+      <p style="color: {subtitleColor};">{subtitle}</p>
     {/if}
     {#if ctaText || secondaryCtaText}
       <div class="hero-cta-group">

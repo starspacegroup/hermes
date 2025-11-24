@@ -29,11 +29,11 @@
   }
 
   function handleEdit(pageId: string) {
-    goto(`/admin/pages/${pageId}/edit`);
+    goto(`/admin/builder/${pageId}`);
   }
 
   function handleCreate() {
-    goto('/admin/pages/create');
+    goto('/admin/builder');
   }
 
   function formatDate(timestamp: number): string {
@@ -49,7 +49,7 @@
   <div class="page-header">
     <div>
       <h1>Pages</h1>
-      <p>Manage your site pages with the WYSIWYG editor</p>
+      <p>Create and manage your site pages with the Builder</p>
     </div>
     <button class="create-btn" on:click={handleCreate}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -72,7 +72,7 @@
           <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"></path>
         </svg>
         <h2>No pages yet</h2>
-        <p>Create your first page to get started with the WYSIWYG editor</p>
+        <p>Create your first page to get started with the Builder</p>
         <button class="create-btn" on:click={handleCreate}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"></path>

@@ -274,6 +274,36 @@ export async function getPublishedRevision(
 }
 
 /**
+ * Get the most recent draft revision for a page
+ */
+export async function getMostRecentDraftRevision(
+  db: D1Database,
+  siteId: string,
+  pageId: string
+): Promise<ParsedPageRevision | null> {
+  const result = await db
+    .prepare(
+      `
+      SELECT pr.* 
+      FROM page_revisions pr
+      INNER JOIN pages p ON pr.page_id = p.id
+      WHERE p.site_id = ? AND pr.page_id = ? AND pr.status = 'draft'
+      ORDER BY pr.created_at DESC
+      LIMIT 1
+    `
+    )
+    .bind(siteId, pageId)
+    .first<PageRevision>();
+
+  if (!result) return null;
+
+  return {
+    ...result,
+    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+  };
+}
+
+/**
  * Build a revision tree structure for visualization
  * Returns an array of revision nodes with parent-child relationships
  */

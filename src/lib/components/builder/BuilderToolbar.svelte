@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { goto } from '$app/navigation';
   import {
     Save,
     Upload,
@@ -9,22 +10,72 @@
     Smartphone,
     Tablet,
     Monitor,
-    Eye,
-    Edit3,
-    Sparkles
+    Sparkles,
+    History,
+    ChevronDown,
+    LayoutDashboard,
+    Globe,
+    Sun,
+    Moon,
+    MonitorSmartphone,
+    Check,
+    Palette
   } from 'lucide-svelte';
+  import { themeStore } from '$lib/stores/theme';
+  import type { Theme } from '$lib/types/theme';
+  import type { ColorThemeDefinition } from '$lib/types/pages';
+  import Avatar from '$lib/components/Avatar.svelte';
 
   export let title: string;
   export let slug: string;
   export let currentBreakpoint: 'mobile' | 'tablet' | 'desktop';
-  export let viewMode: 'edit' | 'preview';
+  export let colorTheme: string;
+  export let colorThemes: ColorThemeDefinition[] = [];
   export let hasUnsavedChanges: boolean;
   export let isSaving: boolean;
   export let lastSavedAt: Date | null;
   export let canUndo: boolean;
   export let canRedo: boolean;
+  export let hasRevisions = false;
+  export let revisionCount = 0;
+  export let userName: string | undefined = undefined;
 
   const dispatch = createEventDispatcher();
+
+  let showUserMenu = false;
+
+  function toggleUserMenu() {
+    showUserMenu = !showUserMenu;
+  }
+
+  function closeUserMenu() {
+    showUserMenu = false;
+  }
+
+  function openThemePalette() {
+    dispatch('openThemePalette');
+  }
+
+  // Reactively compute the selected theme name
+  $: selectedThemeName = (() => {
+    const theme = colorThemes.find((t) => t.id === colorTheme);
+    return theme?.name || 'Select Theme';
+  })();
+
+  function handleThemeChange(theme: Theme) {
+    themeStore.setTheme(theme);
+    closeUserMenu();
+  }
+
+  async function navigateToAdmin() {
+    closeUserMenu();
+    await goto('/admin/dashboard');
+  }
+
+  async function navigateToPublicSite() {
+    closeUserMenu();
+    await goto('/');
+  }
 
   function formatLastSaved() {
     if (!lastSavedAt) return '';
@@ -90,29 +141,31 @@
       </button>
     </div>
 
-    <div class="view-mode-switcher">
-      <button
-        class="btn-mode"
-        class:active={viewMode === 'edit'}
-        on:click={() => dispatch('changeViewMode', 'edit')}
-        aria-label="Edit mode"
-      >
-        <Edit3 size={18} />
-        <span>Edit</span>
-      </button>
-      <button
-        class="btn-mode"
-        class:active={viewMode === 'preview'}
-        on:click={() => dispatch('changeViewMode', 'preview')}
-        aria-label="Preview mode"
-      >
-        <Eye size={18} />
-        <span>Preview</span>
+    <div class="theme-preview-container">
+      <button class="btn-theme-preview" on:click={openThemePalette} aria-label="Theme preview">
+        <Palette size={18} />
+        <span>{selectedThemeName}</span>
       </button>
     </div>
   </div>
 
   <div class="toolbar-right">
+    <button
+      class="btn-icon"
+      disabled={!hasRevisions}
+      on:click={() => dispatch('viewHistory')}
+      aria-label={hasRevisions
+        ? 'View revision history (Ctrl+H)'
+        : 'No revision history yet - save to create first revision'}
+      title={hasRevisions
+        ? `View revision history (${revisionCount} revision${revisionCount === 1 ? '' : 's'})`
+        : 'No revision history yet - save to create first revision'}
+    >
+      <History size={18} />
+      {#if revisionCount > 0}
+        <span class="revision-badge">{revisionCount}</span>
+      {/if}
+    </button>
     <button
       class="btn-icon"
       disabled={!canUndo}
@@ -137,11 +190,20 @@
 
     <div class="save-status">
       {#if isSaving}
-        <span class="saving">Saving...</span>
+        <span class="saving">
+          <span class="status-dot pulsing"></span>
+          Saving...
+        </span>
       {:else if hasUnsavedChanges}
-        <span class="unsaved">Unsaved changes</span>
+        <span class="unsaved">
+          <span class="status-dot"></span>
+          Unsaved changes
+        </span>
       {:else if lastSavedAt}
-        <span class="saved">Saved {formatLastSaved()}</span>
+        <span class="saved">
+          <span class="status-dot"></span>
+          Saved {formatLastSaved()}
+        </span>
       {/if}
     </div>
 
@@ -153,6 +215,71 @@
       <Upload size={18} />
       <span>Publish</span>
     </button>
+
+    <div class="user-menu-container">
+      <button class="btn-user-menu" on:click={toggleUserMenu} aria-label="User menu">
+        <Avatar name={userName} size="small" />
+        <ChevronDown size={14} />
+      </button>
+
+      {#if showUserMenu}
+        <div class="user-menu-dropdown">
+          <div class="menu-section">
+            <div class="menu-label">Theme</div>
+            <button
+              class="menu-item"
+              class:active={$themeStore === 'light'}
+              on:click={() => handleThemeChange('light')}
+            >
+              <Sun size={16} />
+              <span>Light</span>
+              {#if $themeStore === 'light'}
+                <Check size={16} class="check-icon" />
+              {/if}
+            </button>
+            <button
+              class="menu-item"
+              class:active={$themeStore === 'dark'}
+              on:click={() => handleThemeChange('dark')}
+            >
+              <Moon size={16} />
+              <span>Dark</span>
+              {#if $themeStore === 'dark'}
+                <Check size={16} class="check-icon" />
+              {/if}
+            </button>
+            <button
+              class="menu-item"
+              class:active={$themeStore === 'system'}
+              on:click={() => handleThemeChange('system')}
+            >
+              <MonitorSmartphone size={16} />
+              <span>System</span>
+              {#if $themeStore === 'system'}
+                <Check size={16} class="check-icon" />
+              {/if}
+            </button>
+          </div>
+
+          <div class="menu-divider"></div>
+
+          <div class="menu-section">
+            <button class="menu-item" on:click={navigateToAdmin}>
+              <LayoutDashboard size={16} />
+              <span>Admin Dashboard</span>
+            </button>
+            <button class="menu-item" on:click={navigateToPublicSite}>
+              <Globe size={16} />
+              <span>View Public Site</span>
+            </button>
+          </div>
+        </div>
+      {/if}
+
+      {#if showUserMenu}
+        <button class="menu-backdrop" on:click={closeUserMenu} aria-label="Close menu"></button>
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -177,19 +304,22 @@
     gap: 0.75rem;
   }
 
+  .toolbar-left {
+    flex-shrink: 0;
+  }
+
   .toolbar-center {
     flex: 1;
     justify-content: center;
   }
 
   .page-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    display: none;
   }
 
   .title-input,
   .slug-input {
+    width: 100%;
     padding: 0.375rem 0.5rem;
     border: 1px solid var(--color-border-secondary);
     border-radius: 4px;
@@ -197,6 +327,10 @@
     color: var(--color-text-primary);
     font-size: 0.875rem;
     transition: border-color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
   }
 
   .title-input {
@@ -214,8 +348,7 @@
     border-color: var(--color-primary);
   }
 
-  .breakpoint-switcher,
-  .view-mode-switcher {
+  .breakpoint-switcher {
     display: flex;
     gap: 0.25rem;
     background: var(--color-bg-secondary);
@@ -224,8 +357,7 @@
   }
 
   .btn-icon,
-  .btn-breakpoint,
-  .btn-mode {
+  .btn-breakpoint {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -238,14 +370,12 @@
     transition: all 0.2s;
   }
 
-  .btn-breakpoint,
-  .btn-mode {
+  .btn-breakpoint {
     gap: 0.5rem;
   }
 
   .btn-icon:hover:not(:disabled),
-  .btn-breakpoint:hover,
-  .btn-mode:hover {
+  .btn-breakpoint:hover {
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
   }
@@ -255,8 +385,7 @@
     cursor: not-allowed;
   }
 
-  .btn-breakpoint.active,
-  .btn-mode.active {
+  .btn-breakpoint.active {
     background: var(--color-primary);
     color: white;
   }
@@ -277,6 +406,24 @@
 
   .btn-ai:hover {
     opacity: 0.9;
+  }
+
+  .revision-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 600;
+    border-radius: 9px;
+    border: 2px solid var(--color-bg-primary);
   }
 
   .btn-primary,
@@ -319,24 +466,162 @@
     border-radius: 4px;
   }
 
+  .save-status span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   .saving {
     color: var(--color-warning);
+  }
+
+  .saving .status-dot {
+    background: var(--color-warning);
+  }
+
+  .saving .status-dot.pulsing {
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
   .unsaved {
     color: var(--color-danger);
   }
 
+  .unsaved .status-dot {
+    background: var(--color-danger);
+  }
+
   .saved {
     color: var(--color-success);
   }
 
-  @media (max-width: 1024px) {
-    .toolbar-center {
-      display: none;
-    }
+  .saved .status-dot {
+    background: var(--color-success);
+  }
 
-    .page-info {
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
+  }
+
+  .user-menu-container {
+    position: relative;
+  }
+
+  .btn-user-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-user-menu:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-primary);
+  }
+
+  .user-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 220px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  .menu-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: default;
+    z-index: 999;
+  }
+
+  .menu-section {
+    padding: 0.5rem;
+  }
+
+  .menu-label {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .menu-item:hover {
+    background: var(--color-bg-secondary);
+  }
+
+  .menu-item.active {
+    background: var(--color-bg-tertiary);
+    color: var(--color-primary);
+  }
+
+  .menu-item span {
+    flex: 1;
+  }
+
+  .menu-item :global(.check-icon) {
+    color: var(--color-primary);
+  }
+
+  .menu-divider {
+    height: 1px;
+    background: var(--color-border-secondary);
+    margin: 0.5rem 0;
+  }
+
+  @media (max-width: 1200px) {
+    .toolbar-center {
       display: none;
     }
   }

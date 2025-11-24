@@ -129,7 +129,7 @@
 {#if isAdmin}
   <div class="edit-banner">
     {#if page}
-      <a href="/admin/pages/{page.id}/edit" class="edit-link">
+      <a href="/admin/builder/{page.id}" class="edit-link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path
             d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
@@ -141,7 +141,7 @@
         <span>Edit Home Page</span>
       </a>
     {:else}
-      <a href="/admin/pages/create?title=Home&slug=/" class="edit-link create-link">
+      <a href="/admin/builder?title=Home&slug=/" class="edit-link create-link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"></path>
         </svg>

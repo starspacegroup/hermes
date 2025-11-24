@@ -186,6 +186,8 @@ export interface WidgetConfig {
   // Hero widget
   title?: string;
   subtitle?: string;
+  titleColor?: string | ThemeSpecificColor;
+  subtitleColor?: string | ThemeSpecificColor;
   backgroundImage?: string;
   backgroundColor?: string | ThemeSpecificColor;
   heroHeight?: ResponsiveValue<string>;

@@ -13,12 +13,32 @@
 
   $: themeColors = applyThemeColors(colorTheme, widget.config.themeOverrides);
 
-  function handleContentEdit(field: string, event: Event) {
-    if (!onUpdate) return;
-    const target = event.target as HTMLElement;
-    const newValue = target.textContent || '';
-    const updatedConfig = { ...widget.config, [field]: newValue };
-    onUpdate(updatedConfig);
+  // Local state for contenteditable fields
+  let titleElement: HTMLElement | undefined;
+  let subtitleElement: HTMLElement | undefined;
+
+  // Track if we're currently editing to prevent external updates during typing
+  let isEditingTitle = false;
+  let isEditingSubtitle = false;
+
+  // Sync widget config to contenteditable when NOT editing
+  $: if (titleElement && !isEditingTitle) {
+    titleElement.textContent = widget.config.title || 'Hero Title';
+  }
+  $: if (subtitleElement && !isEditingSubtitle) {
+    subtitleElement.textContent = widget.config.subtitle || 'Click to add subtitle';
+  }
+
+  function handleTitleInput() {
+    if (!onUpdate || !titleElement) return;
+    const newValue = titleElement.textContent || '';
+    onUpdate({ ...widget.config, title: newValue });
+  }
+
+  function handleSubtitleInput() {
+    if (!onUpdate || !subtitleElement) return;
+    const newValue = subtitleElement.textContent || '';
+    onUpdate({ ...widget.config, subtitle: newValue });
   }
 
   function getResponsiveValue<T>(value: T | { mobile?: T; tablet?: T; desktop: T }): T {
@@ -115,7 +135,9 @@
     const _columnsLayout = getResponsiveValue(widget.config.columns || { desktop: 2 });
     columnsGap = getResponsiveValue(widget.config.gap || { desktop: 20 });
     columnsCount = getResponsiveValue(widget.config.columnCount || { desktop: 2 });
-    productListColumns = getResponsiveValue(widget.config.columns || { desktop: 3 });
+    productListColumns = getResponsiveValue(
+      widget.config.columns || { desktop: 3, tablet: 2, mobile: 1 }
+    );
     featuresColumns = getResponsiveValue(
       widget.config.featuresColumns || { desktop: 3, tablet: 2, mobile: 1 }
     );
@@ -223,6 +245,10 @@
     {@const heroTextColor =
       resolveThemeColor(widget.config.textColor, colorTheme, '', true) ||
       (widget.config.overlay || widget.config.backgroundImage ? '#ffffff' : `var(--theme-text)`)}
+    {@const heroTitleColor =
+      resolveThemeColor(widget.config.titleColor, colorTheme, '', true) || heroTextColor}
+    {@const heroSubtitleColor =
+      resolveThemeColor(widget.config.subtitleColor, colorTheme, '', true) || heroTextColor}
     <div
       class="hero-widget"
       style="
@@ -246,19 +272,53 @@
       {/if}
       <div class="hero-content" style="color: {heroTextColor};">
         <h1
+          bind:this={titleElement}
           contenteditable="true"
-          on:input={(e) => handleContentEdit('title', e)}
-          on:keydown={(e) => e.key === 'Enter' && e.preventDefault()}
+          on:input={handleTitleInput}
+          on:focus={() => {
+            isEditingTitle = true;
+          }}
+          on:blur={() => {
+            isEditingTitle = false;
+          }}
+          on:keydown={(e) => {
+            // Prevent default behaviors that might interfere with editing
+            if (e.key === 'Enter') {
+              e.preventDefault();
+            }
+            // Stop propagation to prevent window-level handlers from interfering
+            e.stopPropagation();
+          }}
+          on:keypress={(e) => {
+            // Explicitly allow space and stop propagation
+            e.stopPropagation();
+          }}
+          style="color: {heroTitleColor};"
+          data-field="title"
         >
-          {widget.config.title || 'Hero Title'}
+          {widget.config.title || ''}
         </h1>
         <p
+          bind:this={subtitleElement}
           contenteditable="true"
-          on:input={(e) => handleContentEdit('subtitle', e)}
-          style="display: block;"
-        >
-          {widget.config.subtitle || 'Click to add subtitle'}
-        </p>
+          on:input={handleSubtitleInput}
+          on:focus={() => {
+            isEditingSubtitle = true;
+          }}
+          on:blur={() => {
+            isEditingSubtitle = false;
+          }}
+          on:keydown={(e) => {
+            // Stop propagation to prevent window-level handlers from interfering
+            e.stopPropagation();
+          }}
+          on:keypress={(e) => {
+            // Explicitly allow space and stop propagation
+            e.stopPropagation();
+          }}
+          style="display: block; color: {heroSubtitleColor};"
+          data-field="subtitle"
+        ></p>
         {#if widget.config.ctaText || widget.config.secondaryCtaText}
           <div class="hero-cta-group">
             {#if widget.config.ctaText}

@@ -9,12 +9,14 @@
 
   const dispatch = createEventDispatcher();
 
-  let message = '';
-  let messages: Array<{
+  interface AIMessage {
     role: 'user' | 'assistant';
     content: string;
-    suggestedChanges?: any;
-  }> = [];
+    suggestedChanges?: Record<string, unknown>;
+  }
+
+  let message = '';
+  let messages: AIMessage[] = [];
   let isLoading = false;
 
   async function sendMessage() {
@@ -46,7 +48,7 @@
 
       const data = (await response.json()) as {
         response: string;
-        suggestedChanges?: any;
+        suggestedChanges?: Record<string, unknown>;
       };
       messages = [...messages, { role: 'assistant', content: data.response }];
 
@@ -69,7 +71,7 @@
     }
   }
 
-  function applyChanges(changes: any) {
+  function applyChanges(changes: Record<string, unknown>) {
     dispatch('applyChanges', changes);
   }
 </script>
@@ -103,7 +105,10 @@
         <div class="message {msg.role}">
           <div class="message-content">{msg.content}</div>
           {#if msg.suggestedChanges}
-            <button class="btn-apply" on:click={() => applyChanges(msg.suggestedChanges)}>
+            <button
+              class="btn-apply"
+              on:click={() => msg.suggestedChanges && applyChanges(msg.suggestedChanges)}
+            >
               Apply Changes
             </button>
           {/if}
