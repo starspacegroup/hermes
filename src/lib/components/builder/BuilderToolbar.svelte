@@ -36,6 +36,7 @@
   export let lastSavedAt: Date | null;
   export let canUndo: boolean;
   export let canRedo: boolean;
+  export let canPublish = true;
   export let hasRevisions = false;
   export let revisionCount = 0;
   export let userName: string | undefined = undefined;
@@ -207,11 +208,22 @@
       {/if}
     </div>
 
-    <button class="btn-primary" on:click={() => dispatch('save')} disabled={isSaving}>
+    <button
+      class="btn-primary"
+      on:click={() => dispatch('save')}
+      disabled={isSaving || !hasUnsavedChanges}
+    >
       <Save size={18} />
-      <span>Save</span>
+      <span>Save Draft</span>
     </button>
-    <button class="btn-publish" on:click={() => dispatch('publish')} disabled={isSaving}>
+    <button
+      class="btn-publish"
+      on:click={() => dispatch('publish')}
+      disabled={isSaving || !canPublish}
+      title={canPublish
+        ? 'Publish this version'
+        : 'Already viewing the published version - make changes to publish'}
+    >
       <Upload size={18} />
       <span>Publish</span>
     </button>

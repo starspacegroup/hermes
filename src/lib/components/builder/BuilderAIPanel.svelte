@@ -57,8 +57,7 @@
         // Store suggested changes for apply button
         messages[messages.length - 1].suggestedChanges = data.suggestedChanges;
       }
-    } catch (error) {
-      console.error('AI error:', error);
+    } catch (_error) {
       messages = [
         ...messages,
         {

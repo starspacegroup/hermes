@@ -28,7 +28,11 @@
   export let initialWidgets: PageWidget[] = [];
   export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
+  export let currentRevisionIsPublished = false;
   export let colorThemes: ColorThemeDefinition[] = [];
+
+  // Track if we're currently viewing a published revision (can change after saves)
+  let isViewingPublishedRevision = currentRevisionIsPublished;
   export let userName: string | undefined = undefined;
   export let onSave: (data: SaveData) => Promise<void>;
   export let onPublish: (data: SaveData) => Promise<void>;
@@ -87,11 +91,6 @@
     activeColorTheme = page?.colorTheme || userCurrentThemeId;
   }
 
-  // Debug: Log whenever colorTheme changes
-  $: console.log('[AdvancedBuilder] colorTheme changed:', colorTheme);
-  $: console.log('[AdvancedBuilder] userCurrentThemeId:', userCurrentThemeId);
-  $: console.log('[AdvancedBuilder] activeColorTheme:', activeColorTheme);
-
   // Track initialization to only load widgets once at mount
   let initialized = false;
 
@@ -118,6 +117,7 @@
   let hasUnsavedChanges = false;
   let isSaving = false;
   let lastSavedAt: Date | null = null;
+  let lastSavedState: { title: string; slug: string; widgets: PageWidget[] } | null = null;
 
   // Add to history when state changes
   function addToHistory() {
@@ -253,11 +253,6 @@
 
   // Save operations
   async function handleSaveClick() {
-    console.log('[AdvancedBuilder] handleSaveClick - Current widgets:', {
-      count: widgets.length,
-      widgets: widgets
-    });
-
     isSaving = true;
     try {
       await onSave({
@@ -266,8 +261,16 @@
         slug,
         widgets
       });
+      // Capture the saved state for future comparison
+      lastSavedState = {
+        title,
+        slug,
+        widgets: JSON.parse(JSON.stringify(widgets))
+      };
       hasUnsavedChanges = false;
       lastSavedAt = new Date();
+      // After saving a draft, we're no longer viewing a published revision
+      isViewingPublishedRevision = false;
     } finally {
       isSaving = false;
     }
@@ -281,6 +284,8 @@
       slug,
       widgets
     });
+    // After publishing, we're now viewing a published revision
+    isViewingPublishedRevision = true;
   }
 
   function handleExitClick() {
@@ -294,24 +299,16 @@
   }
 
   function handleThemePreview(themeId: string) {
-    console.log('[AdvancedBuilder] handleThemePreview called with:', themeId);
     colorTheme = themeId;
-    console.log('[AdvancedBuilder] colorTheme updated to:', colorTheme);
   }
 
   function handleThemeConfirm(themeId: string) {
-    console.log('[AdvancedBuilder] ===== THEME CONFIRMED =====');
-    console.log('[AdvancedBuilder] Received theme ID:', themeId);
-    const theme = colorThemes.find((t) => t.id === themeId);
-    console.log('[AdvancedBuilder] Theme name:', theme?.name);
-    console.log('[AdvancedBuilder] ============================');
     activeColorTheme = themeId;
     colorTheme = themeId;
     hasUnsavedChanges = true;
   }
 
   function handleResetTheme() {
-    console.log('[AdvancedBuilder] Resetting theme to user current:', userCurrentThemeId);
     activeColorTheme = userCurrentThemeId;
     colorTheme = userCurrentThemeId;
     hasUnsavedChanges = true;
@@ -336,10 +333,21 @@
       slug = revision.slug;
       widgets = revision.widgets;
 
+      // Update whether we're viewing a published revision
+      isViewingPublishedRevision = revision.is_published;
+
+      // Set lastSavedState to match the loaded revision
+      // This treats the loaded revision as the "saved" state
+      lastSavedState = {
+        title: revision.title,
+        slug: revision.slug,
+        widgets: JSON.parse(JSON.stringify(revision.widgets))
+      };
+
       addToHistory();
-      hasUnsavedChanges = true;
-    } catch (error) {
-      console.error('Failed to load revision:', error);
+      hasUnsavedChanges = false;
+      lastSavedAt = new Date(revision.created_at);
+    } catch (_error) {
       alert('Failed to load revision');
     }
   }
@@ -359,8 +367,7 @@
 
       // Reload the page to get updated revisions
       window.location.reload();
-    } catch (error) {
-      console.error('Failed to publish revision:', error);
+    } catch (_error) {
       alert('Failed to publish revision');
     }
   }
@@ -390,6 +397,22 @@
     }
   }
 
+  // Compute whether current state differs from last saved state
+  $: hasActualChanges = (() => {
+    if (!lastSavedState) return hasUnsavedChanges;
+
+    // Compare current state with last saved state
+    const currentState = JSON.stringify({ title, slug, widgets });
+    const savedState = JSON.stringify(lastSavedState);
+
+    return currentState !== savedState;
+  })();
+
+  // Compute whether publish button should be enabled
+  // Only enable if we're NOT currently viewing the published version
+  // OR if we've made changes since loading the published version
+  $: canPublish = !isViewingPublishedRevision || hasActualChanges;
+
   // Auto-save
   let autoSaveInterval: ReturnType<typeof setInterval>;
   onMount(() => {
@@ -399,10 +422,16 @@
     // Initialize history
     addToHistory();
     hasUnsavedChanges = false;
+    // Initialize lastSavedState with the initial state
+    lastSavedState = {
+      title,
+      slug,
+      widgets: JSON.parse(JSON.stringify(widgets))
+    };
 
     // Setup auto-save
     autoSaveInterval = setInterval(() => {
-      if (hasUnsavedChanges && !isSaving) {
+      if (hasActualChanges && !isSaving) {
         handleSaveClick();
       }
     }, 30000); // Auto-save every 30 seconds
@@ -422,10 +451,11 @@
     {currentBreakpoint}
     {colorTheme}
     {colorThemes}
-    {hasUnsavedChanges}
+    hasUnsavedChanges={hasActualChanges}
     {isSaving}
     {lastSavedAt}
     {userName}
+    {canPublish}
     canUndo={historyIndex > 0}
     canRedo={historyIndex < history.length - 1}
     hasRevisions={revisions.length > 0}

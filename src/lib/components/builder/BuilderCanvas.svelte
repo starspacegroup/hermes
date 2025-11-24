@@ -20,11 +20,6 @@
   $: currentThemeData = colorThemes.find((t) => t.id === colorTheme);
   $: themeColors = currentThemeData?.colors || getThemeColors(colorTheme);
   $: themeStyles = generateThemeStyles(themeColors);
-  $: console.log('[BuilderCanvas] Theme reactive update:', {
-    colorTheme,
-    hasThemeData: !!currentThemeData,
-    themeColors
-  });
 
   // Check if we're previewing a different theme than the user's current site theme
   // This should compare against the user's active theme, not the page's saved theme
@@ -45,12 +40,6 @@
     --color-danger: ${themeColors.error};
     --color-error: ${themeColors.error};
   `.trim();
-
-  $: console.log('[BuilderCanvas] Generated styles:', {
-    themeStyles,
-    widgetThemeOverrides,
-    combinedLength: (themeStyles + widgetThemeOverrides).length
-  });
 
   // Compute sorted widgets reactively using stable sort
   // This ensures consistent ordering even with duplicate positions

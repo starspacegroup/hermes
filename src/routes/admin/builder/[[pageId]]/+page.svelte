@@ -210,6 +210,7 @@
   initialWidgets={parsedWidgets}
   revisions={data.revisions}
   currentRevisionId={data.currentRevisionId}
+  currentRevisionIsPublished={data.currentRevisionIsPublished}
   colorThemes={data.colorThemes}
   userName={data.userName}
   onSave={handleSave}

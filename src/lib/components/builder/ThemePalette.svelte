@@ -36,10 +36,6 @@
   $: if (isOpen && !frozenActiveTheme) {
     frozenActiveTheme = activeTheme; // Use activeTheme (user's current active theme)
     sortedThemes = sortThemes(colorThemes, activeTheme); // Sort by activeTheme
-    console.log(
-      '[ThemePalette] Sorted themes (frozen):',
-      sortedThemes.map((t) => ({ id: t.id, name: t.name }))
-    );
   }
 
   // Reset frozen theme when modal closes
@@ -53,25 +49,12 @@
     theme.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  $: if (isOpen) {
-    console.log(
-      '[ThemePalette] Filtered themes:',
-      filteredThemes.map((t, i) => ({ index: i, id: t.id, name: t.name }))
-    );
-  }
-
   // Update previewTheme when currentTheme changes (from parent)
   $: if (currentTheme !== previewTheme) {
     previewTheme = currentTheme;
   }
 
   $: if (isOpen && inputElement) {
-    console.log('[ThemePalette] Opening with themes:', {
-      colorThemesCount: colorThemes.length,
-      colorThemes: colorThemes.map((t) => ({ id: t.id, name: t.name })),
-      currentTheme,
-      activeTheme
-    });
     inputElement.focus();
     // Start with current preview theme selected
     const index = filteredThemes.findIndex((t) => t.id === previewTheme);
@@ -116,10 +99,6 @@
   }
 
   function confirmTheme(theme: ColorThemeDefinition) {
-    console.log('[ThemePalette] ===== CONFIRM THEME =====');
-    console.log('[ThemePalette] Theme ID:', theme.id);
-    console.log('[ThemePalette] Theme name:', theme.name);
-    console.log('[ThemePalette] ========================');
     dispatch('confirmTheme', theme.id);
     close();
   }
@@ -147,7 +126,6 @@
     selectedIndex = index;
     const theme = filteredThemes[index];
     previewTheme = theme.id;
-    console.log('[ThemePalette] Mouse enter:', { index, themeId: theme.id, themeName: theme.name });
     dispatch('previewTheme', previewTheme);
   }
 </script>
@@ -194,10 +172,6 @@
               data-theme-name={theme.name}
               on:click={() => {
                 const clickedTheme = filteredThemes[index];
-                console.log('[ThemePalette] BUTTON CLICKED at index', index, ':', {
-                  id: clickedTheme.id,
-                  name: clickedTheme.name
-                });
                 confirmTheme(clickedTheme);
               }}
               on:mouseenter={() => handleMouseEnter(index)}
