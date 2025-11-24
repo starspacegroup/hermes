@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { authStore } from '$lib/stores/auth';
 
   let isLoading = true;
@@ -18,6 +18,18 @@
     }
 
     isLoading = false;
+
+    // Add builder-active class to body to enable overflow hidden
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('builder-active');
+    }
+  });
+
+  onDestroy(() => {
+    // Remove builder-active class when leaving the builder
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('builder-active');
+    }
   });
 </script>
 
@@ -59,7 +71,7 @@
     }
   }
 
-  :global(body) {
+  :global(body.builder-active) {
     margin: 0;
     padding: 0;
     overflow: hidden;

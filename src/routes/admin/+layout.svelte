@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { beforeNavigate, goto } from '$app/navigation';
+  import { beforeNavigate, afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
 
@@ -23,6 +23,18 @@
   // Close sidebar on navigation
   beforeNavigate(() => {
     isSidebarOpen = false;
+  });
+
+  // Ensure scroll is enabled after navigation
+  afterNavigate(() => {
+    // Reset scroll position to top
+    window.scrollTo(0, 0);
+    // Ensure body overflow is not hidden and builder class is removed
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.classList.remove('builder-active');
+    }
   });
   $: isLoginPage = currentPath === '/auth/login';
   $: sessions = $page.data?.sessions || [];
