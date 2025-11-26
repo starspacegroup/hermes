@@ -26,6 +26,7 @@
     title: string;
     slug: string;
     widgets: PageWidget[];
+    layout_id?: number;
   }
 
   async function handleSave(pageData: SaveData) {
@@ -46,7 +47,8 @@
           body: JSON.stringify({
             title: pageData.title,
             slug: pageData.slug,
-            status: 'draft'
+            status: 'draft',
+            layout_id: pageData.layout_id || data.defaultLayoutId
           })
         });
 
@@ -87,7 +89,8 @@
           body: JSON.stringify({
             title: pageData.title,
             slug: pageData.slug,
-            status: 'draft'
+            status: 'draft',
+            layout_id: pageData.layout_id
           })
         });
 
@@ -136,6 +139,7 @@
     title: string;
     slug: string;
     widgets: PageWidget[];
+    layout_id?: number;
   }) {
     try {
       if (!pageData.id) {
@@ -149,7 +153,8 @@
         body: JSON.stringify({
           title: pageData.title,
           slug: pageData.slug,
-          status: 'published'
+          status: 'published',
+          layout_id: pageData.layout_id
         })
       });
 
@@ -212,6 +217,9 @@
   currentRevisionId={data.currentRevisionId}
   currentRevisionIsPublished={data.currentRevisionIsPublished}
   colorThemes={data.colorThemes}
+  layouts={data.layouts}
+  defaultLayoutId={data.defaultLayoutId}
+  components={data.components}
   userName={data.userName}
   onSave={handleSave}
   onPublish={handlePublish}

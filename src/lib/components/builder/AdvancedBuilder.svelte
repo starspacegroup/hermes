@@ -6,7 +6,9 @@
     PageWidget,
     RevisionNode,
     ParsedPageRevision,
-    ColorThemeDefinition
+    ColorThemeDefinition,
+    Layout,
+    Component
   } from '$lib/types/pages';
   import BuilderToolbar from './BuilderToolbar.svelte';
   import BuilderCanvas from './BuilderCanvas.svelte';
@@ -17,19 +19,26 @@
   import ThemePalette from './ThemePalette.svelte';
   import { themeStore } from '$lib/stores/theme';
 
+  type BuilderMode = 'page' | 'layout' | 'component';
+
   interface SaveData {
     id?: string;
     title: string;
     slug: string;
     widgets: PageWidget[];
+    layout_id?: number;
   }
 
+  export let mode: BuilderMode = 'page';
   export let page: Page | null;
   export let initialWidgets: PageWidget[] = [];
   export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
   export let currentRevisionIsPublished = false;
   export let colorThemes: ColorThemeDefinition[] = [];
+  export let layouts: Layout[] = [];
+  export let defaultLayoutId: number | null = null;
+  export let components: Component[] = [];
 
   // Track if we're currently viewing a published revision (can change after saves)
   let isViewingPublishedRevision = currentRevisionIsPublished;
@@ -38,9 +47,14 @@
   export let onPublish: (data: SaveData) => Promise<void>;
   export let onExit: () => void;
 
+  // Entity labels based on mode
+  $: entityLabel = mode === 'page' ? 'Page' : mode === 'layout' ? 'Layout' : 'Component';
+  $: entityLabelLower = entityLabel.toLowerCase();
+
   // Core state
-  let title = page?.title || 'Untitled Page';
-  let slug = page?.slug || `/untitled-${Date.now()}`;
+  let title = page?.title || `Untitled ${entityLabel}`;
+  let slug = page?.slug || `/${entityLabelLower}-${Date.now()}`;
+  let layoutId: number | null = page?.layout_id || defaultLayoutId;
   let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
   let selectedWidget: PageWidget | null = null;
   let hoveredWidget: PageWidget | null = null;
@@ -217,6 +231,12 @@
   }
 
   function handleDeleteWidget(widgetId: string) {
+    // Prevent deletion of Yield widget in layout mode
+    const widgetToDelete = widgets.find((w) => w.id === widgetId);
+    if (mode === 'layout' && widgetToDelete?.type === 'yield') {
+      return; // Silently ignore deletion attempts
+    }
+
     widgets = widgets.filter((w) => w.id !== widgetId);
     if (selectedWidget?.id === widgetId) {
       selectedWidget = null;
@@ -259,7 +279,8 @@
         id: page?.id,
         title,
         slug,
-        widgets
+        widgets,
+        layout_id: layoutId || undefined
       });
       // Capture the saved state for future comparison
       lastSavedState = {
@@ -282,10 +303,16 @@
       id: page?.id,
       title,
       slug,
-      widgets
+      widgets,
+      layout_id: layoutId || undefined
     });
     // After publishing, we're now viewing a published revision
     isViewingPublishedRevision = true;
+  }
+
+  function handleUpdateLayout(newLayoutId: number) {
+    layoutId = newLayoutId;
+    hasUnsavedChanges = true;
   }
 
   function handleExitClick() {
@@ -390,7 +417,10 @@
       }
     } else if (event.key === 'Delete' && selectedWidget) {
       event.preventDefault();
-      handleDeleteWidget(selectedWidget.id);
+      // Don't delete Yield widget in layout mode
+      if (!(mode === 'layout' && selectedWidget.type === 'yield')) {
+        handleDeleteWidget(selectedWidget.id);
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       handleSelectWidget(null);
@@ -446,11 +476,14 @@
 
 <div class="advanced-builder">
   <BuilderToolbar
+    {mode}
     {title}
     {slug}
     {currentBreakpoint}
     {colorTheme}
     {colorThemes}
+    {layoutId}
+    {layouts}
     hasUnsavedChanges={hasActualChanges}
     {isSaving}
     {lastSavedAt}
@@ -468,6 +501,7 @@
       slug = e.detail;
       addToHistory();
     }}
+    on:updateLayout={(e) => handleUpdateLayout(e.detail)}
     on:changeBreakpoint={(e) => {
       currentBreakpoint = e.detail;
     }}
@@ -488,9 +522,11 @@
   <div class="builder-content">
     {#if showLeftSidebar}
       <BuilderSidebar
+        {mode}
         {widgets}
         {title}
         {slug}
+        {components}
         on:addWidget={(e) => handleAddWidget(e.detail)}
         on:selectWidget={(e) => handleSelectWidget(e.detail)}
         on:showPageProperties={handleShowPageProperties}
@@ -509,6 +545,7 @@
     {/if}
 
     <BuilderCanvas
+      {mode}
       {widgets}
       {selectedWidget}
       {hoveredWidget}
@@ -534,6 +571,7 @@
         {pageProperties}
         {currentBreakpoint}
         {colorTheme}
+        {entityLabel}
         on:selectWidget={(e) => handleSelectWidget(e.detail)}
         on:updateWidget={(e) => handleUpdateWidget(e.detail)}
         on:updatePageProperties={(e) => handleUpdatePageProperties(e.detail)}

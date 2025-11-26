@@ -14,6 +14,7 @@
   let isSettingsSubmenuOpen = false;
   let isAIChatSubmenuOpen = false;
   let isArchivedSubmenuOpen = false;
+  let isSiteSubmenuOpen = false;
   let currentPath = '';
   let notifications: Notification[] = [];
   let unreadCount = 0;
@@ -57,6 +58,17 @@
       isAIChatSubmenuOpen = true;
     } else {
       isAIChatSubmenuOpen = false;
+    }
+    // Auto-expand Site submenu if on pages, layouts, or components page
+    if (
+      currentPath.startsWith('/admin/pages') ||
+      currentPath.startsWith('/admin/builder') ||
+      currentPath.startsWith('/admin/layouts') ||
+      currentPath.startsWith('/admin/components')
+    ) {
+      isSiteSubmenuOpen = true;
+    } else {
+      isSiteSubmenuOpen = false;
     }
   }
 
@@ -123,6 +135,10 @@
 
   function toggleAIChatSubmenu() {
     isAIChatSubmenuOpen = !isAIChatSubmenuOpen;
+  }
+
+  function toggleSiteSubmenu() {
+    isSiteSubmenuOpen = !isSiteSubmenuOpen;
   }
 
   function formatSessionDate(dateString: string): string {
@@ -490,24 +506,120 @@
           Orders
         </a>
 
-        <a
-          href="/admin/pages"
-          class:active={currentPath.startsWith('/admin/pages') ||
-            currentPath.startsWith('/admin/builder')}
-          on:click={closeSidebar}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path
-              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"
-            ></path>
-          </svg>
-          Pages
-        </a>
+        <!-- Site with submenu (Pages, Layouts, Components) -->
+        <div class="menu-item-with-submenu">
+          <button
+            class="menu-item-button"
+            class:active={currentPath.startsWith('/admin/pages') ||
+              currentPath.startsWith('/admin/builder') ||
+              currentPath.startsWith('/admin/layouts') ||
+              currentPath.startsWith('/admin/components')}
+            on:click={toggleSiteSubmenu}
+          >
+            <div class="menu-item-content">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+                <path d="M9 22V12h6v10" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+              <span>Site</span>
+            </div>
+            <svg
+              class="chevron"
+              class:open={isSiteSubmenuOpen}
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M9 18l6-6-6-6"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+          </button>
+
+          {#if isSiteSubmenuOpen}
+            <div class="submenu">
+              <a
+                href="/admin/pages"
+                class:active={currentPath.startsWith('/admin/pages') ||
+                  currentPath.startsWith('/admin/builder')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"
+                  ></path>
+                </svg>
+                Pages
+              </a>
+
+              <a
+                href="/admin/layouts"
+                class:active={currentPath.startsWith('/admin/layouts')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    ry="2"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <line x1="3" y1="9" x2="21" y2="9" stroke-width="2" stroke-linecap="round"></line>
+                  <line x1="9" y1="21" x2="9" y2="9" stroke-width="2" stroke-linecap="round"></line>
+                </svg>
+                Layouts
+              </a>
+
+              <a
+                href="/admin/components"
+                class:active={currentPath.startsWith('/admin/components')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M12 2L2 7l10 5 10-5-10-5z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path
+                    d="M2 17l10 5 10-5"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path
+                    d="M2 12l10 5 10-5"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Components
+              </a>
+            </div>
+          {/if}
+        </div>
 
         <a
           href="/admin/users"

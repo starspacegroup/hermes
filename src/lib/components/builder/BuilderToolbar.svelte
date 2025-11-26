@@ -23,14 +23,19 @@
   } from 'lucide-svelte';
   import { themeStore } from '$lib/stores/theme';
   import type { Theme } from '$lib/types/theme';
-  import type { ColorThemeDefinition } from '$lib/types/pages';
+  import type { ColorThemeDefinition, Layout } from '$lib/types/pages';
   import Avatar from '$lib/components/Avatar.svelte';
 
+  type BuilderMode = 'page' | 'layout' | 'component';
+
+  export let mode: BuilderMode = 'page';
   export let title: string;
   export let slug: string;
   export let currentBreakpoint: 'mobile' | 'tablet' | 'desktop';
   export let colorTheme: string;
   export let colorThemes: ColorThemeDefinition[] = [];
+  export let layoutId: number | null = null;
+  export let layouts: Layout[] = [];
   export let hasUnsavedChanges: boolean;
   export let isSaving: boolean;
   export let lastSavedAt: Date | null;
@@ -44,13 +49,29 @@
   const dispatch = createEventDispatcher();
 
   let showUserMenu = false;
+  let showLayoutDropdown = false;
 
   function toggleUserMenu() {
     showUserMenu = !showUserMenu;
+    showLayoutDropdown = false;
   }
 
   function closeUserMenu() {
     showUserMenu = false;
+  }
+
+  function toggleLayoutDropdown() {
+    showLayoutDropdown = !showLayoutDropdown;
+    showUserMenu = false;
+  }
+
+  function closeLayoutDropdown() {
+    showLayoutDropdown = false;
+  }
+
+  function selectLayout(layout: Layout) {
+    dispatch('updateLayout', layout.id);
+    closeLayoutDropdown();
   }
 
   function openThemePalette() {
@@ -62,6 +83,15 @@
     const theme = colorThemes.find((t) => t.id === colorTheme);
     return theme?.name || 'Select Theme';
   })();
+
+  // Reactively compute the selected layout name
+  $: selectedLayoutName = (() => {
+    const layout = layouts.find((l) => l.id === layoutId);
+    return layout?.name || 'No Layout';
+  })();
+
+  // Check if a layout is selected
+  $: hasLayoutSelected = layoutId !== null;
 
   function handleThemeChange(theme: Theme) {
     themeStore.setTheme(theme);
@@ -141,6 +171,54 @@
         <Monitor size={18} />
       </button>
     </div>
+
+    {#if mode === 'page'}
+      <div class="layout-selector-container">
+        <button
+          class="btn-layout-selector"
+          class:has-layout={hasLayoutSelected}
+          class:no-layout={!hasLayoutSelected}
+          on:click={toggleLayoutDropdown}
+          aria-label="Select layout"
+          title={hasLayoutSelected
+            ? `Layout: ${selectedLayoutName}`
+            : 'No layout selected - select one'}
+        >
+          <LayoutDashboard size={18} />
+          <span>{selectedLayoutName}</span>
+          <ChevronDown size={14} />
+        </button>
+
+        {#if showLayoutDropdown}
+          <div class="layout-dropdown">
+            <div class="dropdown-header">Page Layout</div>
+            {#each layouts as layout}
+              <button
+                class="dropdown-item"
+                class:active={layoutId === layout.id}
+                on:click={() => selectLayout(layout)}
+              >
+                <span class="layout-name">{layout.name}</span>
+                {#if layout.is_default}
+                  <span class="layout-badge">Default</span>
+                {/if}
+                {#if layoutId === layout.id}
+                  <Check size={16} class="check-icon" />
+                {/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+
+        {#if showLayoutDropdown}
+          <button
+            class="menu-backdrop"
+            on:click={closeLayoutDropdown}
+            aria-label="Close layout menu"
+          ></button>
+        {/if}
+      </div>
+    {/if}
 
     <div class="theme-preview-container">
       <button class="btn-theme-preview" on:click={openThemePalette} aria-label="Theme preview">
@@ -407,10 +485,10 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--color-secondary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
     border: none;
     border-radius: 6px;
-    color: white;
+    color: var(--color-bg-primary, white);
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.2s;
@@ -529,6 +607,131 @@
       opacity: 0.5;
       transform: scale(1.2);
     }
+  }
+
+  /* Layout Selector Styles */
+  .layout-selector-container {
+    position: relative;
+  }
+
+  .btn-layout-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-layout-selector:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-primary);
+  }
+
+  .btn-layout-selector.no-layout {
+    border-color: var(--color-warning);
+    background: rgba(255, 152, 0, 0.1);
+  }
+
+  .btn-layout-selector.has-layout {
+    border-color: var(--color-success);
+  }
+
+  .layout-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    min-width: 250px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  .dropdown-header {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .dropdown-item:hover {
+    background: var(--color-bg-secondary);
+  }
+
+  .dropdown-item.active {
+    background: var(--color-bg-tertiary);
+  }
+
+  .layout-name {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .layout-badge {
+    padding: 0.125rem 0.5rem;
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-transform: uppercase;
+  }
+
+  .dropdown-item :global(.check-icon) {
+    color: var(--color-primary);
+  }
+
+  /* Theme Preview Styles */
+  .theme-preview-container {
+    position: relative;
+  }
+
+  .btn-theme-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-theme-preview:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-primary);
   }
 
   .user-menu-container {

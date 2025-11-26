@@ -14,6 +14,7 @@ export interface DBPage {
   status: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
   created_at: number;
   updated_at: number;
 }
@@ -47,6 +48,7 @@ export interface CreatePageData {
   status: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
 }
 
 export interface UpdatePageData {
@@ -55,6 +57,7 @@ export interface UpdatePageData {
   status?: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
 }
 
 export interface CreateWidgetData {
@@ -160,8 +163,8 @@ export async function createPage(
 
   await db
     .prepare(
-      `INSERT INTO pages (id, site_id, title, slug, status, content, color_theme, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO pages (id, site_id, title, slug, status, content, color_theme, layout_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -171,6 +174,7 @@ export async function createPage(
       data.status,
       data.content || null,
       data.colorTheme || null,
+      data.layout_id || null,
       timestamp,
       timestamp
     )
@@ -228,6 +232,10 @@ export async function updatePage(
   if (data.colorTheme !== undefined) {
     updates.push('color_theme = ?');
     params.push(data.colorTheme);
+  }
+  if (data.layout_id !== undefined) {
+    updates.push('layout_id = ?');
+    params.push(data.layout_id);
   }
 
   if (updates.length === 0) {

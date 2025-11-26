@@ -123,6 +123,82 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
         backgroundColor: 'theme:primary'
       };
 
+    case 'container':
+      return {
+        containerPadding: {
+          desktop: { top: 40, right: 40, bottom: 40, left: 40 },
+          tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+          mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+        },
+        containerMargin: {
+          desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+          tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+        },
+        containerBackground: 'transparent',
+        containerBorderRadius: 0,
+        containerMaxWidth: '1200px',
+        containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+        containerJustifyContent: 'flex-start',
+        containerAlignItems: 'center',
+        containerWrap: 'wrap',
+        children: []
+      };
+
+    case 'flex':
+      return {
+        flexDirection: {
+          desktop: 'row' as const,
+          tablet: 'row' as const,
+          mobile: 'column' as const
+        },
+        flexWrap: { desktop: 'wrap' as const },
+        flexJustifyContent: { desktop: 'flex-start' as const },
+        flexAlignItems: { desktop: 'stretch' as const },
+        flexGap: { desktop: 16, tablet: 12, mobile: 8 },
+        flexPadding: {
+          desktop: { top: 16, right: 16, bottom: 16, left: 16 },
+          tablet: { top: 12, right: 12, bottom: 12, left: 12 },
+          mobile: { top: 8, right: 8, bottom: 8, left: 8 }
+        },
+        flexBackground: 'transparent',
+        flexBorderRadius: 0,
+        useGrid: false,
+        gridColumns: { desktop: 3, tablet: 2, mobile: 1 },
+        children: []
+      };
+
+    case 'navbar':
+      return {
+        logo: { text: 'Store', url: '/' },
+        links: [
+          { text: 'Home', url: '/' },
+          { text: 'Products', url: '/products' },
+          { text: 'About', url: '/about' }
+        ],
+        showSearch: false,
+        showCart: true,
+        showAuth: true,
+        navbarBackground: 'theme:background',
+        navbarTextColor: 'theme:text',
+        sticky: true
+      };
+
+    case 'footer':
+      return {
+        copyright: '© 2025 Store Name. All rights reserved.',
+        footerLinks: [
+          { text: 'Privacy Policy', url: '/privacy' },
+          { text: 'Terms of Service', url: '/terms' }
+        ],
+        socialLinks: [],
+        footerBackground: 'theme:surface',
+        footerTextColor: 'theme:textSecondary'
+      };
+
+    case 'yield':
+      return {};
+
     default:
       return {};
   }
@@ -142,7 +218,12 @@ export function getWidgetLabel(type: WidgetType): string {
     product_list: 'Product List',
     features: 'Features Section',
     pricing: 'Pricing Section',
-    cta: 'Call to Action'
+    cta: 'Call to Action',
+    navbar: 'Navigation Bar',
+    footer: 'Footer',
+    yield: 'Page Content (Yield)',
+    container: 'Container',
+    flex: 'Flex Box'
   };
   return labels[type] || type;
 }

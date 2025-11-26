@@ -6,6 +6,9 @@
   import { stableSortWidgets } from '$lib/utils/widgetPositions';
   import { getThemeColors, generateThemeStyles } from '$lib/utils/editor/colorThemes';
 
+  type BuilderMode = 'page' | 'layout' | 'component';
+
+  export let mode: BuilderMode = 'page';
   export let widgets: PageWidget[];
   export let selectedWidget: PageWidget | null;
   export let hoveredWidget: PageWidget | null;
@@ -210,14 +213,16 @@
                 >
                   <Copy size={14} />
                 </button>
-                <button
-                  class="btn-control btn-danger"
-                  on:click|stopPropagation={() => dispatch('deleteWidget', widget.id)}
-                  aria-label="Delete"
-                  title="Delete"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {#if !(mode === 'layout' && widget.type === 'yield')}
+                  <button
+                    class="btn-control btn-danger"
+                    on:click|stopPropagation={() => dispatch('deleteWidget', widget.id)}
+                    aria-label="Delete"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                {/if}
               </div>
             </div>
           {/if}
@@ -230,6 +235,7 @@
               {currentBreakpoint}
               {colorTheme}
               onUpdate={(newConfig) => handleWidgetConfigUpdate(widget, newConfig)}
+              isEditable={true}
             />
           </div>
         </div>
@@ -237,7 +243,32 @@
 
       {#if widgets.length === 0}
         <div class="empty-canvas">
-          <p>No components yet. Add components from the sidebar to get started.</p>
+          {#if mode === 'component'}
+            <div class="empty-icon">📦</div>
+            <h3>Create Your Component</h3>
+            <p>Choose a widget type from the sidebar to start building your reusable component.</p>
+            <div class="empty-hints">
+              <p class="hint">💡 <strong>Tip:</strong> Popular components include:</p>
+              <ul class="hint-list">
+                <li><strong>Navigation Bar</strong> - Site header with logo and menu</li>
+                <li><strong>Footer</strong> - Site footer with links and info</li>
+                <li><strong>Hero</strong> - Large banner section</li>
+                <li><strong>Features</strong> - Showcase product features</li>
+              </ul>
+            </div>
+          {:else if mode === 'layout'}
+            <div class="empty-icon">🎨</div>
+            <h3>Build Your Layout</h3>
+            <p>Add widgets from the sidebar to create your layout structure.</p>
+            <p class="hint">
+              💡 <strong>Tip:</strong> Use the <strong>Yield</strong> widget to define where page content
+              should appear.
+            </p>
+          {:else}
+            <div class="empty-icon">📄</div>
+            <h3>Start Building</h3>
+            <p>Add components from the sidebar to get started.</p>
+          {/if}
         </div>
       {/if}
     </div>
@@ -299,9 +330,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    /* Force use of app colors, not theme preview colors */
-    background: #3b82f6; /* Direct color instead of CSS var to avoid theme override */
-    color: white;
+    background: var(--color-primary, #3b82f6);
+    color: var(--color-bg-primary, white);
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
     z-index: 10;
@@ -324,16 +354,16 @@
     width: 24px;
     height: 24px;
     padding: 0;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--color-primary-light, rgba(255, 255, 255, 0.2));
     border: none;
     border-radius: 4px;
-    color: white;
+    color: var(--color-bg-primary, white);
     cursor: pointer;
     transition: background 0.2s;
   }
 
   .btn-control:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--color-primary-hover, rgba(255, 255, 255, 0.3));
   }
 
   .btn-control:disabled {
@@ -355,12 +385,66 @@
 
   .empty-canvas {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 400px;
-    padding: 2rem;
+    padding: 3rem 2rem;
     text-align: center;
     color: var(--color-text-secondary);
+  }
+
+  .empty-canvas .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .empty-canvas h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-canvas > p {
+    font-size: 1rem;
+    max-width: 500px;
+    margin: 0.5rem 0;
+    line-height: 1.5;
+  }
+
+  .empty-hints {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--color-bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--color-border-secondary);
+    max-width: 450px;
+  }
+
+  .empty-hints .hint {
+    margin: 0 0 1rem 0;
+    font-size: 0.9375rem;
+    color: var(--color-text-primary);
+  }
+
+  .hint-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+  }
+
+  .hint-list li {
+    padding: 0.5rem 0;
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+  }
+
+  .hint-list li strong {
+    color: var(--color-text-primary);
   }
 
   @media (max-width: 768px) {
@@ -377,15 +461,15 @@
     position: fixed;
     top: 60px;
     right: 10px;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
+    background: var(--color-overlay, rgba(0, 0, 0, 0.9));
+    color: var(--color-bg-primary, white);
     padding: 0;
     border-radius: 6px;
     font-size: 11px;
     z-index: 9999;
     max-width: 250px;
     font-family: monospace;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.3));
   }
 
   .theme-debug-header {
@@ -393,8 +477,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.05));
+    border-bottom: 1px solid var(--color-border-secondary, rgba(255, 255, 255, 0.1));
     border-radius: 6px 6px 0 0;
   }
 
@@ -408,17 +492,17 @@
     align-items: center;
     justify-content: center;
     padding: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--color-border-secondary, rgba(255, 255, 255, 0.2));
     border-radius: 3px;
-    color: white;
+    color: var(--color-bg-primary, white);
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .btn-reset-theme:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--color-bg-secondary, rgba(255, 255, 255, 0.2));
+    border-color: var(--color-border-primary, rgba(255, 255, 255, 0.3));
   }
 
   .theme-debug-content {
@@ -428,13 +512,13 @@
   .theme-debug-colors {
     margin-top: 6px;
     padding: 4px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
     border-radius: 3px;
   }
 
   .color-swatch {
     padding: 2px 6px;
     border-radius: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--color-border-secondary, rgba(255, 255, 255, 0.2));
   }
 </style>

@@ -216,7 +216,7 @@
   .palette-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-overlay, rgba(0, 0, 0, 0.5));
     backdrop-filter: blur(4px);
     z-index: 9998;
     animation: fadeIn 0.15s ease-out;

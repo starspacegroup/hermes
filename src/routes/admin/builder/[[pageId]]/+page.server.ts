@@ -8,6 +8,8 @@ import {
 } from '$lib/server/db/revisions';
 import { normalizeWidgetPositions, needsPositionNormalization } from '$lib/utils/widgetPositions';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
+import { getLayouts, getDefaultLayout } from '$lib/server/db/layouts';
+import { getComponents } from '$lib/server/db/components';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -20,6 +22,13 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   // Load color themes for the site
   const colorThemes = await getAllColorThemes(db, siteId);
 
+  // Load layouts for the site
+  const layouts = await getLayouts(db, siteId);
+  const defaultLayout = await getDefaultLayout(db, siteId);
+
+  // Load custom components for the site
+  const components = await getComponents(db, siteId);
+
   // If no pageId, return empty state for new page creation
   if (!params.pageId) {
     return {
@@ -27,6 +36,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       widgets: [],
       revisions: [],
       colorThemes,
+      layouts,
+      defaultLayoutId: defaultLayout?.id || null,
+      components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
       isNewPage: true
     };
@@ -76,6 +88,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     currentRevisionId,
     currentRevisionIsPublished,
     colorThemes,
+    layouts,
+    defaultLayoutId: defaultLayout?.id || null,
+    components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
     isNewPage: false
   };

@@ -9,13 +9,22 @@
     Image,
     Box,
     ShoppingCart,
-    ChevronDown
+    ChevronDown,
+    Package
   } from 'lucide-svelte';
-  import type { PageWidget, WidgetType } from '$lib/types/pages';
+  import type { PageWidget, WidgetType, Component } from '$lib/types/pages';
 
+  type BuilderMode = 'page' | 'layout' | 'component';
+
+  export let mode: BuilderMode = 'page';
   export let widgets: PageWidget[];
   export let title: string;
   export let slug: string;
+  export let components: Component[] = [];
+
+  // Entity labels based on mode
+  $: entityLabel = mode === 'page' ? 'Page' : mode === 'layout' ? 'Layout' : 'Component';
+  $: entityLabelLower = entityLabel.toLowerCase();
 
   const dispatch = createEventDispatcher();
 
@@ -27,6 +36,14 @@
   // Widget library organized by category
   const widgetLibrary = {
     layout: [
+      {
+        type: 'navbar',
+        name: 'Navigation Bar',
+        icon: Layout,
+        description: 'Site navigation header'
+      },
+      { type: 'container', name: 'Container', icon: Box, description: 'Container with padding' },
+      { type: 'flex', name: 'Flex Box', icon: Layout, description: 'Flexible layout container' },
       { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner section' },
       {
         type: 'columns',
@@ -64,7 +81,8 @@
     { id: 'layout', name: 'Layout', icon: Layout },
     { id: 'content', name: 'Content', icon: Type },
     { id: 'media', name: 'Media', icon: Image },
-    { id: 'commerce', name: 'Commerce', icon: ShoppingCart }
+    { id: 'commerce', name: 'Commerce', icon: ShoppingCart },
+    { id: 'custom', name: 'Custom', icon: Package }
   ];
 
   // Reactive filtered widgets based on search and category
@@ -72,9 +90,34 @@
     // Using any here because widgetLibrary has complex union types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let allWidgets: any[] = [];
-    if (activeCategory === 'all') {
+
+    if (activeCategory === 'custom') {
+      // Show custom components
+      allWidgets = components.map((c) => ({
+        type: `component:${c.id}`,
+        name: c.name,
+        icon: Package,
+        description: c.description || 'Custom component',
+        componentId: c.id,
+        componentType: c.type,
+        componentConfig: c.config
+      }));
+    } else if (activeCategory === 'all') {
+      // Show all built-in widgets
       Object.values(widgetLibrary).forEach((category) => {
         allWidgets = [...allWidgets, ...category];
+      });
+      // Add custom components to 'all' view
+      components.forEach((c) => {
+        allWidgets.push({
+          type: `component:${c.id}`,
+          name: c.name,
+          icon: Package,
+          description: c.description || 'Custom component',
+          componentId: c.id,
+          componentType: c.type,
+          componentConfig: c.config
+        });
       });
     } else {
       allWidgets = widgetLibrary[activeCategory as keyof typeof widgetLibrary] || [];
@@ -94,10 +137,32 @@
   })();
 
   function addWidget(type: string) {
+    let widgetType: WidgetType;
+    let widgetConfig: Record<string, unknown>;
+
+    // Check if this is a custom component (format: "component:123")
+    if (type.startsWith('component:')) {
+      const componentId = parseInt(type.split(':')[1]);
+      const component = components.find((c) => c.id === componentId);
+
+      if (!component) {
+        console.error('Component not found:', componentId);
+        return;
+      }
+
+      // Use the component's type and config
+      widgetType = component.type as WidgetType;
+      widgetConfig = { ...component.config };
+    } else {
+      // Built-in widget type
+      widgetType = type as WidgetType;
+      widgetConfig = getDefaultConfig(widgetType);
+    }
+
     const newWidget: PageWidget = {
       id: `temp-${Date.now()}`,
-      type: type as WidgetType,
-      config: getDefaultConfig(type as WidgetType),
+      type: widgetType,
+      config: widgetConfig,
       position: widgets.length,
       page_id: '',
       created_at: Date.now(),
@@ -221,6 +286,133 @@
         buttonUrl: '#',
         backgroundColor: 'var(--color-bg-secondary)',
         textColor: 'var(--color-text-primary)'
+      },
+      navbar: {
+        // Logo configuration
+        logo: { text: 'Store', url: '/', image: '', imageHeight: 40 },
+        logoPosition: 'left',
+        // Navigation links
+        links: [
+          { text: 'Home', url: '/' },
+          { text: 'Products', url: '/products' },
+          { text: 'About', url: '/about' },
+          { text: 'Contact', url: '/contact' }
+        ],
+        linksPosition: 'center',
+        // Action buttons
+        showSearch: false,
+        showCart: true,
+        showAuth: true,
+        showThemeToggle: true,
+        showAccountMenu: true,
+        actionsPosition: 'right',
+        // Account menu items
+        accountMenuItems: [
+          { text: 'Profile', url: '/profile', icon: '👤' },
+          { text: 'Settings', url: '/settings', icon: '⚙️', dividerBefore: true }
+        ],
+        // Styling
+        navbarBackground: '#ffffff',
+        navbarTextColor: '#000000',
+        navbarHoverColor: 'var(--color-primary)',
+        navbarBorderColor: '#e5e7eb',
+        navbarShadow: false,
+        sticky: true,
+        navbarHeight: 0,
+        navbarPadding: {
+          desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+          tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+          mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+        },
+        // Dropdown styling
+        dropdownBackground: '#ffffff',
+        dropdownTextColor: '#000000',
+        dropdownHoverBackground: '#f3f4f6',
+        // Mobile
+        mobileBreakpoint: 768
+      },
+      footer: {
+        copyright: '© 2025 Store Name. All rights reserved.',
+        footerLinks: [
+          { text: 'Privacy Policy', url: '/privacy' },
+          { text: 'Terms of Service', url: '/terms' }
+        ],
+        socialLinks: [],
+        footerBackground: '#f9fafb',
+        footerTextColor: '#374151'
+      },
+      yield: {},
+      container: {
+        containerPadding: {
+          desktop: { top: 40, right: 40, bottom: 40, left: 40 },
+          tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+          mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+        },
+        containerMargin: {
+          desktop: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+          tablet: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+        },
+        containerBackground: 'transparent',
+        containerBorderRadius: 0,
+        containerMaxWidth: '1200px',
+        containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+        containerJustifyContent: 'flex-start',
+        containerAlignItems: 'center',
+        containerWrap: 'wrap',
+        children: []
+      },
+      flex: {
+        // Flex properties (mobile-first defaults)
+        flexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+        flexWrap: { desktop: 'wrap', tablet: 'wrap', mobile: 'nowrap' },
+        flexJustifyContent: { desktop: 'flex-start', tablet: 'flex-start', mobile: 'flex-start' },
+        flexAlignItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
+        flexAlignContent: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
+        flexGap: { desktop: 16, tablet: 12, mobile: 8 },
+        flexGapX: { desktop: 16, tablet: 12, mobile: 8 },
+        flexGapY: { desktop: 16, tablet: 12, mobile: 8 },
+        flexPadding: {
+          desktop: { top: 16, right: 16, bottom: 16, left: 16 },
+          tablet: { top: 12, right: 12, bottom: 12, left: 12 },
+          mobile: { top: 8, right: 8, bottom: 8, left: 8 }
+        },
+        flexMargin: {
+          desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+          tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+        },
+        flexBackground: 'transparent',
+        flexBorderRadius: 0,
+        flexBorder: {
+          width: 0,
+          style: 'solid',
+          color: 'transparent',
+          radius: 0
+        },
+        flexWidth: { desktop: '100%', tablet: '100%', mobile: '100%' },
+        flexHeight: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        flexMinHeight: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        flexMaxWidth: { desktop: 'none', tablet: 'none', mobile: 'none' },
+        childFlexGrow: { desktop: 0, tablet: 0, mobile: 0 },
+        childFlexShrink: { desktop: 1, tablet: 1, mobile: 1 },
+        childFlexBasis: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        childAlignSelf: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        // Grid properties (mobile-first defaults)
+        useGrid: false,
+        gridColumns: { desktop: 3, tablet: 2, mobile: 1 },
+        gridRows: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        gridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+        gridAutoColumns: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        gridAutoRows: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        gridColumnGap: { desktop: 16, tablet: 12, mobile: 8 },
+        gridRowGap: { desktop: 16, tablet: 12, mobile: 8 },
+        gridJustifyItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
+        gridAlignItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
+        gridJustifyContent: { desktop: 'start', tablet: 'start', mobile: 'start' },
+        gridAlignContent: { desktop: 'start', tablet: 'start', mobile: 'start' },
+        // Child widgets
+        children: []
       }
     };
     return defaults[type] || {};
@@ -235,7 +427,7 @@
         pageSettingsExpanded = !pageSettingsExpanded;
       }}
     >
-      <h4>Page Settings</h4>
+      <h4>{entityLabel} Settings</h4>
       <div class="chevron" class:expanded={pageSettingsExpanded}>
         <ChevronDown size={16} />
       </div>
@@ -250,7 +442,7 @@
             class="setting-input"
             value={title}
             on:input={(e) => dispatch('updateTitle', e.currentTarget.value)}
-            placeholder="Page title"
+            placeholder="{entityLabel} title"
           />
         </div>
         <div class="setting-group">
@@ -261,7 +453,7 @@
             class="setting-input"
             value={slug}
             on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
-            placeholder="/page-url"
+            placeholder="/{entityLabelLower}-url"
           />
         </div>
         <button class="btn-properties" on:click={() => dispatch('showPageProperties')}>
@@ -375,7 +567,18 @@
           </div>
         {:else}
           {#each filteredWidgets as widget}
-            <button class="widget-item" on:click={() => addWidget(widget.type)}>
+            <button
+              class="widget-item"
+              draggable="true"
+              on:click={() => addWidget(widget.type)}
+              on:dragstart={(e) => {
+                if (e.dataTransfer) {
+                  e.dataTransfer.effectAllowed = 'copy';
+                  e.dataTransfer.setData('widget-type', widget.type);
+                  e.dataTransfer.setData('text/plain', widget.name);
+                }
+              }}
+            >
               <div class="widget-icon">
                 <svelte:component this={widget.icon} size={20} />
               </div>

@@ -17,7 +17,12 @@ export type WidgetType =
   | 'divider'
   | 'features'
   | 'pricing'
-  | 'cta';
+  | 'cta'
+  | 'navbar'
+  | 'footer'
+  | 'yield' // Special widget type for layouts - renders page content
+  | 'container' // Container with padding and background
+  | 'flex'; // Flexible layout container (flex or grid)
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -63,8 +68,42 @@ export interface Page {
   status: PageStatus;
   content?: string;
   colorTheme?: ColorTheme; // Selected theme for this page
+  layout_id?: number | null; // Layout to use for this page (required)
   created_at: number;
   updated_at: number;
+}
+
+export interface Layout {
+  id: number;
+  site_id: string;
+  name: string;
+  description?: string;
+  slug: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LayoutWidget {
+  id: string;
+  layout_id: number;
+  type: WidgetType;
+  config: WidgetConfig;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Component {
+  id: number;
+  site_id: string;
+  name: string;
+  description?: string;
+  type: string; // Widget type this component represents
+  config: Record<string, unknown>; // JSON configuration
+  is_global: boolean; // If true, available to all sites (system component)
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PageWidget {
@@ -75,6 +114,18 @@ export interface PageWidget {
   position: number;
   created_at: number;
   updated_at: number;
+  // Child-specific flex/grid properties (when widget is inside a flex/grid container)
+  flexChildProps?: {
+    flexGrow?: ResponsiveValue<number>;
+    flexShrink?: ResponsiveValue<number>;
+    flexBasis?: ResponsiveValue<string>;
+    alignSelf?: ResponsiveValue<'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch'>;
+    order?: ResponsiveValue<number>;
+    gridColumn?: ResponsiveValue<string>; // e.g., 'span 2', '1 / 3'
+    gridRow?: ResponsiveValue<string>;
+    gridArea?: ResponsiveValue<string>;
+    justifySelf?: ResponsiveValue<'auto' | 'start' | 'center' | 'end' | 'stretch'>;
+  };
 }
 
 // Responsive value type - allows different values per breakpoint
@@ -120,6 +171,96 @@ export interface BorderConfig {
   radius?: number;
 }
 
+// Border width configuration (per side)
+export interface BorderWidthConfig {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+}
+
+// Border style configuration (per side)
+export interface BorderStyleConfig {
+  top?: 'none' | 'solid' | 'dashed' | 'dotted' | 'double';
+  right?: 'none' | 'solid' | 'dashed' | 'dotted' | 'double';
+  bottom?: 'none' | 'solid' | 'dashed' | 'dotted' | 'double';
+  left?: 'none' | 'solid' | 'dashed' | 'dotted' | 'double';
+}
+
+// Shadow configuration
+export interface ShadowConfig {
+  x?: number;
+  y?: number;
+  blur?: number;
+  spread?: number;
+  color?: string;
+  inset?: boolean;
+}
+
+// Transform configuration
+export interface TransformConfig {
+  translateX?: string;
+  translateY?: string;
+  translateZ?: string;
+  rotate?: number;
+  rotateX?: number;
+  rotateY?: number;
+  rotateZ?: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
+  skewX?: number;
+  skewY?: number;
+}
+
+// Filter configuration
+export interface FilterConfig {
+  blur?: number;
+  brightness?: number;
+  contrast?: number;
+  grayscale?: number;
+  hueRotate?: number;
+  invert?: number;
+  opacity?: number;
+  saturate?: number;
+  sepia?: number;
+}
+
+// Transition configuration
+export interface TransitionConfig {
+  property?: string;
+  duration?: number;
+  timingFunction?: 'ease' | 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+  delay?: number;
+}
+
+// Animation configuration
+export interface AnimationConfig {
+  name?: string;
+  duration?: number;
+  timingFunction?: 'ease' | 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+  delay?: number;
+  iterationCount?: number | 'infinite';
+  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+}
+
+// Position configuration
+export interface PositionConfig {
+  type?: 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky';
+  top?: string;
+  right?: string;
+  bottom?: string;
+  left?: string;
+  zIndex?: number;
+}
+
+// Overflow configuration
+export interface OverflowConfig {
+  x?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  y?: 'visible' | 'hidden' | 'scroll' | 'auto';
+}
+
 // Background configuration
 export interface BackgroundConfig {
   color?: string;
@@ -146,6 +287,68 @@ export interface WidgetConfig {
   anchorName?: string; // Optional anchor name for linking to this widget (e.g., /#section-name)
   styles?: ResponsiveStyles;
   themeOverrides?: Partial<ThemeColors>; // Widget-specific theme color overrides
+
+  // Advanced styling properties (responsive)
+  boxShadow?: ResponsiveValue<ShadowConfig | ShadowConfig[]>; // Support multiple shadows
+  textShadow?: ResponsiveValue<ShadowConfig>;
+  transform?: ResponsiveValue<TransformConfig>;
+  filter?: ResponsiveValue<FilterConfig>;
+  backdropFilter?: ResponsiveValue<FilterConfig>;
+  transition?: TransitionConfig | TransitionConfig[]; // Support multiple transitions
+  animation?: AnimationConfig | AnimationConfig[]; // Support multiple animations
+  position?: ResponsiveValue<PositionConfig>;
+  overflow?: ResponsiveValue<OverflowConfig>;
+  opacity?: ResponsiveValue<number>;
+  cursor?: ResponsiveValue<
+    'auto' | 'pointer' | 'grab' | 'grabbing' | 'text' | 'move' | 'not-allowed' | 'default'
+  >;
+  userSelect?: ResponsiveValue<'none' | 'auto' | 'text' | 'all'>;
+  pointerEvents?: ResponsiveValue<'auto' | 'none'>;
+
+  // Visibility and display
+  visibility?: ResponsiveValue<'visible' | 'hidden' | 'collapse'>;
+  clipPath?: ResponsiveValue<string>; // CSS clip-path value
+
+  // Aspect ratio
+  aspectRatio?: ResponsiveValue<string>; // e.g., '16/9', '1/1'
+
+  // Blend modes
+  mixBlendMode?: ResponsiveValue<
+    | 'normal'
+    | 'multiply'
+    | 'screen'
+    | 'overlay'
+    | 'darken'
+    | 'lighten'
+    | 'color-dodge'
+    | 'color-burn'
+    | 'hard-light'
+    | 'soft-light'
+    | 'difference'
+    | 'exclusion'
+    | 'hue'
+    | 'saturation'
+    | 'color'
+    | 'luminosity'
+  >;
+  backgroundBlendMode?: ResponsiveValue<
+    | 'normal'
+    | 'multiply'
+    | 'screen'
+    | 'overlay'
+    | 'darken'
+    | 'lighten'
+    | 'color-dodge'
+    | 'color-burn'
+    | 'hard-light'
+    | 'soft-light'
+    | 'difference'
+    | 'exclusion'
+    | 'hue'
+    | 'saturation'
+    | 'color'
+    | 'luminosity'
+  >;
 
   // Single product widget
   productId?: string;
@@ -259,6 +462,215 @@ export interface WidgetConfig {
   secondaryCtaBorderColor?: string | ThemeSpecificColor;
   secondaryCtaFontSize?: string;
   secondaryCtaFontWeight?: string;
+
+  // NavBar widget (references a component)
+  componentId?: number; // Reference to a component
+  logo?: {
+    text?: string;
+    image?: string;
+    url?: string;
+    imageHeight?: number; // Logo height in pixels
+  };
+  links?: Array<{
+    text: string;
+    url: string;
+    openInNewTab?: boolean;
+    children?: Array<{
+      // Dropdown submenu items
+      text: string;
+      url: string;
+      openInNewTab?: boolean;
+    }>;
+  }>;
+  showSearch?: boolean;
+  showCart?: boolean;
+  showAuth?: boolean;
+  showThemeToggle?: boolean; // Show theme toggle in navbar
+  showAccountMenu?: boolean; // Show account dropdown menu when authenticated
+  accountMenuItems?: Array<{
+    // Custom menu items in account dropdown
+    text: string;
+    url: string;
+    icon?: string; // Icon name or emoji
+    dividerBefore?: boolean; // Show divider before this item
+  }>;
+  navbarBackground?: string | ThemeSpecificColor;
+  navbarTextColor?: string | ThemeSpecificColor;
+  navbarHoverColor?: string | ThemeSpecificColor; // Link hover color
+  navbarBorderColor?: string | ThemeSpecificColor; // Border color
+  navbarShadow?: boolean; // Show shadow on navbar
+  sticky?: boolean;
+  navbarHeight?: number; // Height in pixels (default: auto)
+  navbarPadding?: ResponsiveValue<SpacingConfig>; // Custom padding
+  logoPosition?: 'left' | 'center'; // Logo alignment
+  linksPosition?: 'left' | 'center' | 'right'; // Links alignment
+  actionsPosition?: 'right' | 'left'; // Actions (cart, auth) alignment
+  mobileBreakpoint?: number; // Width in pixels when mobile menu appears (default: 768)
+  dropdownBackground?: string | ThemeSpecificColor; // Dropdown menu background
+  dropdownTextColor?: string | ThemeSpecificColor; // Dropdown text color
+  dropdownHoverBackground?: string | ThemeSpecificColor; // Dropdown hover background
+
+  // Footer widget (references a component)
+  copyright?: string;
+  footerLinks?: Array<{
+    text: string;
+    url: string;
+    openInNewTab?: boolean;
+  }>;
+  socialLinks?: Array<{
+    platform: 'facebook' | 'twitter' | 'instagram' | 'linkedin' | 'youtube';
+    url: string;
+  }>;
+  footerBackground?: string | ThemeSpecificColor;
+  footerTextColor?: string | ThemeSpecificColor;
+
+  // Yield widget (special - renders page content in layout)
+  // No configuration needed - just a placeholder
+
+  // Container widget - wraps content with padding and background (horizontal row layout)
+  containerPadding?: ResponsiveValue<SpacingConfig>;
+  containerMargin?: ResponsiveValue<SpacingConfig>;
+  containerBackground?: string | ThemeSpecificColor;
+  containerBorderRadius?: number;
+  containerBorder?: BorderConfig;
+  containerMaxWidth?: string; // e.g., '1200px', '100%'
+  containerMinHeight?: ResponsiveValue<string>; // Min height
+  containerMaxHeight?: ResponsiveValue<string>; // Max height
+  containerWidth?: ResponsiveValue<string>; // Width
+  containerGap?: ResponsiveValue<number>; // Gap between children
+  containerGapX?: ResponsiveValue<number>; // Horizontal gap
+  containerGapY?: ResponsiveValue<number>; // Vertical gap
+  containerJustifyContent?:
+    | 'flex-start'
+    | 'center'
+    | 'flex-end'
+    | 'space-between'
+    | 'space-around'
+    | 'space-evenly';
+  containerAlignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline';
+  containerAlignContent?:
+    | 'flex-start'
+    | 'center'
+    | 'flex-end'
+    | 'stretch'
+    | 'space-between'
+    | 'space-around';
+  containerWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+  containerFlexDirection?: ResponsiveValue<'row' | 'column' | 'row-reverse' | 'column-reverse'>;
+
+  // Container display mode
+  containerDisplay?: ResponsiveValue<'flex' | 'grid' | 'block'>;
+
+  // Container grid properties (when containerDisplay === 'grid')
+  containerGridCols?: ResponsiveValue<number | string>; // e.g., 3 or '1fr 2fr 1fr'
+  containerGridRows?: ResponsiveValue<number | string>;
+  containerGridAutoFlow?: ResponsiveValue<
+    'row' | 'column' | 'dense' | 'row dense' | 'column dense'
+  >;
+  containerGridAutoColumns?: ResponsiveValue<string>;
+  containerGridAutoRows?: ResponsiveValue<string>;
+  containerPlaceItems?: ResponsiveValue<string>; // Shorthand for align-items + justify-items
+  containerPlaceContent?: ResponsiveValue<string>; // Shorthand for align-content + justify-content
+
+  // Container advanced styling
+  containerBoxShadow?: ResponsiveValue<ShadowConfig | ShadowConfig[]>;
+  containerTransform?: ResponsiveValue<TransformConfig>;
+  containerTransition?: TransitionConfig | TransitionConfig[];
+  containerOpacity?: ResponsiveValue<number>;
+  containerOverflow?: ResponsiveValue<OverflowConfig>;
+  containerPosition?: ResponsiveValue<PositionConfig>;
+  containerZIndex?: ResponsiveValue<number>;
+
+  // Container background advanced
+  containerBackgroundImage?: string;
+  containerBackgroundSize?: ResponsiveValue<'cover' | 'contain' | 'auto' | string>;
+  containerBackgroundPosition?: ResponsiveValue<string>; // e.g., 'center', 'top left'
+  containerBackgroundRepeat?: ResponsiveValue<'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y'>;
+  containerBackgroundAttachment?: ResponsiveValue<'scroll' | 'fixed' | 'local'>;
+
+  // Container border advanced
+  containerBorderWidth?: ResponsiveValue<BorderWidthConfig>;
+  containerBorderStyle?: ResponsiveValue<BorderStyleConfig>;
+  containerBorderColor?: ResponsiveValue<string | ThemeSpecificColor>;
+
+  // Container filters
+  containerFilter?: ResponsiveValue<FilterConfig>;
+  containerBackdropFilter?: ResponsiveValue<FilterConfig>;
+
+  // Container blend modes
+  containerMixBlendMode?: ResponsiveValue<string>;
+  containerBackgroundBlendMode?: ResponsiveValue<string>;
+
+  // Container cursor and interactions
+  containerCursor?: ResponsiveValue<string>;
+  containerPointerEvents?: ResponsiveValue<'auto' | 'none'>;
+
+  // Row widget - horizontal flexbox layout
+  rowGap?: ResponsiveValue<number>;
+  rowJustifyContent?:
+    | 'flex-start'
+    | 'center'
+    | 'flex-end'
+    | 'space-between'
+    | 'space-around'
+    | 'space-evenly';
+  rowAlignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline';
+  rowFlexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+  rowPadding?: ResponsiveValue<SpacingConfig>;
+  rowBackground?: string | ThemeSpecificColor;
+
+  // Flex widget - flexible container (grid or flex)
+  // Core flex properties
+  flexDirection?: ResponsiveValue<'row' | 'column' | 'row-reverse' | 'column-reverse'>;
+  flexWrap?: ResponsiveValue<'nowrap' | 'wrap' | 'wrap-reverse'>;
+  flexJustifyContent?: ResponsiveValue<
+    'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly'
+  >;
+  flexAlignItems?: ResponsiveValue<'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline'>;
+  flexAlignContent?: ResponsiveValue<
+    'flex-start' | 'center' | 'flex-end' | 'stretch' | 'space-between' | 'space-around'
+  >;
+  flexGap?: ResponsiveValue<number>;
+  flexGapX?: ResponsiveValue<number>; // Horizontal gap
+  flexGapY?: ResponsiveValue<number>; // Vertical gap
+  flexPadding?: ResponsiveValue<SpacingConfig>;
+  flexMargin?: ResponsiveValue<SpacingConfig>;
+  flexBackground?: string | ThemeSpecificColor;
+  flexBorderRadius?: number;
+  flexBorder?: BorderConfig;
+  flexWidth?: ResponsiveValue<string>; // Width: 'full', 'auto', '1/2', '1/3', etc.
+  flexHeight?: ResponsiveValue<string>; // Height: 'auto', 'full', 'screen', etc.
+  flexMinHeight?: ResponsiveValue<string>;
+  flexMaxWidth?: ResponsiveValue<string>;
+
+  // Individual child flex properties (applied to direct children)
+  childFlexGrow?: ResponsiveValue<number>; // Default flex-grow for children
+  childFlexShrink?: ResponsiveValue<number>; // Default flex-shrink for children
+  childFlexBasis?: ResponsiveValue<string>; // Default flex-basis for children
+  childAlignSelf?: ResponsiveValue<'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch'>;
+
+  // Grid-specific properties for flex widget
+  useGrid?: boolean; // If true, use CSS Grid instead of flexbox
+  gridColumns?: ResponsiveValue<number | string>; // e.g., 3 or '1fr 2fr 1fr'
+  gridRows?: ResponsiveValue<number | string>;
+  gridAutoFlow?: ResponsiveValue<'row' | 'column' | 'dense' | 'row dense' | 'column dense'>;
+  gridAutoColumns?: ResponsiveValue<string>; // e.g., 'auto', 'min-content', '1fr'
+  gridAutoRows?: ResponsiveValue<string>;
+  gridColumnGap?: ResponsiveValue<number>;
+  gridRowGap?: ResponsiveValue<number>;
+  gridPlaceItems?: ResponsiveValue<string>; // Shorthand for align-items + justify-items
+  gridPlaceContent?: ResponsiveValue<string>; // Shorthand for align-content + justify-content
+  gridJustifyItems?: ResponsiveValue<'start' | 'center' | 'end' | 'stretch'>;
+  gridAlignItems?: ResponsiveValue<'start' | 'center' | 'end' | 'stretch'>;
+  gridJustifyContent?: ResponsiveValue<
+    'start' | 'center' | 'end' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
+  >;
+  gridAlignContent?: ResponsiveValue<
+    'start' | 'center' | 'end' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
+  >;
+
+  // Individual child grid properties (applied to direct children via config)
+  // These would be stored per-child in the children array
 }
 
 export interface PageWithWidgets extends Page {

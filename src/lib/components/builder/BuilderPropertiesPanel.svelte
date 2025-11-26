@@ -7,6 +7,9 @@
   import ThemeColorInput from '$lib/components/admin/ThemeColorInput.svelte';
   import MediaBrowser from '$lib/components/admin/MediaBrowser.svelte';
   import MediaUpload from '$lib/components/admin/MediaUpload.svelte';
+  import TailwindFlexEditor from './TailwindFlexEditor.svelte';
+  import TailwindGridEditor from './TailwindGridEditor.svelte';
+  import FlexChildPropertiesEditor from './FlexChildPropertiesEditor.svelte';
 
   export let widgets: PageWidget[] = [];
   export let selectedWidget: PageWidget | null = null;
@@ -15,6 +18,7 @@
     | undefined = undefined;
   export let currentBreakpoint: 'mobile' | 'tablet' | 'desktop';
   export let colorTheme: ColorTheme = 'default';
+  export let entityLabel = 'Page';
 
   // Track which component is expanded (null = none, 'page' = page, widget.id = specific widget)
   let expandedComponentId: string | 'page' | null = selectedWidget?.id || 'page';
@@ -98,7 +102,7 @@
               ? 0
               : -90}deg); transition: transform 0.2s;"
           />
-          <span class="component-label">Page</span>
+          <span class="component-label">{entityLabel}</span>
         </button>
 
         {#if expandedComponentId === 'page'}
@@ -282,14 +286,79 @@
             </div>
           </div>
           <div class="widget-properties">
-            <WidgetPropertiesPanel
-              widget={widgetItem}
-              {currentBreakpoint}
-              onUpdate={(config) => {
-                const updatedWidget = { ...widgetItem, config };
-                dispatch('updateWidget', updatedWidget);
-              }}
-            />
+            {#if widgetItem.type === 'flex'}
+              <div class="flex-editor-tabs">
+                <div class="editor-tab-header">
+                  <h4>Flex/Grid Layout Editor</h4>
+                  <label class="grid-toggle">
+                    <input
+                      type="checkbox"
+                      checked={widgetItem.config?.useGrid || false}
+                      on:change={(e) => {
+                        const updatedWidget = {
+                          ...widgetItem,
+                          config: { ...widgetItem.config, useGrid: e.currentTarget.checked }
+                        };
+                        dispatch('updateWidget', updatedWidget);
+                      }}
+                    />
+                    <span>Use Grid</span>
+                  </label>
+                </div>
+
+                {#if widgetItem.config?.useGrid}
+                  <TailwindGridEditor
+                    config={widgetItem.config}
+                    {currentBreakpoint}
+                    on:update={(e) => {
+                      const updatedWidget = { ...widgetItem, config: e.detail };
+                      dispatch('updateWidget', updatedWidget);
+                    }}
+                  />
+                {:else}
+                  <TailwindFlexEditor
+                    config={widgetItem.config}
+                    {currentBreakpoint}
+                    on:update={(e) => {
+                      const updatedWidget = { ...widgetItem, config: e.detail };
+                      dispatch('updateWidget', updatedWidget);
+                    }}
+                  />
+                {/if}
+              </div>
+            {:else}
+              <WidgetPropertiesPanel
+                widget={widgetItem}
+                {currentBreakpoint}
+                onUpdate={(config) => {
+                  const updatedWidget = { ...widgetItem, config };
+                  dispatch('updateWidget', updatedWidget);
+                }}
+              />
+            {/if}
+
+            <!-- Show child properties editor if widget has a flex/grid parent -->
+            {#if widgetItem.config?.children}
+              <!-- This is a parent flex/grid container - children can have child props -->
+              <div class="child-props-section">
+                <p class="info-hint">
+                  💡 Children of this {widgetItem.config?.useGrid ? 'grid' : 'flex'} container can have
+                  individual positioning properties. Select a child widget to edit its properties.
+                </p>
+              </div>
+            {/if}
+
+            <!-- Always show child properties for the selected widget if it exists -->
+            {#if selectedWidget?.id === widgetItem.id}
+              <FlexChildPropertiesEditor
+                widget={widgetItem}
+                {currentBreakpoint}
+                isGridParent={widgetItem.config?.useGrid || false}
+                on:update={(e) => {
+                  dispatch('updateWidget', e.detail);
+                }}
+              />
+            {/if}
           </div>
         {/if}
       </div>
@@ -545,8 +614,8 @@
     top: 0.5rem;
     right: 0.5rem;
     padding: 0.5rem 1rem;
-    background: rgba(239, 68, 68, 0.9);
-    color: white;
+    background: var(--color-danger, rgba(239, 68, 68, 0.9));
+    color: var(--color-bg-primary, white);
     border: none;
     border-radius: 6px;
     font-size: 0.875rem;
@@ -555,7 +624,7 @@
   }
 
   .media-preview .btn-remove:hover {
-    background: rgba(220, 38, 38, 1);
+    background: var(--color-danger-hover, rgba(220, 38, 38, 1));
   }
 
   .media-actions {
@@ -591,7 +660,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--color-overlay, rgba(0, 0, 0, 0.7));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -644,6 +713,57 @@
   .modal-close-btn:hover {
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
+  }
+
+  .flex-editor-tabs {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-tab-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .editor-tab-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .grid-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+
+  .grid-toggle input[type='checkbox'] {
+    cursor: pointer;
+  }
+
+  .child-props-section {
+    padding: 1rem;
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-secondary);
+  }
+
+  .info-hint {
+    margin: 0;
+    padding: 0.75rem;
+    background: var(--color-info-light);
+    border-left: 3px solid var(--color-info);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
   }
 
   @media (max-width: 1024px) {

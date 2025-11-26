@@ -8,6 +8,7 @@
   export let showTitle: boolean = true;
   export let showAddButton: boolean = true;
   export let showFooter: boolean = true;
+  export let allowMultiple: boolean = true;
 
   let mediaItems: MediaLibraryItem[] = [];
   let isLoading = true;
@@ -71,7 +72,12 @@
     if (internalSelectedIds.includes(item.id)) {
       internalSelectedIds = internalSelectedIds.filter((id) => id !== item.id);
     } else {
-      internalSelectedIds = [...internalSelectedIds, item.id];
+      // If allowMultiple is false, replace selection instead of adding to it
+      if (allowMultiple) {
+        internalSelectedIds = [...internalSelectedIds, item.id];
+      } else {
+        internalSelectedIds = [item.id];
+      }
     }
 
     // Notify parent of selection changes

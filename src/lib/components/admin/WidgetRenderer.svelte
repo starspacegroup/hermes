@@ -1,15 +1,24 @@
 <script lang="ts">
-  import type { PageWidget, Breakpoint, WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import type {
+    PageWidget,
+    Breakpoint,
+    WidgetConfig,
+    ColorTheme,
+    WidgetType
+  } from '$lib/types/pages';
   import {
     applyThemeColors,
     generateThemeStyles,
     resolveThemeColor
   } from '$lib/utils/editor/colorThemes';
+  import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
+  import ContainerDropZone from '$lib/components/builder/ContainerDropZone.svelte';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let onUpdate: ((config: WidgetConfig) => void) | undefined = undefined;
+  export let isEditable = false; // Whether we're in edit mode (builder)
 
   $: themeColors = applyThemeColors(colorTheme, widget.config.themeOverrides);
 
@@ -54,6 +63,18 @@
     return value as T;
   }
 
+  function getBreakpointValue<T>(
+    value: T | { mobile?: T; tablet?: T; desktop?: T } | undefined,
+    breakpoint: Breakpoint
+  ): T | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      const responsive = value as { mobile?: T; tablet?: T; desktop?: T };
+      return responsive[breakpoint] ?? responsive.desktop ?? undefined;
+    }
+    return value as T;
+  }
+
   // For featuresLimit, we want to return undefined if the breakpoint isn't explicitly set
   function getResponsiveLimitValue(
     value: { mobile?: number; tablet?: number; desktop?: number } | number | undefined
@@ -70,6 +91,70 @@
       return value.desktop;
     }
     return undefined;
+  }
+
+  // Helper to format grid template columns/rows
+  function formatGridTemplate(
+    value: string | number | undefined | null,
+    defaultValue: string
+  ): string {
+    if (!value) return defaultValue;
+
+    // Convert to string if it's a number
+    const stringValue = String(value);
+
+    // If it's a simple number (like "3"), convert to repeat syntax
+    if (/^\d+$/.test(stringValue)) {
+      return `repeat(${stringValue}, 1fr)`;
+    }
+
+    // If it already contains CSS units or keywords, use as-is
+    return stringValue;
+  }
+
+  // Handle dropping a new widget into a container
+  function handleContainerDrop(event: CustomEvent<{ widgetType: string; insertIndex: number }>) {
+    const { widgetType, insertIndex } = event.detail;
+    const newWidget: PageWidget = {
+      id: `temp-${Date.now()}`,
+      type: widgetType as WidgetType,
+      config: getDefaultConfig(widgetType as WidgetType),
+      position: insertIndex,
+      page_id: widget.page_id,
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+
+    const updatedChildren = [...(widget.config.children || [])];
+    updatedChildren.splice(insertIndex, 0, newWidget);
+
+    if (onUpdate) {
+      onUpdate({ ...widget.config, children: updatedChildren });
+    }
+  }
+
+  // Handle clicking on a child widget to scroll to its properties panel
+  function handleChildClick(event: CustomEvent<{ childId: string }>) {
+    const { childId } = event.detail;
+    const element = document.getElementById(`child-panel-${childId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Briefly highlight the panel
+      element.classList.add('highlight');
+      setTimeout(() => element.classList.remove('highlight'), 2000);
+    }
+  }
+
+  // Handle reordering widgets within a container
+  function handleContainerReorder(event: CustomEvent<{ fromIndex: number; toIndex: number }>) {
+    const { fromIndex, toIndex } = event.detail;
+    const updatedChildren = [...(widget.config.children || [])];
+    const [movedWidget] = updatedChildren.splice(fromIndex, 1);
+    updatedChildren.splice(toIndex, 0, movedWidget);
+
+    if (onUpdate) {
+      onUpdate({ ...widget.config, children: updatedChildren });
+    }
   }
 
   function getStyleString(widget: PageWidget): string {
@@ -539,6 +624,250 @@
         {/if}
       </div>
     </div>
+  {:else if widget.type === 'navbar'}
+    <div class="navbar-preview">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          {#if widget.config.logo?.image}
+            <img
+              src={widget.config.logo.image}
+              alt={widget.config.logo.text || 'Logo'}
+              class="logo"
+            />
+          {:else}
+            <span class="logo-text">{widget.config.logo?.text || 'Store'}</span>
+          {/if}
+        </div>
+        <div class="navbar-links">
+          {#each widget.config.links || [] as link}
+            <a href={link.url} class="nav-link">{link.text}</a>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {:else if widget.type === 'footer'}
+    <div class="footer-preview">
+      <div class="footer-container">
+        {#if widget.config.footerLinks && widget.config.footerLinks.length > 0}
+          <div class="footer-links">
+            {#each widget.config.footerLinks as link}
+              <a href={link.url} class="footer-link">{link.text}</a>
+            {/each}
+          </div>
+        {/if}
+        <div class="footer-copyright">
+          {widget.config.copyright || '© 2025 Store Name. All rights reserved.'}
+        </div>
+      </div>
+    </div>
+  {:else if widget.type === 'yield'}
+    <div class="yield-preview">
+      <div class="yield-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path
+            d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        <p>Page Content Area</p>
+        <span>Page widgets will be rendered here</span>
+      </div>
+    </div>
+  {:else if widget.type === 'container'}
+    {@const containerDisplay =
+      getBreakpointValue(widget.config.containerDisplay, currentBreakpoint) || 'flex'}
+    {@const flexDirection =
+      getBreakpointValue(widget.config.containerFlexDirection, currentBreakpoint) || 'row'}
+    {@const containerWidth =
+      getBreakpointValue(widget.config.containerWidth, currentBreakpoint) || 'auto'}
+    {@const containerMinHeight =
+      getBreakpointValue(widget.config.containerMinHeight, currentBreakpoint) || 'auto'}
+    {@const containerMaxHeight =
+      getBreakpointValue(widget.config.containerMaxHeight, currentBreakpoint) || 'none'}
+    {@const containerGap = getBreakpointValue(widget.config.containerGap, currentBreakpoint) || 16}
+    {@const containerOpacity =
+      getBreakpointValue(widget.config.containerOpacity, currentBreakpoint) || 1}
+    {@const containerOverflow = getBreakpointValue(
+      widget.config.containerOverflow,
+      currentBreakpoint
+    )}
+    {@const containerZIndex = getBreakpointValue(widget.config.containerZIndex, currentBreakpoint)}
+    {@const containerGridCols = getBreakpointValue(
+      widget.config.containerGridCols,
+      currentBreakpoint
+    )}
+    {@const containerGridRows = getBreakpointValue(
+      widget.config.containerGridRows,
+      currentBreakpoint
+    )}
+    {@const containerGridAutoFlow = getBreakpointValue(
+      widget.config.containerGridAutoFlow,
+      currentBreakpoint
+    )}
+    {@const containerPlaceItems = getBreakpointValue(
+      widget.config.containerPlaceItems,
+      currentBreakpoint
+    )}
+    {@const containerPlaceContent = getBreakpointValue(
+      widget.config.containerPlaceContent,
+      currentBreakpoint
+    )}
+    {@const containerPadding = getBreakpointValue(
+      widget.config.containerPadding,
+      currentBreakpoint
+    )}
+    {@const containerMargin = getBreakpointValue(widget.config.containerMargin, currentBreakpoint)}
+    <div
+      class="container-widget"
+      style="
+        display: {containerDisplay};
+        {containerDisplay === 'flex'
+        ? `
+          flex-direction: ${flexDirection};
+          justify-content: ${widget.config.containerJustifyContent || 'flex-start'};
+          align-items: ${widget.config.containerAlignItems || 'stretch'};
+          align-content: ${widget.config.containerAlignContent || 'normal'};
+          flex-wrap: ${widget.config.containerWrap || 'nowrap'};
+        `
+        : containerDisplay === 'grid'
+          ? `
+          grid-template-columns: ${formatGridTemplate(containerGridCols, 'repeat(3, 1fr)')};
+          ${containerGridRows && containerGridRows !== 'auto' ? `grid-template-rows: ${formatGridTemplate(containerGridRows, 'auto')};` : ''}
+          ${containerGridAutoFlow ? `grid-auto-flow: ${containerGridAutoFlow};` : ''}
+          ${containerPlaceItems ? `place-items: ${containerPlaceItems};` : ''}
+          ${containerPlaceContent ? `place-content: ${containerPlaceContent};` : ''}
+        `
+          : ''}
+        gap: ${containerGap}px;
+        width: ${containerWidth};
+        max-width: ${widget.config.containerMaxWidth || '1200px'};
+        min-height: ${containerMinHeight};
+        max-height: ${containerMaxHeight};
+        padding: ${containerPadding
+        ? `${containerPadding.top || 40}px ${containerPadding.right || 40}px ${containerPadding.bottom || 40}px ${containerPadding.left || 40}px`
+        : '40px'};
+        margin: ${containerMargin
+        ? `${containerMargin.top || 0}px auto ${containerMargin.bottom || 0}px`
+        : '0px auto'};
+        background: ${widget.config.containerBackground || 'transparent'};
+        ${widget.config.containerBackgroundImage
+        ? `background-image: url(${widget.config.containerBackgroundImage});`
+        : ''}
+        ${widget.config.containerBackgroundSize
+        ? `background-size: ${getBreakpointValue(widget.config.containerBackgroundSize, currentBreakpoint)};`
+        : ''}
+        ${widget.config.containerBackgroundPosition
+        ? `background-position: ${getBreakpointValue(widget.config.containerBackgroundPosition, currentBreakpoint)};`
+        : ''}
+        ${widget.config.containerBackgroundRepeat
+        ? `background-repeat: ${getBreakpointValue(widget.config.containerBackgroundRepeat, currentBreakpoint)};`
+        : ''}
+        border-radius: ${widget.config.containerBorderRadius || 0}px;
+        ${(() => {
+        const borderWidth = getBreakpointValue(
+          widget.config.containerBorderWidth,
+          currentBreakpoint
+        );
+        return borderWidth
+          ? `border-width: ${borderWidth.top || 0}px ${borderWidth.right || 0}px ${borderWidth.bottom || 0}px ${borderWidth.left || 0}px;`
+          : '';
+      })()}
+        ${widget.config.containerBorderColor
+        ? `border-color: ${widget.config.containerBorderColor}; border-style: solid;`
+        : ''}
+        opacity: ${containerOpacity};
+        ${containerOverflow
+        ? `overflow: ${typeof containerOverflow === 'object' ? `${containerOverflow.x || 'visible'} ${containerOverflow.y || 'visible'}` : containerOverflow};`
+        : ''}
+        ${containerZIndex !== undefined ? `z-index: ${containerZIndex};` : ''}
+        ${widget.config.containerCursor
+        ? `cursor: ${getBreakpointValue(widget.config.containerCursor, currentBreakpoint)};`
+        : ''}
+        ${widget.config.containerPointerEvents
+        ? `pointer-events: ${getBreakpointValue(widget.config.containerPointerEvents, currentBreakpoint)};`
+        : ''}
+      "
+    >
+      {#if isEditable}
+        <ContainerDropZone
+          containerId={widget.id}
+          children={widget.config.children || []}
+          isActive={false}
+          allowedTypes={[]}
+          displayMode={containerDisplay}
+          showLayoutHints={true}
+          containerStyles={containerDisplay === 'flex'
+            ? `
+              flex-direction: ${flexDirection};
+              justify-content: ${widget.config.containerJustifyContent || 'flex-start'};
+              align-items: ${widget.config.containerAlignItems || 'stretch'};
+              flex-wrap: ${widget.config.containerWrap || 'nowrap'};
+              gap: ${containerGap}px;
+            `
+            : containerDisplay === 'grid'
+              ? `
+              grid-template-columns: ${formatGridTemplate(containerGridCols, 'repeat(3, 1fr)')};
+              ${containerGridRows && containerGridRows !== 'auto' ? `grid-template-rows: ${formatGridTemplate(containerGridRows, 'auto')};` : ''}
+              ${containerGridAutoFlow ? `grid-auto-flow: ${containerGridAutoFlow};` : ''}
+              ${containerPlaceItems ? `place-items: ${containerPlaceItems};` : ''}
+              ${containerPlaceContent ? `place-content: ${containerPlaceContent};` : ''}
+              gap: ${containerGap}px;
+            `
+              : `gap: ${containerGap}px;`}
+          on:drop={handleContainerDrop}
+          on:reorder={handleContainerReorder}
+          on:childClick={handleChildClick}
+        >
+          <svelte:fragment slot="child" let:child>
+            <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
+          </svelte:fragment>
+        </ContainerDropZone>
+      {:else if widget.config.children && widget.config.children.length > 0}
+        {#each widget.config.children as child}
+          <div class="container-child">
+            <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
+          </div>
+        {/each}
+      {:else}
+        <div class="layout-placeholder">
+          <p>📦 Container</p>
+          <span>Drop widgets here</span>
+        </div>
+      {/if}
+    </div>
+  {:else if widget.type === 'flex'}
+    <div
+      class="flex-preview"
+      style="
+        display: {widget.config.useGrid ? 'grid' : 'flex'};
+        {widget.config.useGrid
+        ? `
+          grid-template-columns: repeat(${widget.config.gridColumns?.desktop || 3}, 1fr);
+          ${widget.config.gridRows ? `grid-template-rows: repeat(${widget.config.gridRows.desktop}, 1fr);` : ''}
+          grid-auto-flow: ${widget.config.gridAutoFlow || 'row'};
+        `
+        : `
+          flex-direction: ${widget.config.flexDirection?.desktop || 'row'};
+          flex-wrap: ${widget.config.flexWrap || 'wrap'};
+          justify-content: ${widget.config.flexJustifyContent || 'flex-start'};
+          align-items: ${widget.config.flexAlignItems || 'stretch'};
+        `}
+        gap: {widget.config.flexGap?.desktop || 16}px;
+        padding: {widget.config.flexPadding?.desktop?.top || 16}px {widget.config.flexPadding
+        ?.desktop?.right || 16}px {widget.config.flexPadding?.desktop?.bottom || 16}px {widget
+        .config.flexPadding?.desktop?.left || 16}px;
+        background: {widget.config.flexBackground || 'transparent'};
+        border-radius: {widget.config.flexBorderRadius || 0}px;
+      "
+    >
+      <div class="layout-placeholder">
+        <p>{widget.config.useGrid ? '⊞ Grid' : '⊟ Flex'}</p>
+        <span>Flexible layout</span>
+      </div>
+    </div>
   {:else}
     <div class="unknown-widget">
       <span>Unknown widget type: {widget.type}</span>
@@ -549,6 +878,13 @@
 <style>
   .widget-renderer {
     min-height: 20px;
+  }
+
+  /* Container child wrapper - ensures children act as independent flex/grid items */
+  .container-child {
+    /* No display property - inherits block/inline behavior naturally */
+    /* This allows the wrapper to be a proper flex/grid item */
+    position: relative; /* Ensures element is rendered */
   }
 
   /* Text Widget */
@@ -749,6 +1085,18 @@
   /* Divider Widget */
   .divider-widget {
     width: 100%;
+  }
+
+  /* Container Widget */
+  .container-widget {
+    min-height: 60px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .container-widget > .layout-placeholder {
+    flex: 1;
+    min-width: 200px;
   }
 
   /* Columns Widget */
@@ -990,5 +1338,150 @@
     background: transparent;
     color: white;
     border: 2px solid white !important;
+  }
+
+  /* Navbar Preview */
+  .navbar-preview {
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-border-secondary);
+    padding: 1rem;
+  }
+
+  .navbar-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .navbar-brand {
+    font-weight: 600;
+    font-size: 1.25rem;
+  }
+
+  .logo {
+    height: 32px;
+    width: auto;
+  }
+
+  .logo-text {
+    color: var(--color-text-primary);
+  }
+
+  .navbar-links {
+    display: flex;
+    gap: 1.5rem;
+    flex: 1;
+  }
+
+  .nav-link {
+    color: var(--color-text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  /* Footer Preview */
+  .footer-preview {
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-secondary);
+    padding: 2rem 1rem;
+  }
+
+  .footer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .footer-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .footer-copyright {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-secondary);
+  }
+
+  /* Yield Preview */
+  .yield-preview {
+    background: var(--color-bg-secondary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    min-height: 200px;
+  }
+
+  .yield-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+
+  .yield-placeholder svg {
+    opacity: 0.5;
+  }
+
+  .yield-placeholder p {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--color-text-primary);
+  }
+
+  .yield-placeholder span {
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+
+  /* Layout Widget Previews */
+  .container-preview,
+  .row-preview,
+  .flex-preview {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 100px;
+  }
+
+  .layout-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 4px;
+    background: var(--color-bg-tertiary);
+  }
+
+  .layout-placeholder p {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+  }
+
+  .layout-placeholder span {
+    font-size: 0.875rem;
+    font-style: italic;
   }
 </style>

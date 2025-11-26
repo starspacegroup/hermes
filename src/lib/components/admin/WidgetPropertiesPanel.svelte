@@ -4,6 +4,9 @@
   import MediaBrowser from './MediaBrowser.svelte';
   import MediaUpload from './MediaUpload.svelte';
   import ThemeColorInput from './ThemeColorInput.svelte';
+  import VisualStyleEditor from '../builder/VisualStyleEditor.svelte';
+  import TailwindContainerEditor from '../builder/TailwindContainerEditor.svelte';
+  import { GripVertical, Trash2 } from 'lucide-svelte';
 
   export let widget: PageWidget;
   export let currentBreakpoint: Breakpoint;
@@ -26,6 +29,13 @@
   let draggedIndex: number | null = null;
   let dragOverIndex: number | null = null;
   let dropPosition: 'before' | 'after' | null = null;
+
+  // Container children drag state
+  let draggedChildIndex: number | null = null;
+  let dragOverChildIndex: number | null = null;
+
+  // Container children expand/collapse state
+  let expandedChildren = new Set<string>();
 
   // Debounce timer for handleUpdate
   let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -112,6 +122,22 @@
       collapsedFeatures = new Set();
     }
   }
+  // Helper function to create new child widgets
+  function _createTextWidget(): PageWidget {
+    return {
+      id: `temp-${Date.now()}`,
+      type: 'text',
+      config: {
+        text: 'Text content',
+        alignment: 'left',
+        fontSize: 16
+      },
+      position: 0,
+      page_id: '',
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+  }
 
   // Sync external widget config changes to local config (e.g., from contenteditable)
   $: {
@@ -172,6 +198,12 @@
     }, 100); // 100ms debounce delay (reduced from 150ms)
   }
 
+  // Handle visual style updates
+  function handleVisualStyleUpdate(event: CustomEvent<WidgetConfig>): void {
+    config = event.detail;
+    handleUpdate();
+  }
+
   // Immediate update without debouncing (for select changes, buttons, etc.)
   function handleImmediateUpdate() {
     // Mark as local update FIRST to prevent sync back
@@ -198,8 +230,15 @@
   }
 
   function handleMediaSelected(media: MediaLibraryItem[]) {
-    // Update selection with the provided array
-    selectedMediaItems = media;
+    // For image widget with single selection, immediately apply and close
+    if (media.length > 0 && widget.type === 'image') {
+      config.src = media[0].url;
+      showMediaBrowser = false;
+      handleImmediateUpdate();
+    } else {
+      // Update selection with the provided array for other uses
+      selectedMediaItems = media;
+    }
   }
 
   function handleAddSelectedMedia() {
@@ -297,6 +336,106 @@
     dragOverIndex = null;
     dropPosition = null;
   }
+
+  // Drag and drop handlers for container children
+  function handleChildDragStart(event: DragEvent, index: number): void {
+    draggedChildIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/html', '');
+    }
+  }
+
+  function handleChildDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    dragOverChildIndex = index;
+  }
+
+  function handleChildDragLeave(): void {
+    dragOverChildIndex = null;
+  }
+
+  function handleChildDrop(event: DragEvent, dropIndex: number): void {
+    event.preventDefault();
+
+    if (draggedChildIndex === null || !config.children) return;
+
+    const children = [...config.children];
+    const [draggedItem] = children.splice(draggedChildIndex, 1);
+
+    // Adjust insertion index if needed
+    let insertIndex = dropIndex;
+    if (draggedChildIndex < dropIndex) {
+      insertIndex = dropIndex;
+    }
+
+    children.splice(insertIndex, 0, draggedItem);
+    config.children = children;
+    handleImmediateUpdate();
+
+    draggedChildIndex = null;
+    dragOverChildIndex = null;
+  }
+
+  function handleChildDragEnd(): void {
+    draggedChildIndex = null;
+    dragOverChildIndex = null;
+  }
+
+  function handleDeleteChild(index: number): void {
+    if (!config.children) return;
+
+    const children = [...config.children];
+    const childId = children[index].id;
+    children.splice(index, 1);
+    config.children = children;
+
+    // Remove from expanded set if it was expanded
+    expandedChildren.delete(childId);
+    expandedChildren = expandedChildren;
+
+    handleImmediateUpdate();
+  }
+
+  function _toggleChildExpanded(childId: string): void {
+    if (expandedChildren.has(childId)) {
+      expandedChildren.delete(childId);
+    } else {
+      expandedChildren.add(childId);
+    }
+    expandedChildren = expandedChildren; // Trigger reactivity
+  }
+
+  // Scroll to child widget properties panel
+  function scrollToChildPanel(childId: string): void {
+    const element = document.getElementById(`child-panel-${childId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Briefly highlight the panel
+      element.classList.add('highlight');
+      setTimeout(() => element.classList.remove('highlight'), 2000);
+    }
+  }
+
+  function handleChildUpdate(childIndex: number, childConfig: WidgetConfig): void {
+    if (!config.children) return;
+
+    const children = [...config.children];
+    children[childIndex] = {
+      ...children[childIndex],
+      config: childConfig
+    };
+    config.children = children;
+    handleImmediateUpdate();
+  }
+
+  // Helper to create typed child update handlers
+  function createChildUpdateHandler(childIndex: number): (childConfig: WidgetConfig) => void {
+    return (childConfig: WidgetConfig) => handleChildUpdate(childIndex, childConfig);
+  }
 </script>
 
 <div class="properties-panel">
@@ -324,6 +463,14 @@
       on:click={() => (activeTab = 'responsive')}
     >
       Responsive
+    </button>
+    <button
+      type="button"
+      class="tab"
+      class:active={activeTab === 'advanced'}
+      on:click={() => (activeTab = 'advanced')}
+    >
+      Advanced
     </button>
   </div>
 
@@ -394,17 +541,81 @@
         {:else if widget.type === 'image'}
           <div class="section">
             <h4>Image</h4>
-            <div class="form-group">
-              <label>
-                <span>Image URL</span>
-                <input
-                  type="url"
-                  bind:value={config.src}
-                  on:input={handleUpdate}
-                  placeholder="https://..."
-                />
-              </label>
+            {#if config.src}
+              <div class="media-preview">
+                <img src={config.src} alt={config.alt || 'Preview'} />
+                <button
+                  type="button"
+                  class="btn-remove"
+                  on:click={() => {
+                    config.src = '';
+                    handleImmediateUpdate();
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            {/if}
+            <div class="media-actions">
+              <MediaUpload
+                onMediaUploaded={(media) => {
+                  config.src = media.url;
+                  handleImmediateUpdate();
+                }}
+              />
+              <button
+                type="button"
+                class="btn-secondary"
+                on:click={() => (showMediaBrowser = !showMediaBrowser)}
+              >
+                {showMediaBrowser ? 'Hide' : 'Browse'} Library
+              </button>
             </div>
+            {#if showMediaBrowser}
+              <div
+                class="media-browser-modal"
+                role="button"
+                tabindex="0"
+                on:click|self={handleCancelMediaBrowser}
+                on:keydown={(e) => e.key === 'Escape' && handleCancelMediaBrowser()}
+              >
+                <div class="media-browser-content">
+                  <div class="media-browser-header">
+                    <h3>Media Library</h3>
+                    <div class="header-actions">
+                      {#if selectedMediaItems.length > 0}
+                        <span class="selection-count">
+                          {selectedMediaItems.length} selected
+                        </span>
+                      {/if}
+                      <button
+                        type="button"
+                        class="modal-close-btn"
+                        on:click={handleCancelMediaBrowser}
+                        title="Close"
+                      >
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <MediaBrowser
+                    onSelect={handleMediaSelected}
+                    allowMultiple={false}
+                    showFooter={false}
+                  />
+                </div>
+              </div>
+            {/if}
             <div class="form-group">
               <label>
                 <span>Alt Text</span>
@@ -705,6 +916,74 @@
               </label>
             </div>
           </div>
+        {:else if widget.type === 'container'}
+          <!-- Show container content -->
+          <div class="section">
+            <h4>Container Content</h4>
+            <p class="field-hint">
+              Drag widgets from the sidebar into this container to add child elements. The container
+              will arrange them based on your layout and style settings in the Style tab.
+            </p>
+
+            {#if config.children && config.children.length > 0}
+              <div class="container-children-list">
+                <h5>Child Widgets ({config.children.length})</h5>
+                {#each config.children as child, index (child.id)}
+                  <div class="child-wrapper">
+                    <div
+                      class="child-item"
+                      class:dragging={draggedChildIndex === index}
+                      class:drag-over={dragOverChildIndex === index}
+                      draggable="true"
+                      on:dragstart={(e) => handleChildDragStart(e, index)}
+                      on:dragover={(e) => handleChildDragOver(e, index)}
+                      on:dragleave={handleChildDragLeave}
+                      on:drop={(e) => handleChildDrop(e, index)}
+                      on:dragend={handleChildDragEnd}
+                      role="listitem"
+                    >
+                      <div class="drag-handle" title="Drag to reorder">
+                        <GripVertical size={16} />
+                      </div>
+                      <div class="child-info">
+                        <span class="child-type">{child.type}</span>
+                        {#if child.config.title}
+                          <span class="child-title">- {child.config.title}</span>
+                        {:else if child.config.text}
+                          <span class="child-title"
+                            >- {child.config.text.substring(0, 30)}{child.config.text.length > 30
+                              ? '...'
+                              : ''}</span
+                          >
+                        {/if}
+                      </div>
+                      <button
+                        type="button"
+                        class="btn-edit-child"
+                        on:click={() => scrollToChildPanel(child.id)}
+                        title="Jump to properties"
+                      >
+                        ↓ Properties
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-delete-child"
+                        on:click={() => handleDeleteChild(index)}
+                        title="Delete widget"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="empty-children-state">
+                <p>No child widgets yet</p>
+                <span>Drop widgets from the sidebar into the container</span>
+              </div>
+            {/if}
+          </div>
         {:else if widget.type === 'features'}
           <div class="section">
             <h4>Section Header</h4>
@@ -879,6 +1158,351 @@
                   <p class="empty-state">No features yet. Click "Add Feature" to get started.</p>
                 {/if}
               </div>
+            </div>
+          </div>
+        {:else if widget.type === 'navbar'}
+          <div class="section">
+            <h4>Logo</h4>
+            <div class="form-group">
+              <label>
+                <span>Logo Text</span>
+                <input
+                  type="text"
+                  value={config.logo?.text || 'Store'}
+                  on:input={(e) => {
+                    if (!config.logo)
+                      config.logo = { text: 'Store', url: '/', image: '', imageHeight: 40 };
+                    config.logo.text = e.currentTarget.value;
+                    handleUpdate();
+                  }}
+                  placeholder="Store Name"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Logo URL</span>
+                <input
+                  type="url"
+                  value={config.logo?.url || '/'}
+                  on:input={(e) => {
+                    if (!config.logo)
+                      config.logo = { text: 'Store', url: '/', image: '', imageHeight: 40 };
+                    config.logo.url = e.currentTarget.value;
+                    handleUpdate();
+                  }}
+                  placeholder="/"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Logo Image URL (optional)</span>
+                <input
+                  type="url"
+                  value={config.logo?.image || ''}
+                  on:input={(e) => {
+                    if (!config.logo)
+                      config.logo = { text: 'Store', url: '/', image: '', imageHeight: 40 };
+                    config.logo.image = e.currentTarget.value;
+                    handleUpdate();
+                  }}
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Logo Height (px)</span>
+                <input
+                  type="number"
+                  value={config.logo?.imageHeight || 40}
+                  on:input={(e) => {
+                    if (!config.logo)
+                      config.logo = { text: 'Store', url: '/', image: '', imageHeight: 40 };
+                    config.logo.imageHeight = parseInt(e.currentTarget.value);
+                    handleUpdate();
+                  }}
+                  min="20"
+                  max="100"
+                  placeholder="40"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Logo Position</span>
+                <select bind:value={config.logoPosition} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Navigation Links</h4>
+            <div class="form-group">
+              <div class="section-header">
+                <span>Links</span>
+                <button
+                  type="button"
+                  class="btn-add-item"
+                  on:click={() => {
+                    if (!config.links) config.links = [];
+                    config.links = [...config.links, { text: 'New Link', url: '#' }];
+                    handleImmediateUpdate();
+                  }}
+                >
+                  Add Link
+                </button>
+              </div>
+              <div class="repeater-items">
+                {#if config.links && config.links.length > 0}
+                  {#each config.links as link, index}
+                    <div class="repeater-item">
+                      <div class="repeater-item-header">
+                        <span class="repeater-item-title">{link.text || `Link ${index + 1}`}</span>
+                        <button
+                          type="button"
+                          class="btn-remove-item"
+                          on:click={() => {
+                            if (config.links) {
+                              config.links = config.links.filter((_, i) => i !== index);
+                              handleImmediateUpdate();
+                            }
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div class="repeater-item-content">
+                        <label>
+                          <span>Link Text</span>
+                          <input
+                            type="text"
+                            bind:value={link.text}
+                            on:input={handleUpdate}
+                            placeholder="Link text"
+                          />
+                        </label>
+                        <label>
+                          <span>Link URL</span>
+                          <input
+                            type="url"
+                            bind:value={link.url}
+                            on:input={handleUpdate}
+                            placeholder="/"
+                          />
+                        </label>
+                        <label class="checkbox-label">
+                          <input
+                            type="checkbox"
+                            bind:checked={link.openInNewTab}
+                            on:change={handleImmediateUpdate}
+                          />
+                          <span>Open in new tab</span>
+                        </label>
+                      </div>
+                    </div>
+                  {/each}
+                {:else}
+                  <p class="empty-state">No links yet. Click "Add Link" to get started.</p>
+                {/if}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Links Position</span>
+                <select bind:value={config.linksPosition} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Action Buttons</h4>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showSearch}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Search</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showCart}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Cart</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showAuth}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Auth/Login</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showThemeToggle}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Theme Toggle</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showAccountMenu}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Account Menu (when authenticated)</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Actions Position</span>
+                <select bind:value={config.actionsPosition} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Account Menu Items</h4>
+            <p class="field-hint">
+              These items appear in the dropdown menu when a user is authenticated.
+            </p>
+            <div class="form-group">
+              <div class="section-header">
+                <span>Menu Items</span>
+                <button
+                  type="button"
+                  class="btn-add-item"
+                  on:click={() => {
+                    if (!config.accountMenuItems) config.accountMenuItems = [];
+                    config.accountMenuItems = [
+                      ...config.accountMenuItems,
+                      { text: 'New Item', url: '#', icon: '📄' }
+                    ];
+                    handleImmediateUpdate();
+                  }}
+                >
+                  Add Item
+                </button>
+              </div>
+              <div class="repeater-items">
+                {#if config.accountMenuItems && config.accountMenuItems.length > 0}
+                  {#each config.accountMenuItems as item, index}
+                    <div class="repeater-item">
+                      <div class="repeater-item-header">
+                        <span class="repeater-item-title">{item.text || `Item ${index + 1}`}</span>
+                        <button
+                          type="button"
+                          class="btn-remove-item"
+                          on:click={() => {
+                            if (config.accountMenuItems) {
+                              config.accountMenuItems = config.accountMenuItems.filter(
+                                (_, i) => i !== index
+                              );
+                              handleImmediateUpdate();
+                            }
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div class="repeater-item-content">
+                        <label>
+                          <span>Icon (emoji or text)</span>
+                          <input
+                            type="text"
+                            bind:value={item.icon}
+                            on:input={handleUpdate}
+                            placeholder="📄"
+                            maxlength="4"
+                          />
+                        </label>
+                        <label>
+                          <span>Item Text</span>
+                          <input
+                            type="text"
+                            bind:value={item.text}
+                            on:input={handleUpdate}
+                            placeholder="Menu item"
+                          />
+                        </label>
+                        <label>
+                          <span>Item URL</span>
+                          <input
+                            type="url"
+                            bind:value={item.url}
+                            on:input={handleUpdate}
+                            placeholder="/profile"
+                          />
+                        </label>
+                        <label class="checkbox-label">
+                          <input
+                            type="checkbox"
+                            bind:checked={item.dividerBefore}
+                            on:change={handleImmediateUpdate}
+                          />
+                          <span>Show divider before this item</span>
+                        </label>
+                      </div>
+                    </div>
+                  {/each}
+                {:else}
+                  <p class="empty-state">
+                    No custom menu items. Standard items (profile, settings, logout) are included by
+                    default.
+                  </p>
+                {/if}
+              </div>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Behavior</h4>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.sticky}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Sticky Navigation (stays at top when scrolling)</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Mobile Breakpoint (px)</span>
+                <input
+                  type="number"
+                  bind:value={config.mobileBreakpoint}
+                  on:input={handleUpdate}
+                  min="320"
+                  max="1024"
+                  placeholder="768"
+                />
+              </label>
+              <p class="field-hint">
+                Width below which the mobile menu (hamburger) appears. Default: 768px.
+              </p>
             </div>
           </div>
         {/if}
@@ -1442,6 +2066,16 @@
               <p class="field-hint">Use Responsive tab for per-device gap control.</p>
             </div>
           </div>
+        {:else if widget.type === 'container'}
+          <TailwindContainerEditor
+            {config}
+            {currentBreakpoint}
+            {colorTheme}
+            on:update={(e) => {
+              config = e.detail;
+              handleImmediateUpdate();
+            }}
+          />
         {:else if widget.type === 'features'}
           <div class="section">
             <h4>Card Styling</h4>
@@ -1479,6 +2113,124 @@
                   min="0"
                   placeholder="12"
                 />
+              </label>
+            </div>
+          </div>
+        {:else if widget.type === 'navbar'}
+          <div class="section">
+            <h4>Colors</h4>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.navbarBackground}
+                currentTheme={colorTheme}
+                label="Background Color"
+                defaultValue="#ffffff"
+                onChange={(newValue) => {
+                  config.navbarBackground = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.navbarTextColor}
+                currentTheme={colorTheme}
+                label="Text Color"
+                defaultValue="#000000"
+                onChange={(newValue) => {
+                  config.navbarTextColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.navbarHoverColor}
+                currentTheme={colorTheme}
+                label="Hover Color"
+                defaultValue="theme:primary"
+                onChange={(newValue) => {
+                  config.navbarHoverColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.navbarBorderColor}
+                currentTheme={colorTheme}
+                label="Border Color"
+                defaultValue="#e5e7eb"
+                onChange={(newValue) => {
+                  config.navbarBorderColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+          </div>
+          <div class="section">
+            <h4>Dropdown Styling</h4>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.dropdownBackground}
+                currentTheme={colorTheme}
+                label="Dropdown Background"
+                defaultValue="#ffffff"
+                onChange={(newValue) => {
+                  config.dropdownBackground = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.dropdownTextColor}
+                currentTheme={colorTheme}
+                label="Dropdown Text Color"
+                defaultValue="#000000"
+                onChange={(newValue) => {
+                  config.dropdownTextColor = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+            <div class="form-group">
+              <ThemeColorInput
+                value={config.dropdownHoverBackground}
+                currentTheme={colorTheme}
+                label="Dropdown Hover Background"
+                defaultValue="#f3f4f6"
+                onChange={(newValue) => {
+                  config.dropdownHoverBackground = newValue;
+                  handleImmediateUpdate();
+                }}
+              />
+            </div>
+          </div>
+          <div class="section">
+            <h4>Layout</h4>
+            <div class="form-group">
+              <label>
+                <span>Navbar Height (px, 0 = auto)</span>
+                <input
+                  type="number"
+                  bind:value={config.navbarHeight}
+                  on:input={handleUpdate}
+                  min="0"
+                  max="200"
+                  placeholder="0"
+                />
+              </label>
+              <p class="field-hint">Set to 0 for automatic height based on content.</p>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.navbarShadow}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show Shadow</span>
               </label>
             </div>
           </div>
@@ -1665,13 +2417,156 @@
               all.
             </p>
           </div>
+        {:else if widget.type === 'navbar' && config.navbarPadding}
+          <div class="form-group">
+            <h4>Padding ({currentBreakpoint})</h4>
+            {#if !config.navbarPadding[currentBreakpoint]}
+              {(() => {
+                if (!config.navbarPadding) {
+                  config.navbarPadding = {
+                    desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+                    tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+                    mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+                  };
+                }
+                if (!config.navbarPadding[currentBreakpoint]) {
+                  config.navbarPadding[currentBreakpoint] = {
+                    top: 16,
+                    right: 24,
+                    bottom: 16,
+                    left: 24
+                  };
+                }
+                return '';
+              })()}
+            {/if}
+            <div class="spacing-grid">
+              <label>
+                <span>Top</span>
+                <input
+                  type="number"
+                  value={config.navbarPadding?.[currentBreakpoint]?.top ?? 16}
+                  on:input={(e) => {
+                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                      const padding = config.navbarPadding[currentBreakpoint];
+                      if (padding) {
+                        padding.top = parseInt(e.currentTarget.value);
+                        handleUpdate();
+                      }
+                    }
+                  }}
+                  min="0"
+                  placeholder="16"
+                />
+              </label>
+              <label>
+                <span>Right</span>
+                <input
+                  type="number"
+                  value={config.navbarPadding?.[currentBreakpoint]?.right ?? 24}
+                  on:input={(e) => {
+                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                      const padding = config.navbarPadding[currentBreakpoint];
+                      if (padding) {
+                        padding.right = parseInt(e.currentTarget.value);
+                        handleUpdate();
+                      }
+                    }
+                  }}
+                  min="0"
+                  placeholder="24"
+                />
+              </label>
+              <label>
+                <span>Bottom</span>
+                <input
+                  type="number"
+                  value={config.navbarPadding?.[currentBreakpoint]?.bottom ?? 16}
+                  on:input={(e) => {
+                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                      const padding = config.navbarPadding[currentBreakpoint];
+                      if (padding) {
+                        padding.bottom = parseInt(e.currentTarget.value);
+                        handleUpdate();
+                      }
+                    }
+                  }}
+                  min="0"
+                  placeholder="16"
+                />
+              </label>
+              <label>
+                <span>Left</span>
+                <input
+                  type="number"
+                  value={config.navbarPadding?.[currentBreakpoint]?.left ?? 24}
+                  on:input={(e) => {
+                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                      const padding = config.navbarPadding[currentBreakpoint];
+                      if (padding) {
+                        padding.left = parseInt(e.currentTarget.value);
+                        handleUpdate();
+                      }
+                    }
+                  }}
+                  min="0"
+                  placeholder="24"
+                />
+              </label>
+            </div>
+            <p class="field-hint">
+              Adjust navbar padding for {currentBreakpoint} devices.
+            </p>
+          </div>
         {:else}
           <p class="tab-info">This widget doesn't have responsive settings.</p>
         {/if}
       </div>
+    {:else if activeTab === 'advanced'}
+      <div class="advanced-tab">
+        <div class="section">
+          <h4>Visual Effects</h4>
+          <p class="section-description">
+            Apply advanced visual effects like shadows, transforms, filters, and positioning.
+          </p>
+        </div>
+
+        <VisualStyleEditor {config} {currentBreakpoint} on:update={handleVisualStyleUpdate} />
+      </div>
     {/if}
   </div>
 </div>
+
+<!-- Child widget properties panels (always shown for container widgets) -->
+{#if widget.type === 'container' && config.children && config.children.length > 0}
+  <div class="child-properties-container">
+    {#each config.children as child, index (child.id)}
+      <div class="child-properties-panel" id="child-panel-{child.id}">
+        <div class="child-panel-header">
+          <div class="child-panel-title">
+            <span class="child-panel-number">#{index + 1}</span>
+            <span class="child-panel-type">{child.type}</span>
+            {#if child.config.title}
+              <span class="child-panel-name">- {child.config.title}</span>
+            {:else if child.config.text}
+              <span class="child-panel-name">
+                - {child.config.text.substring(0, 40)}{child.config.text.length > 40 ? '...' : ''}
+              </span>
+            {/if}
+          </div>
+        </div>
+        <div class="child-panel-content">
+          <svelte:self
+            widget={child}
+            {currentBreakpoint}
+            {colorTheme}
+            onUpdate={createChildUpdateHandler(index)}
+          />
+        </div>
+      </div>
+    {/each}
+  </div>
+{/if}
 
 <style>
   .properties-panel {
@@ -2243,6 +3138,22 @@
     border-radius: 8px;
   }
 
+  .child-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+  }
+
+  .child-type {
+    font-weight: 500;
+    text-transform: capitalize;
+    color: var(--color-text-primary);
+  }
+
   .help-text {
     font-size: 0.8rem;
     color: var(--color-text-tertiary);
@@ -2289,5 +3200,234 @@
 
   .section .form-group:last-child {
     margin-bottom: 0;
+  }
+
+  /* Container children list styles */
+  .container-children-list {
+    margin-top: 1rem;
+  }
+
+  .container-children-list h5 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .container-children-list .child-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    cursor: move;
+    transition: all 0.2s;
+  }
+
+  .container-children-list .child-item:hover {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-primary-light);
+  }
+
+  .container-children-list .child-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+
+  .container-children-list .child-item.drag-over {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+  }
+
+  .drag-handle {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+    cursor: grab;
+    flex-shrink: 0;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .child-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    overflow: hidden;
+  }
+
+  .child-type {
+    font-weight: 600;
+    text-transform: capitalize;
+    color: var(--color-text-primary);
+    flex-shrink: 0;
+  }
+
+  .child-title {
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-delete-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 4px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-delete-child:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: rgb(239, 68, 68);
+  }
+
+  .empty-children-state {
+    padding: 2rem;
+    text-align: center;
+    background: var(--color-bg-tertiary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+
+  .empty-children-state p {
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  .empty-children-state span {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* Child wrapper for expand/collapse */
+  .child-wrapper {
+    margin-bottom: 0.5rem;
+  }
+
+  .child-wrapper:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Edit button for child widgets - now a link to scroll to panel */
+  .btn-edit-child {
+    padding: 0.25rem 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-edit-child:hover {
+    background: var(--color-primary-hover, #2563eb);
+    transform: translateY(-1px);
+  }
+
+  /* Container for all child properties panels */
+  .child-properties-container {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-secondary);
+  }
+
+  /* Individual child properties panel */
+  .child-properties-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    border-top: 2px solid var(--color-primary);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .child-properties-panel:last-child {
+    margin-bottom: 0;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 3px var(--color-primary-light, rgba(59, 130, 246, 0.3));
+    }
+    50% {
+      box-shadow: 0 0 0 6px var(--color-primary-light, rgba(59, 130, 246, 0.5));
+    }
+  }
+
+  .child-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--color-primary-light, rgba(59, 130, 246, 0.1));
+    border-bottom: 1px solid var(--color-border-secondary);
+    flex-shrink: 0;
+  }
+
+  .child-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .child-panel-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .child-panel-type {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .child-panel-name {
+    color: var(--color-text-secondary);
+  }
+
+  .child-panel-content {
+    background: var(--color-bg-primary);
+  }
+
+  /* Nested properties panel styling */
+  .child-panel-content :global(.properties-panel) {
+    height: auto;
+    border: none;
+  }
+
+  .child-panel-content :global(.panel-tabs) {
+    background: var(--color-bg-secondary);
   }
 </style>

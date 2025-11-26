@@ -158,7 +158,7 @@
     display: flex;
     flex-direction: column;
     z-index: 20;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md, -2px 0 10px rgba(0, 0, 0, 0.1));
   }
 
   .panel-header {
@@ -167,8 +167,8 @@
     justify-content: space-between;
     padding: 1rem;
     border-bottom: 1px solid var(--color-border-secondary);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--color-primary, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--color-bg-primary, white);
   }
 
   .header-title {
@@ -185,16 +185,16 @@
 
   .btn-close {
     padding: 0.25rem;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--color-primary-light, rgba(255, 255, 255, 0.2));
     border: none;
-    color: white;
+    color: var(--color-bg-primary, white);
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.2s;
   }
 
   .btn-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--color-primary-hover, rgba(255, 255, 255, 0.3));
   }
 
   .messages-container {
