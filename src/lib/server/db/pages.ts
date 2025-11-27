@@ -15,8 +15,16 @@ export interface DBPage {
   content?: string;
   colorTheme?: string;
   layout_id?: number;
+  published_revision_id?: string;
+  draft_revision_id?: string;
   created_at: number;
   updated_at: number;
+}
+
+export interface EnrichedPage extends DBPage {
+  published_at?: number;
+  draft_at?: number;
+  has_unpublished_changes: boolean;
 }
 
 export interface DBPageWidget {
@@ -130,6 +138,37 @@ export async function getAllPages(db: D1Database, siteId: string): Promise<DBPag
     [siteId]
   );
   return result.results || [];
+}
+
+/**
+ * Get all pages for a site with enriched revision information
+ */
+export async function getAllPagesWithRevisionInfo(
+  db: D1Database,
+  siteId: string
+): Promise<EnrichedPage[]> {
+  const query = `
+    SELECT 
+      p.*,
+      pr_pub.created_at as published_at,
+      pr_draft.created_at as draft_at
+    FROM pages p
+    LEFT JOIN page_revisions pr_pub ON p.published_revision_id = pr_pub.id
+    LEFT JOIN page_revisions pr_draft ON p.draft_revision_id = pr_draft.id
+    WHERE p.site_id = ?
+    ORDER BY p.updated_at DESC
+  `;
+
+  const result = await execute<DBPage & { published_at?: number; draft_at?: number }>(db, query, [
+    siteId
+  ]);
+
+  // Enrich pages with has_unpublished_changes flag
+  return (result.results || []).map((page) => ({
+    ...page,
+    has_unpublished_changes:
+      !!page.draft_at && !!page.published_at && page.draft_at > page.published_at
+  }));
 }
 
 /**

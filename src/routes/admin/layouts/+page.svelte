@@ -242,6 +242,7 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    min-height: 200px;
   }
 
   .layout-header {
@@ -294,6 +295,7 @@
     flex-wrap: wrap;
     padding-top: 0.5rem;
     border-top: 1px solid var(--color-border-secondary);
+    margin-top: auto;
   }
 
   .layout-actions form {

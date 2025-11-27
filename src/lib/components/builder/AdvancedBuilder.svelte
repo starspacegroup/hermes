@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
   import type {
     Page,
@@ -18,6 +18,7 @@
   import RevisionModal from '../admin/RevisionModal.svelte';
   import ThemePalette from './ThemePalette.svelte';
   import { themeStore } from '$lib/stores/theme';
+  import { builderContextStore } from '$lib/stores/builderContext';
 
   type BuilderMode = 'page' | 'layout' | 'component';
 
@@ -459,6 +460,9 @@
       widgets: JSON.parse(JSON.stringify(widgets))
     };
 
+    // Activate builder context store for AI awareness
+    builderContextStore.activate(mode, page?.id || null, title, slug, widgets, layoutId);
+
     // Setup auto-save
     autoSaveInterval = setInterval(() => {
       if (hasActualChanges && !isSaving) {
@@ -470,6 +474,22 @@
       clearInterval(autoSaveInterval);
     };
   });
+
+  onDestroy(() => {
+    // Deactivate builder context when leaving
+    builderContextStore.deactivate();
+  });
+
+  // Sync builder context store when state changes
+  $: if (initialized) {
+    builderContextStore.updateState({
+      entityId: page?.id || null,
+      entityName: title,
+      slug,
+      widgets,
+      layoutId
+    });
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />

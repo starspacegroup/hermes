@@ -52,13 +52,35 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
   const revisions = await buildRevisionTree(db, siteId, params.pageId);
 
-  // Try to load the published revision first
-  let currentRevision = await getPublishedRevision(db, siteId, params.pageId);
-  let currentRevisionIsPublished = true;
+  // Load both published and latest draft revisions
+  const publishedRevision = await getPublishedRevision(db, siteId, params.pageId);
+  const latestDraft = await getMostRecentDraftRevision(db, siteId, params.pageId);
 
-  // If no published revision, load the most recent draft
-  if (!currentRevision) {
-    currentRevision = await getMostRecentDraftRevision(db, siteId, params.pageId);
+  let currentRevision: typeof publishedRevision = null;
+  let currentRevisionIsPublished = false;
+
+  // Determine which revision to load:
+  // 1. If there's a draft newer than the published version, load the draft
+  // 2. Otherwise, load the published version
+  // 3. If no published version, load the draft
+  // 4. If neither exists, currentRevision will be null
+  if (latestDraft && publishedRevision) {
+    // Compare timestamps - if draft is newer, use it
+    const draftTime = new Date(latestDraft.created_at).getTime();
+    const publishedTime = new Date(publishedRevision.created_at).getTime();
+
+    if (draftTime > publishedTime) {
+      currentRevision = latestDraft;
+      currentRevisionIsPublished = false;
+    } else {
+      currentRevision = publishedRevision;
+      currentRevisionIsPublished = true;
+    }
+  } else if (publishedRevision) {
+    currentRevision = publishedRevision;
+    currentRevisionIsPublished = true;
+  } else if (latestDraft) {
+    currentRevision = latestDraft;
     currentRevisionIsPublished = false;
   }
 
