@@ -59,7 +59,7 @@
     } else {
       isAIChatSubmenuOpen = false;
     }
-    // Auto-expand Site submenu if on pages, layouts, or components page
+    // Auto-expand Builder submenu if on pages, layouts, or components page
     if (
       currentPath.startsWith('/admin/pages') ||
       currentPath.startsWith('/admin/builder') ||
@@ -506,7 +506,7 @@
           Orders
         </a>
 
-        <!-- Site with submenu (Pages, Layouts, Components) -->
+        <!-- Builder with submenu (Pages, Layouts, Components) -->
         <div class="menu-item-with-submenu">
           <button
             class="menu-item-button"
@@ -518,15 +518,21 @@
           >
             <div class="menu-item-content">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                ></path>
-                <path d="M9 22V12h6v10" stroke-width="2" stroke-linecap="round"></path>
+                ></rect>
+                <line x1="3" y1="9" x2="21" y2="9" stroke-width="2" stroke-linecap="round"></line>
+                <line x1="3" y1="15" x2="21" y2="15" stroke-width="2" stroke-linecap="round"></line>
+                <line x1="12" y1="3" x2="12" y2="21" stroke-width="2" stroke-linecap="round"></line>
               </svg>
-              <span>Site</span>
+              <span>Builder</span>
             </div>
             <svg
               class="chevron"
