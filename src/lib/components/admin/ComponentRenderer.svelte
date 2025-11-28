@@ -1,26 +1,26 @@
 <script lang="ts">
   import type {
-    PageWidget,
+    PageComponent,
     Breakpoint,
-    WidgetConfig,
+    ComponentConfig,
     ColorTheme,
-    WidgetType
+    ComponentType
   } from '$lib/types/pages';
   import {
     applyThemeColors,
     generateThemeStyles,
     resolveThemeColor
   } from '$lib/utils/editor/colorThemes';
-  import { getDefaultConfig } from '$lib/utils/editor/widgetDefaults';
+  import { getDefaultConfig } from '$lib/utils/editor/componentDefaults';
   import ContainerDropZone from '$lib/components/builder/ContainerDropZone.svelte';
 
-  export let widget: PageWidget;
+  export let component: PageComponent;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
-  export let onUpdate: ((config: WidgetConfig) => void) | undefined = undefined;
+  export let onUpdate: ((config: ComponentConfig) => void) | undefined = undefined;
   export let isEditable = false; // Whether we're in edit mode (builder)
 
-  $: themeColors = applyThemeColors(colorTheme, widget.config.themeOverrides);
+  $: themeColors = applyThemeColors(colorTheme, component.config.themeOverrides);
 
   // Local state for contenteditable fields
   let titleElement: HTMLElement | undefined;
@@ -30,24 +30,24 @@
   let isEditingTitle = false;
   let isEditingSubtitle = false;
 
-  // Sync widget config to contenteditable when NOT editing
+  // Sync component config to contenteditable when NOT editing
   $: if (titleElement && !isEditingTitle) {
-    titleElement.textContent = widget.config.title || 'Hero Title';
+    titleElement.textContent = component.config.title || 'Hero Title';
   }
   $: if (subtitleElement && !isEditingSubtitle) {
-    subtitleElement.textContent = widget.config.subtitle || 'Click to add subtitle';
+    subtitleElement.textContent = component.config.subtitle || 'Click to add subtitle';
   }
 
   function handleTitleInput() {
     if (!onUpdate || !titleElement) return;
     const newValue = titleElement.textContent || '';
-    onUpdate({ ...widget.config, title: newValue });
+    onUpdate({ ...component.config, title: newValue });
   }
 
   function handleSubtitleInput() {
     if (!onUpdate || !subtitleElement) return;
     const newValue = subtitleElement.textContent || '';
-    onUpdate({ ...widget.config, subtitle: newValue });
+    onUpdate({ ...component.config, subtitle: newValue });
   }
 
   function getResponsiveValue<T>(value: T | { mobile?: T; tablet?: T; desktop: T }): T {
@@ -112,28 +112,30 @@
     return stringValue;
   }
 
-  // Handle dropping a new widget into a container
-  function handleContainerDrop(event: CustomEvent<{ widgetType: string; insertIndex: number }>) {
-    const { widgetType, insertIndex } = event.detail;
-    const newWidget: PageWidget = {
+  // Handle dropping a new component into a container
+  function handleContainerDrop(
+    event: CustomEvent<{ containerId: string; componentType: string; insertIndex: number }>
+  ) {
+    const { componentType, insertIndex } = event.detail;
+    const newChild: PageComponent = {
       id: `temp-${Date.now()}`,
-      type: widgetType as WidgetType,
-      config: getDefaultConfig(widgetType as WidgetType),
+      type: componentType as ComponentType,
+      config: getDefaultConfig(componentType as ComponentType),
       position: insertIndex,
-      page_id: widget.page_id,
+      page_id: component.page_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
 
-    const updatedChildren = [...(widget.config.children || [])];
-    updatedChildren.splice(insertIndex, 0, newWidget);
+    const updatedChildren = [...(component.config.children || [])];
+    updatedChildren.splice(insertIndex, 0, newChild);
 
     if (onUpdate) {
-      onUpdate({ ...widget.config, children: updatedChildren });
+      onUpdate({ ...component.config, children: updatedChildren });
     }
   }
 
-  // Handle clicking on a child widget to scroll to its properties panel
+  // Handle clicking on a child component to scroll to its properties panel
   function handleChildClick(event: CustomEvent<{ childId: string }>) {
     const { childId } = event.detail;
     const element = document.getElementById(`child-panel-${childId}`);
@@ -145,20 +147,20 @@
     }
   }
 
-  // Handle reordering widgets within a container
+  // Handle reordering components within a container
   function handleContainerReorder(event: CustomEvent<{ fromIndex: number; toIndex: number }>) {
     const { fromIndex, toIndex } = event.detail;
-    const updatedChildren = [...(widget.config.children || [])];
-    const [movedWidget] = updatedChildren.splice(fromIndex, 1);
-    updatedChildren.splice(toIndex, 0, movedWidget);
+    const updatedChildren = [...(component.config.children || [])];
+    const [movedComponent] = updatedChildren.splice(fromIndex, 1);
+    updatedChildren.splice(toIndex, 0, movedComponent);
 
     if (onUpdate) {
-      onUpdate({ ...widget.config, children: updatedChildren });
+      onUpdate({ ...component.config, children: updatedChildren });
     }
   }
 
-  function getStyleString(widget: PageWidget): string {
-    const styles = widget.config.styles;
+  function getStyleString(comp: PageComponent): string {
+    const styles = comp.config.styles;
     if (!styles) return '';
 
     let styleStr = '';
@@ -206,78 +208,78 @@
   let featuresGap: number;
   let featuresLimit: number | undefined;
 
-  // Make all reactive computations depend on both widget.config AND currentBreakpoint
+  // Make all reactive computations depend on both component.config AND currentBreakpoint
   $: {
     // Explicitly read currentBreakpoint to establish reactive dependency
     // This ensures the block re-runs whenever currentBreakpoint changes
     const _bp = currentBreakpoint;
 
-    styleString = getStyleString(widget);
-    heroHeight = getResponsiveValue(widget.config.heroHeight || { desktop: '500px' });
-    buttonFullWidth = getResponsiveValue(widget.config.fullWidth || { desktop: false });
-    spacerHeight = getResponsiveValue(widget.config.space || { desktop: 40 });
-    dividerSpacing = getResponsiveValue(widget.config.spacing || { desktop: 20 });
-    const _columnsLayout = getResponsiveValue(widget.config.columns || { desktop: 2 });
-    columnsGap = getResponsiveValue(widget.config.gap || { desktop: 20 });
-    columnsCount = getResponsiveValue(widget.config.columnCount || { desktop: 2 });
+    styleString = getStyleString(component);
+    heroHeight = getResponsiveValue(component.config.heroHeight || { desktop: '500px' });
+    buttonFullWidth = getResponsiveValue(component.config.fullWidth || { desktop: false });
+    spacerHeight = getResponsiveValue(component.config.space || { desktop: 40 });
+    dividerSpacing = getResponsiveValue(component.config.spacing || { desktop: 20 });
+    const _columnsLayout = getResponsiveValue(component.config.columns || { desktop: 2 });
+    columnsGap = getResponsiveValue(component.config.gap || { desktop: 20 });
+    columnsCount = getResponsiveValue(component.config.columnCount || { desktop: 2 });
     productListColumns = getResponsiveValue(
-      widget.config.columns || { desktop: 3, tablet: 2, mobile: 1 }
+      component.config.columns || { desktop: 3, tablet: 2, mobile: 1 }
     );
     featuresColumns = getResponsiveValue(
-      widget.config.featuresColumns || { desktop: 3, tablet: 2, mobile: 1 }
+      component.config.featuresColumns || { desktop: 3, tablet: 2, mobile: 1 }
     );
     featuresGap = getResponsiveValue(
-      widget.config.featuresGap || { desktop: 32, tablet: 24, mobile: 16 }
+      component.config.featuresGap || { desktop: 32, tablet: 24, mobile: 16 }
     );
-    featuresLimit = getResponsiveLimitValue(widget.config.featuresLimit);
+    featuresLimit = getResponsiveLimitValue(component.config.featuresLimit);
   }
 </script>
 
 <div class="widget-renderer" style="{styleString} {generateThemeStyles(themeColors)}">
-  {#if widget.type === 'text'}
+  {#if component.type === 'text'}
     <div
       class="text-widget"
-      style="text-align: {widget.config.alignment || 'left'}; 
-             color: {widget.config.textColor || 'inherit'};
-             font-size: {widget.config.fontSize ? widget.config.fontSize + 'px' : 'inherit'};
-             line-height: {widget.config.lineHeight || 'inherit'};"
+      style="text-align: {component.config.alignment || 'left'}; 
+             color: {component.config.textColor || 'inherit'};
+             font-size: {component.config.fontSize ? component.config.fontSize + 'px' : 'inherit'};
+             line-height: {component.config.lineHeight || 'inherit'};"
     >
-      {#if widget.config.html}
+      {#if component.config.html}
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        {@html widget.config.html}
+        {@html component.config.html}
       {:else}
-        <p>{widget.config.text || 'Enter your text here'}</p>
+        <p>{component.config.text || 'Enter your text here'}</p>
       {/if}
     </div>
-  {:else if widget.type === 'heading'}
+  {:else if component.type === 'heading'}
     {@const textColor = resolveThemeColor(
-      widget.config.textColor,
+      component.config.textColor,
       colorTheme,
       themeColors.text,
       true
     )}
-    {@const headingStyle = `color: ${textColor}; text-align: ${widget.config.alignment || 'left'};`}
-    {#if widget.config.level === 1}
-      <h1 style={headingStyle}>{widget.config.heading || 'Heading'}</h1>
-    {:else if widget.config.level === 2}
-      <h2 style={headingStyle}>{widget.config.heading || 'Heading'}</h2>
-    {:else if widget.config.level === 3}
-      <h3 style={headingStyle}>{widget.config.heading || 'Heading'}</h3>
-    {:else if widget.config.level === 4}
-      <h4 style={headingStyle}>{widget.config.heading || 'Heading'}</h4>
-    {:else if widget.config.level === 5}
-      <h5 style={headingStyle}>{widget.config.heading || 'Heading'}</h5>
+    {@const headingStyle = `color: ${textColor}; text-align: ${component.config.alignment || 'left'};`}
+    {#if component.config.level === 1}
+      <h1 style={headingStyle}>{component.config.heading || 'Heading'}</h1>
+    {:else if component.config.level === 2}
+      <h2 style={headingStyle}>{component.config.heading || 'Heading'}</h2>
+    {:else if component.config.level === 3}
+      <h3 style={headingStyle}>{component.config.heading || 'Heading'}</h3>
+    {:else if component.config.level === 4}
+      <h4 style={headingStyle}>{component.config.heading || 'Heading'}</h4>
+    {:else if component.config.level === 5}
+      <h5 style={headingStyle}>{component.config.heading || 'Heading'}</h5>
     {:else}
-      <h6 style={headingStyle}>{widget.config.heading || 'Heading'}</h6>
+      <h6 style={headingStyle}>{component.config.heading || 'Heading'}</h6>
     {/if}
-  {:else if widget.type === 'image'}
+  {:else if component.type === 'image'}
     <div class="image-widget">
-      {#if widget.config.src}
+      {#if component.config.src}
         <img
-          src={widget.config.src}
-          alt={widget.config.alt || ''}
-          style="width: {widget.config.imageWidth || '100%'}; height: {widget.config.imageHeight ||
-            'auto'}; object-fit: {widget.config.objectFit || 'cover'};"
+          src={component.config.src}
+          alt={component.config.alt || ''}
+          style="width: {component.config.imageWidth || '100%'}; height: {component.config
+            .imageHeight || 'auto'}; object-fit: {component.config.objectFit || 'cover'};"
         />
       {:else}
         <div class="image-placeholder">
@@ -290,68 +292,70 @@
         </div>
       {/if}
     </div>
-  {:else if widget.type === 'hero'}
+  {:else if component.type === 'hero'}
     {@const bgColor = resolveThemeColor(
-      widget.config.backgroundColor,
+      component.config.backgroundColor,
       colorTheme,
       themeColors.primary,
       true
     )}
     {@const ctaBgColor = resolveThemeColor(
-      widget.config.ctaBackgroundColor,
+      component.config.ctaBackgroundColor,
       colorTheme,
       '#ffffff',
       true
     )}
     {@const ctaTxtColor = resolveThemeColor(
-      widget.config.ctaTextColor,
+      component.config.ctaTextColor,
       colorTheme,
       themeColors.primary,
       true
     )}
     {@const secondaryCtaBgColor = resolveThemeColor(
-      widget.config.secondaryCtaBackgroundColor,
+      component.config.secondaryCtaBackgroundColor,
       colorTheme,
       'transparent',
       true
     )}
     {@const secondaryCtaTxtColor = resolveThemeColor(
-      widget.config.secondaryCtaTextColor,
+      component.config.secondaryCtaTextColor,
       colorTheme,
       '#ffffff',
       true
     )}
     {@const secondaryCtaBorderColor = resolveThemeColor(
-      widget.config.secondaryCtaBorderColor,
+      component.config.secondaryCtaBorderColor,
       colorTheme,
       '#ffffff',
       true
     )}
     {@const heroTextColor =
-      resolveThemeColor(widget.config.textColor, colorTheme, '', true) ||
-      (widget.config.overlay || widget.config.backgroundImage ? '#ffffff' : `var(--theme-text)`)}
+      resolveThemeColor(component.config.textColor, colorTheme, '', true) ||
+      (component.config.overlay || component.config.backgroundImage
+        ? '#ffffff'
+        : `var(--theme-text)`)}
     {@const heroTitleColor =
-      resolveThemeColor(widget.config.titleColor, colorTheme, '', true) || heroTextColor}
+      resolveThemeColor(component.config.titleColor, colorTheme, '', true) || heroTextColor}
     {@const heroSubtitleColor =
-      resolveThemeColor(widget.config.subtitleColor, colorTheme, '', true) || heroTextColor}
+      resolveThemeColor(component.config.subtitleColor, colorTheme, '', true) || heroTextColor}
     <div
       class="hero-widget"
       style="
         height: {heroHeight};
-        background-image: {widget.config.backgroundImage
-        ? `url(${widget.config.backgroundImage})`
+        background-image: {component.config.backgroundImage
+        ? `url(${component.config.backgroundImage})`
         : 'none'};
         background-color: {bgColor};
         background-size: cover;
         background-position: center;
-        text-align: {widget.config.contentAlign || 'center'};
+        text-align: {component.config.contentAlign || 'center'};
       "
     >
-      {#if widget.config.overlay}
+      {#if component.config.overlay}
         <div
           class="hero-overlay"
-          style="opacity: {widget.config.overlayOpacity !== undefined
-            ? widget.config.overlayOpacity / 100
+          style="opacity: {component.config.overlayOpacity !== undefined
+            ? component.config.overlayOpacity / 100
             : 0.5}"
         />
       {/if}
@@ -381,7 +385,7 @@
           style="color: {heroTitleColor};"
           data-field="title"
         >
-          {widget.config.title || ''}
+          {component.config.title || ''}
         </h1>
         <p
           bind:this={subtitleElement}
@@ -404,57 +408,58 @@
           style="display: block; color: {heroSubtitleColor};"
           data-field="subtitle"
         ></p>
-        {#if widget.config.ctaText || widget.config.secondaryCtaText}
+        {#if component.config.ctaText || component.config.secondaryCtaText}
           <div class="hero-cta-group">
-            {#if widget.config.ctaText}
+            {#if component.config.ctaText}
               <a
-                href={widget.config.ctaLink || '#'}
+                href={component.config.ctaLink || '#'}
                 class="hero-cta hero-cta-primary"
                 style="
                   background-color: {ctaBgColor};
                   color: {ctaTxtColor};
-                  font-size: {widget.config.ctaFontSize || '16px'};
-                  font-weight: {widget.config.ctaFontWeight || '600'};
+                  font-size: {component.config.ctaFontSize || '16px'};
+                  font-weight: {component.config.ctaFontWeight || '600'};
                 "
                 on:click|preventDefault={() => {}}
               >
-                {widget.config.ctaText}
+                {component.config.ctaText}
               </a>
             {/if}
-            {#if widget.config.secondaryCtaText}
+            {#if component.config.secondaryCtaText}
               <a
-                href={widget.config.secondaryCtaLink || '#'}
+                href={component.config.secondaryCtaLink || '#'}
                 class="hero-cta hero-cta-secondary"
                 style="
                   background-color: {secondaryCtaBgColor};
                   color: {secondaryCtaTxtColor};
                   border-color: {secondaryCtaBorderColor};
-                  font-size: {widget.config.secondaryCtaFontSize || '16px'};
-                  font-weight: {widget.config.secondaryCtaFontWeight || '600'};
+                  font-size: {component.config.secondaryCtaFontSize || '16px'};
+                  font-weight: {component.config.secondaryCtaFontWeight || '600'};
                 "
                 on:click|preventDefault={() => {}}
               >
-                {widget.config.secondaryCtaText}
+                {component.config.secondaryCtaText}
               </a>
             {/if}
           </div>
         {/if}
       </div>
     </div>
-  {:else if widget.type === 'button'}
+  {:else if component.type === 'button'}
     <div class="button-widget">
       <button
-        class="btn btn-{widget.config.variant || 'primary'} btn-{widget.config.size || 'medium'}"
+        class="btn btn-{component.config.variant || 'primary'} btn-{component.config.size ||
+          'medium'}"
         style="width: {buttonFullWidth ? '100%' : 'auto'}"
       >
-        {widget.config.label || 'Button'}
+        {component.config.label || 'Button'}
       </button>
     </div>
-  {:else if widget.type === 'spacer'}
+  {:else if component.type === 'spacer'}
     <div class="spacer-widget" style="height: {spacerHeight}px" />
-  {:else if widget.type === 'divider'}
+  {:else if component.type === 'divider'}
     {@const divColor = resolveThemeColor(
-      widget.config.dividerColor,
+      component.config.dividerColor,
       colorTheme,
       themeColors.border,
       true
@@ -462,23 +467,23 @@
     <div
       class="divider-widget"
       style="
-        border-top: {widget.config.thickness || 1}px {widget.config.dividerStyle ||
+        border-top: {component.config.thickness || 1}px {component.config.dividerStyle ||
         'solid'} {divColor};
         margin: {dividerSpacing}px 0;
       "
     />
-  {:else if widget.type === 'columns'}
+  {:else if component.type === 'columns'}
     <div
       class="columns-widget"
       style="
         display: grid;
         grid-template-columns: repeat({columnsCount}, 1fr);
         gap: {columnsGap}px;
-        align-items: {widget.config.verticalAlign || 'stretch'};
+        align-items: {component.config.verticalAlign || 'stretch'};
       "
     >
-      {#if widget.config.children && widget.config.children.length > 0}
-        {#each widget.config.children as child}
+      {#if component.config.children && component.config.children.length > 0}
+        {#each component.config.children as child}
           <div class="column">
             <svelte:self widget={child} {currentBreakpoint} />
           </div>
@@ -491,9 +496,9 @@
         {/each}
       {/if}
     </div>
-  {:else if widget.type === 'single_product'}
-    <div class="product-widget layout-{widget.config.layout || 'card'}">
-      {#if widget.config.productId}
+  {:else if component.type === 'single_product'}
+    <div class="product-widget layout-{component.config.layout || 'card'}">
+      {#if component.config.productId}
         <div class="product-preview">
           <div class="product-image-placeholder">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -504,11 +509,11 @@
             </svg>
           </div>
           <div class="product-info">
-            <h3>Product #{widget.config.productId}</h3>
-            {#if widget.config.showPrice}
+            <h3>Product #{component.config.productId}</h3>
+            {#if component.config.showPrice}
               <p class="product-price">$0.00</p>
             {/if}
-            {#if widget.config.showDescription}
+            {#if component.config.showDescription}
               <p class="product-description">Product description will appear here</p>
             {/if}
           </div>
@@ -519,7 +524,7 @@
         </div>
       {/if}
     </div>
-  {:else if widget.type === 'product_list'}
+  {:else if component.type === 'product_list'}
     <div
       class="product-list-widget"
       style="
@@ -528,7 +533,7 @@
         gap: 1rem;
       "
     >
-      {#each Array(Math.min(widget.config.limit || 6, 6)) as _, i}
+      {#each Array(Math.min(component.config.limit || 6, 6)) as _, i}
         <div class="product-card">
           <div class="product-image-placeholder">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -543,35 +548,35 @@
         </div>
       {/each}
     </div>
-  {:else if widget.type === 'features'}
+  {:else if component.type === 'features'}
     {@const cardBg = resolveThemeColor(
-      widget.config.cardBackground,
+      component.config.cardBackground,
       colorTheme,
       themeColors.surface,
       true
     )}
     {@const cardBorder = resolveThemeColor(
-      widget.config.cardBorderColor,
+      component.config.cardBorderColor,
       colorTheme,
       themeColors.border,
       true
     )}
     <div class="features-preview">
-      <h3>{widget.config.title || 'Features'}</h3>
-      {#if widget.config.subtitle}
-        <p class="features-subtitle">{widget.config.subtitle}</p>
+      <h3>{component.config.title || 'Features'}</h3>
+      {#if component.config.subtitle}
+        <p class="features-subtitle">{component.config.subtitle}</p>
       {/if}
-      {#if widget.config.features && widget.config.features.length > 0}
+      {#if component.config.features && component.config.features.length > 0}
         <div
           class="features-grid"
           style="grid-template-columns: repeat({featuresColumns}, 1fr); gap: {featuresGap}px;"
         >
-          {#each featuresLimit && featuresLimit > 0 ? widget.config.features.slice(0, featuresLimit) : widget.config.features as feature}
+          {#each featuresLimit && featuresLimit > 0 ? component.config.features.slice(0, featuresLimit) : component.config.features as feature}
             <div
               class="feature-card"
-              style="background: {cardBg}; border-color: {cardBorder}; border-radius: {widget.config
-                .cardBorderRadius !== undefined
-                ? widget.config.cardBorderRadius
+              style="background: {cardBg}; border-color: {cardBorder}; border-radius: {component
+                .config.cardBorderRadius !== undefined
+                ? component.config.cardBorderRadius
                 : 12}px;"
             >
               <div class="feature-icon">{feature.icon}</div>
@@ -586,14 +591,14 @@
         </p>
       {/if}
     </div>
-  {:else if widget.type === 'pricing'}
+  {:else if component.type === 'pricing'}
     <div class="pricing-preview">
-      <h3>{widget.config.title || 'Pricing'}</h3>
-      {#if widget.config.tagline}
-        <p class="tagline">{widget.config.tagline}</p>
+      <h3>{component.config.title || 'Pricing'}</h3>
+      {#if component.config.tagline}
+        <p class="tagline">{component.config.tagline}</p>
       {/if}
       <div class="pricing-grid">
-        {#each (widget.config.tiers || []).slice(0, 2) as tier}
+        {#each (component.config.tiers || []).slice(0, 2) as tier}
           <div class="tier-card">
             <span class="tier-range">{tier.range}</span>
             <span class="tier-fee">{tier.fee}</span>
@@ -601,9 +606,9 @@
         {/each}
       </div>
     </div>
-  {:else if widget.type === 'cta'}
+  {:else if component.type === 'cta'}
     {@const ctaBgColor = resolveThemeColor(
-      widget.config.backgroundColor,
+      component.config.backgroundColor,
       colorTheme,
       `linear-gradient(135deg, ${themeColors.primary} 0%, ${themeColors.secondary} 100%)`,
       true
@@ -613,54 +618,54 @@
       style="background: {ctaBgColor ||
         `linear-gradient(135deg, ${themeColors.primary} 0%, ${themeColors.secondary} 100%)`};"
     >
-      <h3>{widget.config.title || 'Call to Action'}</h3>
-      {#if widget.config.subtitle}
-        <p>{widget.config.subtitle}</p>
+      <h3>{component.config.title || 'Call to Action'}</h3>
+      {#if component.config.subtitle}
+        <p>{component.config.subtitle}</p>
       {/if}
       <div class="cta-buttons">
-        <button class="btn-primary">{widget.config.primaryCtaText || 'Get Started'}</button>
-        {#if widget.config.secondaryCtaText}
-          <button class="btn-secondary">{widget.config.secondaryCtaText}</button>
+        <button class="btn-primary">{component.config.primaryCtaText || 'Get Started'}</button>
+        {#if component.config.secondaryCtaText}
+          <button class="btn-secondary">{component.config.secondaryCtaText}</button>
         {/if}
       </div>
     </div>
-  {:else if widget.type === 'navbar'}
+  {:else if component.type === 'navbar'}
     <div class="navbar-preview">
       <div class="navbar-container">
         <div class="navbar-brand">
-          {#if widget.config.logo?.image}
+          {#if component.config.logo?.image}
             <img
-              src={widget.config.logo.image}
-              alt={widget.config.logo.text || 'Logo'}
+              src={component.config.logo.image}
+              alt={component.config.logo.text || 'Logo'}
               class="logo"
             />
           {:else}
-            <span class="logo-text">{widget.config.logo?.text || 'Store'}</span>
+            <span class="logo-text">{component.config.logo?.text || 'Store'}</span>
           {/if}
         </div>
         <div class="navbar-links">
-          {#each widget.config.links || [] as link}
+          {#each component.config.links || [] as link}
             <a href={link.url} class="nav-link">{link.text}</a>
           {/each}
         </div>
       </div>
     </div>
-  {:else if widget.type === 'footer'}
+  {:else if component.type === 'footer'}
     <div class="footer-preview">
       <div class="footer-container">
-        {#if widget.config.footerLinks && widget.config.footerLinks.length > 0}
+        {#if component.config.footerLinks && component.config.footerLinks.length > 0}
           <div class="footer-links">
-            {#each widget.config.footerLinks as link}
+            {#each component.config.footerLinks as link}
               <a href={link.url} class="footer-link">{link.text}</a>
             {/each}
           </div>
         {/if}
         <div class="footer-copyright">
-          {widget.config.copyright || '© 2025 Store Name. All rights reserved.'}
+          {component.config.copyright || '© 2025 Store Name. All rights reserved.'}
         </div>
       </div>
     </div>
-  {:else if widget.type === 'yield'}
+  {:else if component.type === 'yield'}
     <div class="yield-preview">
       <div class="yield-placeholder">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -676,61 +681,68 @@
         <span>Page widgets will be rendered here</span>
       </div>
     </div>
-  {:else if widget.type === 'container'}
+  {:else if component.type === 'container'}
     {@const containerDisplay =
-      getBreakpointValue(widget.config.containerDisplay, currentBreakpoint) || 'flex'}
+      getBreakpointValue(component.config.containerDisplay, currentBreakpoint) || 'flex'}
     {@const flexDirection =
-      getBreakpointValue(widget.config.containerFlexDirection, currentBreakpoint) || 'row'}
+      getBreakpointValue(component.config.containerFlexDirection, currentBreakpoint) || 'row'}
     {@const containerWidth =
-      getBreakpointValue(widget.config.containerWidth, currentBreakpoint) || 'auto'}
+      getBreakpointValue(component.config.containerWidth, currentBreakpoint) || 'auto'}
     {@const containerMinHeight =
-      getBreakpointValue(widget.config.containerMinHeight, currentBreakpoint) || 'auto'}
+      getBreakpointValue(component.config.containerMinHeight, currentBreakpoint) || 'auto'}
     {@const containerMaxHeight =
-      getBreakpointValue(widget.config.containerMaxHeight, currentBreakpoint) || 'none'}
-    {@const containerGap = getBreakpointValue(widget.config.containerGap, currentBreakpoint) || 16}
+      getBreakpointValue(component.config.containerMaxHeight, currentBreakpoint) || 'none'}
+    {@const containerGap =
+      getBreakpointValue(component.config.containerGap, currentBreakpoint) || 16}
     {@const containerOpacity =
-      getBreakpointValue(widget.config.containerOpacity, currentBreakpoint) || 1}
+      getBreakpointValue(component.config.containerOpacity, currentBreakpoint) || 1}
     {@const containerOverflow = getBreakpointValue(
-      widget.config.containerOverflow,
+      component.config.containerOverflow,
       currentBreakpoint
     )}
-    {@const containerZIndex = getBreakpointValue(widget.config.containerZIndex, currentBreakpoint)}
+    {@const containerZIndex = getBreakpointValue(
+      component.config.containerZIndex,
+      currentBreakpoint
+    )}
     {@const containerGridCols = getBreakpointValue(
-      widget.config.containerGridCols,
+      component.config.containerGridCols,
       currentBreakpoint
     )}
     {@const containerGridRows = getBreakpointValue(
-      widget.config.containerGridRows,
+      component.config.containerGridRows,
       currentBreakpoint
     )}
     {@const containerGridAutoFlow = getBreakpointValue(
-      widget.config.containerGridAutoFlow,
+      component.config.containerGridAutoFlow,
       currentBreakpoint
     )}
     {@const containerPlaceItems = getBreakpointValue(
-      widget.config.containerPlaceItems,
+      component.config.containerPlaceItems,
       currentBreakpoint
     )}
     {@const containerPlaceContent = getBreakpointValue(
-      widget.config.containerPlaceContent,
+      component.config.containerPlaceContent,
       currentBreakpoint
     )}
     {@const containerPadding = getBreakpointValue(
-      widget.config.containerPadding,
+      component.config.containerPadding,
       currentBreakpoint
     )}
-    {@const containerMargin = getBreakpointValue(widget.config.containerMargin, currentBreakpoint)}
+    {@const containerMargin = getBreakpointValue(
+      component.config.containerMargin,
+      currentBreakpoint
+    )}
     <div
-      class="container-widget"
+      class="container-component"
       style="
         display: {containerDisplay};
         {containerDisplay === 'flex'
         ? `
           flex-direction: ${flexDirection};
-          justify-content: ${widget.config.containerJustifyContent || 'flex-start'};
-          align-items: ${widget.config.containerAlignItems || 'stretch'};
-          align-content: ${widget.config.containerAlignContent || 'normal'};
-          flex-wrap: ${widget.config.containerWrap || 'nowrap'};
+          justify-content: ${component.config.containerJustifyContent || 'flex-start'};
+          align-items: ${component.config.containerAlignItems || 'stretch'};
+          align-content: ${component.config.containerAlignContent || 'normal'};
+          flex-wrap: ${component.config.containerWrap || 'nowrap'};
         `
         : containerDisplay === 'grid'
           ? `
@@ -743,7 +755,7 @@
           : ''}
         gap: ${containerGap}px;
         width: ${containerWidth};
-        max-width: ${widget.config.containerMaxWidth || '1200px'};
+        max-width: ${component.config.containerMaxWidth || '1200px'};
         min-height: ${containerMinHeight};
         max-height: ${containerMaxHeight};
         padding: ${containerPadding
@@ -752,49 +764,49 @@
         margin: ${containerMargin
         ? `${containerMargin.top || 0}px auto ${containerMargin.bottom || 0}px`
         : '0px auto'};
-        background: ${widget.config.containerBackground || 'transparent'};
-        ${widget.config.containerBackgroundImage
-        ? `background-image: url(${widget.config.containerBackgroundImage});`
+        background: ${component.config.containerBackground || 'transparent'};
+        ${component.config.containerBackgroundImage
+        ? `background-image: url(${component.config.containerBackgroundImage});`
         : ''}
-        ${widget.config.containerBackgroundSize
-        ? `background-size: ${getBreakpointValue(widget.config.containerBackgroundSize, currentBreakpoint)};`
+        ${component.config.containerBackgroundSize
+        ? `background-size: ${getBreakpointValue(component.config.containerBackgroundSize, currentBreakpoint)};`
         : ''}
-        ${widget.config.containerBackgroundPosition
-        ? `background-position: ${getBreakpointValue(widget.config.containerBackgroundPosition, currentBreakpoint)};`
+        ${component.config.containerBackgroundPosition
+        ? `background-position: ${getBreakpointValue(component.config.containerBackgroundPosition, currentBreakpoint)};`
         : ''}
-        ${widget.config.containerBackgroundRepeat
-        ? `background-repeat: ${getBreakpointValue(widget.config.containerBackgroundRepeat, currentBreakpoint)};`
+        ${component.config.containerBackgroundRepeat
+        ? `background-repeat: ${getBreakpointValue(component.config.containerBackgroundRepeat, currentBreakpoint)};`
         : ''}
-        border-radius: ${widget.config.containerBorderRadius || 0}px;
+        border-radius: ${component.config.containerBorderRadius || 0}px;
         ${(() => {
         const borderWidth = getBreakpointValue(
-          widget.config.containerBorderWidth,
+          component.config.containerBorderWidth,
           currentBreakpoint
         );
         return borderWidth
           ? `border-width: ${borderWidth.top || 0}px ${borderWidth.right || 0}px ${borderWidth.bottom || 0}px ${borderWidth.left || 0}px;`
           : '';
       })()}
-        ${widget.config.containerBorderColor
-        ? `border-color: ${widget.config.containerBorderColor}; border-style: solid;`
+        ${component.config.containerBorderColor
+        ? `border-color: ${component.config.containerBorderColor}; border-style: solid;`
         : ''}
         opacity: ${containerOpacity};
         ${containerOverflow
         ? `overflow: ${typeof containerOverflow === 'object' ? `${containerOverflow.x || 'visible'} ${containerOverflow.y || 'visible'}` : containerOverflow};`
         : ''}
         ${containerZIndex !== undefined ? `z-index: ${containerZIndex};` : ''}
-        ${widget.config.containerCursor
-        ? `cursor: ${getBreakpointValue(widget.config.containerCursor, currentBreakpoint)};`
+        ${component.config.containerCursor
+        ? `cursor: ${getBreakpointValue(component.config.containerCursor, currentBreakpoint)};`
         : ''}
-        ${widget.config.containerPointerEvents
-        ? `pointer-events: ${getBreakpointValue(widget.config.containerPointerEvents, currentBreakpoint)};`
+        ${component.config.containerPointerEvents
+        ? `pointer-events: ${getBreakpointValue(component.config.containerPointerEvents, currentBreakpoint)};`
         : ''}
       "
     >
       {#if isEditable}
         <ContainerDropZone
-          containerId={widget.id}
-          children={widget.config.children || []}
+          containerId={component.id}
+          children={component.config.children || []}
           isActive={false}
           allowedTypes={[]}
           displayMode={containerDisplay}
@@ -802,9 +814,9 @@
           containerStyles={containerDisplay === 'flex'
             ? `
               flex-direction: ${flexDirection};
-              justify-content: ${widget.config.containerJustifyContent || 'flex-start'};
-              align-items: ${widget.config.containerAlignItems || 'stretch'};
-              flex-wrap: ${widget.config.containerWrap || 'nowrap'};
+              justify-content: ${component.config.containerJustifyContent || 'flex-start'};
+              align-items: ${component.config.containerAlignItems || 'stretch'};
+              flex-wrap: ${component.config.containerWrap || 'nowrap'};
               gap: ${containerGap}px;
             `
             : containerDisplay === 'grid'
@@ -825,8 +837,8 @@
             <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
           </svelte:fragment>
         </ContainerDropZone>
-      {:else if widget.config.children && widget.config.children.length > 0}
-        {#each widget.config.children as child}
+      {:else if component.config.children && component.config.children.length > 0}
+        {#each component.config.children as child}
           <div class="container-child">
             <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
           </div>
@@ -838,42 +850,42 @@
         </div>
       {/if}
     </div>
-  {:else if widget.type === 'flex'}
+  {:else if component.type === 'flex'}
     <div
       class="flex-preview"
       style="
-        display: {widget.config.useGrid ? 'grid' : 'flex'};
-        {widget.config.useGrid
+        display: {component.config.useGrid ? 'grid' : 'flex'};
+        {component.config.useGrid
         ? `
-          grid-template-columns: repeat(${widget.config.gridColumns?.desktop || 3}, 1fr);
-          ${widget.config.gridRows ? `grid-template-rows: repeat(${widget.config.gridRows.desktop}, 1fr);` : ''}
-          grid-auto-flow: ${widget.config.gridAutoFlow || 'row'};
+          grid-template-columns: repeat(${component.config.gridColumns?.desktop || 3}, 1fr);
+          ${component.config.gridRows ? `grid-template-rows: repeat(${component.config.gridRows.desktop}, 1fr);` : ''}
+          grid-auto-flow: ${component.config.gridAutoFlow || 'row'};
         `
         : `
-          flex-direction: ${widget.config.flexDirection?.desktop || 'row'};
-          flex-wrap: ${widget.config.flexWrap || 'wrap'};
-          justify-content: ${widget.config.flexJustifyContent || 'flex-start'};
-          align-items: ${widget.config.flexAlignItems || 'stretch'};
+          flex-direction: ${component.config.flexDirection?.desktop || 'row'};
+          flex-wrap: ${component.config.flexWrap || 'wrap'};
+          justify-content: ${component.config.flexJustifyContent || 'flex-start'};
+          align-items: ${component.config.flexAlignItems || 'stretch'};
         `}
-        gap: {widget.config.flexGap?.desktop || 16}px;
-        padding: {widget.config.flexPadding?.desktop?.top || 16}px {widget.config.flexPadding
-        ?.desktop?.right || 16}px {widget.config.flexPadding?.desktop?.bottom || 16}px {widget
+        gap: {component.config.flexGap?.desktop || 16}px;
+        padding: {component.config.flexPadding?.desktop?.top || 16}px {component.config.flexPadding
+        ?.desktop?.right || 16}px {component.config.flexPadding?.desktop?.bottom || 16}px {component
         .config.flexPadding?.desktop?.left || 16}px;
-        background: {widget.config.flexBackground || 'transparent'};
-        border-radius: {widget.config.flexBorderRadius || 0}px;
+        background: {component.config.flexBackground || 'transparent'};
+        border-radius: {component.config.flexBorderRadius || 0}px;
       "
     >
       <div class="layout-placeholder">
-        <p>{widget.config.useGrid ? '⊞ Grid' : '⊟ Flex'}</p>
+        <p>{component.config.useGrid ? '⊞ Grid' : '⊟ Flex'}</p>
         <span>Flexible layout</span>
       </div>
     </div>
-  {:else if widget.type === 'component_ref'}
+  {:else if component.type === 'component_ref'}
     {#await import('./ComponentRefRenderer.svelte')}
       <div class="component-ref-loading">Loading component...</div>
     {:then { default: ComponentRefRenderer }}
       <ComponentRefRenderer
-        componentId={widget.config.componentId}
+        componentId={component.config.componentId}
         {currentBreakpoint}
         {colorTheme}
         {isEditable}
@@ -885,7 +897,7 @@
     {/await}
   {:else}
     <div class="unknown-widget">
-      <span>Unknown widget type: {widget.type}</span>
+      <span>Unknown widget type: {component.type}</span>
     </div>
   {/if}
 </div>
@@ -1103,13 +1115,13 @@
   }
 
   /* Container Widget */
-  .container-widget {
+  .container-component {
     min-height: 60px;
     width: 100%;
     box-sizing: border-box;
   }
 
-  .container-widget > .layout-placeholder {
+  .container-component > .layout-placeholder {
     flex: 1;
     min-width: 200px;
   }

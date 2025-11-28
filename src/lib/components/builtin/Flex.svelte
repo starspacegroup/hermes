@@ -122,7 +122,7 @@
   `;
 </script>
 
-<div class="flex-widget" id={config.anchorName || undefined} style={containerStyle}>
+<div class="flex-component" id={config.anchorName || undefined} style={containerStyle}>
   {#if children.length === 0}
     <div class="flex-placeholder">
       <p>{useGrid ? 'Add elements to this grid' : 'Add elements to this flex container'}</p>
@@ -133,7 +133,7 @@
 </div>
 
 <style>
-  .flex-widget {
+  .flex-component {
     width: 100%;
     box-sizing: border-box;
   }

@@ -1,11 +1,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getComponentWidgets } from '$lib/server/db/componentWidgets';
+import { getComponentChildren } from '$lib/server/db/componentChildren';
 import { getComponent } from '$lib/server/db/components';
 
 /**
- * GET /api/components/[id]/widgets
- * Get all widgets for a component
+ * GET /api/components/[id]/children
+ * Get all child components for a saved component
  */
 export const GET: RequestHandler = async ({ params, locals, platform }) => {
   const db = platform?.env?.DB;
@@ -31,15 +31,15 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
       throw error(404, 'Component not found');
     }
 
-    // Get component widgets
-    const widgets = await getComponentWidgets(db, componentId);
+    // Get component children
+    const children = await getComponentChildren(db, componentId);
 
-    return json({ widgets });
+    return json({ children });
   } catch (err) {
-    console.error('Failed to get component widgets:', err);
+    console.error('Failed to get component children:', err);
     if (err && typeof err === 'object' && 'status' in err) {
       throw err;
     }
-    throw error(500, 'Failed to get component widgets');
+    throw error(500, 'Failed to get component children');
   }
 };

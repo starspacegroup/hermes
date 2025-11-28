@@ -1,28 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageComponent } from '$lib/types/pages';
 
 describe('BuilderCanvas - Sort Button Logic', () => {
-  const mockWidgets: PageWidget[] = [
+  const mockWidgets: PageComponent[] = [
     {
-      id: 'widget-1',
+      id: 'component-1',
       page_id: 'test-page',
       type: 'hero',
       position: 0,
-      config: { heading: 'First Widget' },
+      config: { heading: 'First component' },
       created_at: Date.now(),
       updated_at: Date.now()
     },
     {
-      id: 'widget-2',
+      id: 'component-2',
       page_id: 'test-page',
       type: 'text',
       position: 1,
-      config: { html: 'Second Widget' },
+      config: { html: 'Second component' },
       created_at: Date.now(),
       updated_at: Date.now()
     },
     {
-      id: 'widget-3',
+      id: 'component-3',
       page_id: 'test-page',
       type: 'image',
       position: 2,
@@ -32,9 +32,9 @@ describe('BuilderCanvas - Sort Button Logic', () => {
     }
   ];
 
-  it('correctly swaps widget positions when moving up', () => {
+  it('correctly swaps component positions when moving up', () => {
     const sorted = [...mockWidgets].sort((a, b) => a.position - b.position);
-    const widgetToMove = sorted[1]; // Second widget
+    const widgetToMove = sorted[1]; // Second component
     const index = sorted.findIndex((w) => w.id === widgetToMove.id);
 
     expect(index).toBe(1);
@@ -49,13 +49,13 @@ describe('BuilderCanvas - Sort Button Logic', () => {
 
     expect(updatedCurrent.position).toBe(0);
     expect(updatedAbove.position).toBe(1);
-    expect(updatedCurrent.id).toBe('widget-2');
-    expect(updatedAbove.id).toBe('widget-1');
+    expect(updatedCurrent.id).toBe('component-2');
+    expect(updatedAbove.id).toBe('component-1');
   });
 
-  it('correctly swaps widget positions when moving down', () => {
+  it('correctly swaps component positions when moving down', () => {
     const sorted = [...mockWidgets].sort((a, b) => a.position - b.position);
-    const widgetToMove = sorted[1]; // Second widget
+    const widgetToMove = sorted[1]; // Second component
     const index = sorted.findIndex((w) => w.id === widgetToMove.id);
 
     expect(index).toBe(1);
@@ -70,11 +70,11 @@ describe('BuilderCanvas - Sort Button Logic', () => {
 
     expect(updatedCurrent.position).toBe(2);
     expect(updatedBelow.position).toBe(1);
-    expect(updatedCurrent.id).toBe('widget-2');
-    expect(updatedBelow.id).toBe('widget-3');
+    expect(updatedCurrent.id).toBe('component-2');
+    expect(updatedBelow.id).toBe('component-3');
   });
 
-  it('correctly identifies first widget as unable to move up', () => {
+  it('correctly identifies first component as unable to move up', () => {
     const sorted = [...mockWidgets].sort((a, b) => a.position - b.position);
     const firstWidget = sorted[0];
     const index = sorted.findIndex((w) => w.id === firstWidget.id);
@@ -83,7 +83,7 @@ describe('BuilderCanvas - Sort Button Logic', () => {
     expect(index === 0).toBe(true); // Should be disabled
   });
 
-  it('correctly identifies last widget as unable to move down', () => {
+  it('correctly identifies last component as unable to move down', () => {
     const sorted = [...mockWidgets].sort((a, b) => a.position - b.position);
     const lastWidget = sorted[sorted.length - 1];
     const index = sorted.findIndex((w) => w.id === lastWidget.id);
@@ -101,14 +101,14 @@ describe('BuilderCanvas - Sort Button Logic', () => {
   });
 
   it('maintains correct button state after position swap', () => {
-    // Start with widgets in positions 0, 1, 2
+    // Start with pageComponents in positions 0, 1, 2
     const sorted = [...mockWidgets].sort((a, b) => a.position - b.position);
 
-    // Move widget 2 (position 1) up
+    // Move component 2 (position 1) up
     const widgetToMove = sorted[1];
     const widgetAbove = sorted[0];
 
-    // After swap, widget 2 should be at position 0
+    // After swap, component 2 should be at position 0
     const newWidgets = mockWidgets.map((w) => {
       if (w.id === widgetToMove.id) return { ...w, position: widgetAbove.position };
       if (w.id === widgetAbove.id) return { ...w, position: widgetToMove.position };
@@ -118,12 +118,12 @@ describe('BuilderCanvas - Sort Button Logic', () => {
     // Re-sort after the swap
     const newSorted = [...newWidgets].sort((a, b) => a.position - b.position);
 
-    // Widget that was at index 1 should now be at index 0
-    expect(newSorted[0].id).toBe('widget-2');
-    expect(newSorted[1].id).toBe('widget-1');
+    // component that was at index 1 should now be at index 0
+    expect(newSorted[0].id).toBe('component-2');
+    expect(newSorted[1].id).toBe('component-1');
 
-    // First widget should now be unable to move up
-    const newIndex = newSorted.findIndex((w) => w.id === 'widget-2');
+    // First component should now be unable to move up
+    const newIndex = newSorted.findIndex((w) => w.id === 'component-2');
     expect(newIndex).toBe(0);
     expect(newIndex === 0).toBe(true); // Move up should be disabled
   });

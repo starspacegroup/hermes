@@ -3,7 +3,7 @@ import { getDB, getAllProducts, getProductFulfillmentOptions } from '$lib/server
 import * as pagesDb from '$lib/server/db/pages';
 import { getPublishedRevision } from '$lib/server/db/revisions';
 import * as colorThemes from '$lib/server/db/color-themes';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageComponent } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   // If platform is not available (development without D1), fall back to empty array
@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     return {
       products: [],
       page: null,
-      widgets: [],
+      components: [],
       isAdmin: false,
       systemLightTheme: 'default-light',
       systemDarkTheme: 'default-dark'
@@ -31,11 +31,11 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     // Check if a page exists for the home route '/'
     const page = await pagesDb.getPageBySlug(db, siteId, '/');
 
-    let widgets: PageWidget[] = [];
+    let components: PageComponent[] = [];
     if (page && page.status === 'published') {
-      // Fetch widgets from published revision (Builder content)
+      // Fetch components from published revision (Builder content)
       const publishedRevision = await getPublishedRevision(db, siteId, page.id);
-      widgets = publishedRevision?.widgets || [];
+      components = publishedRevision?.components || [];
     }
 
     // Fetch products from D1 database
@@ -63,7 +63,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     return {
       products,
       page,
-      widgets,
+      components,
       colorTheme: page?.colorTheme || null,
       isAdmin: locals.isAdmin || false,
       systemLightTheme: systemLightThemeId || 'vibrant',
@@ -75,7 +75,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     return {
       products: [],
       page: null,
-      widgets: [],
+      components: [],
       isAdmin: false,
       systemLightTheme: 'default-light',
       systemDarkTheme: 'default-dark'

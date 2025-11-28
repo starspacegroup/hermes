@@ -40,7 +40,7 @@ describe('ContainerDropZone', () => {
         }
       });
 
-      expect(screen.getByText('Drop widgets here')).toBeInTheDocument();
+      expect(screen.getByText('Drop components here')).toBeInTheDocument();
       expect(screen.getByText('Drag from the sidebar')).toBeInTheDocument();
     });
 

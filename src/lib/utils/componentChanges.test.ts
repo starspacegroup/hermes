@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { applyWidgetChanges } from './widgetChanges';
-import type { PageWidget } from '$lib/types/pages';
+import { applyComponentChanges } from './componentChanges';
+import type { PageComponent } from '$lib/types/pages';
 
-describe('applyWidgetChanges', () => {
-  const mockWidgets: PageWidget[] = [
+describe('applyComponentChanges', () => {
+  const mockComponents: PageComponent[] = [
     {
-      id: 'widget-1',
+      id: 'component-1',
       page_id: 'page-1',
       type: 'hero',
       position: 0,
@@ -14,7 +14,7 @@ describe('applyWidgetChanges', () => {
       updated_at: 1000
     },
     {
-      id: 'widget-2',
+      id: 'component-2',
       page_id: 'page-1',
       type: 'text',
       position: 1,
@@ -25,12 +25,12 @@ describe('applyWidgetChanges', () => {
   ];
 
   describe('add action', () => {
-    it('should add a new widget at the end', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should add a new component at the end', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'add',
-          widgets: [
+          components: [
             {
               id: 'temp-123',
               page_id: 'page-1',
@@ -49,12 +49,12 @@ describe('applyWidgetChanges', () => {
       expect(result[2].position).toBe(2);
     });
 
-    it('should add a new widget at specific position', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should add a new component at specific position', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'add',
-          widgets: [
+          components: [
             {
               id: 'temp-456',
               page_id: 'page-1',
@@ -76,16 +76,16 @@ describe('applyWidgetChanges', () => {
       expect(result[2].position).toBe(2);
     });
 
-    it('should generate ID for widgets without ID', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should generate ID for components without ID', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'add',
-          widgets: [
+          components: [
             {
               type: 'hero',
               config: { heading: 'New Hero' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget
+            } as Partial<PageComponent> as PageComponent
           ]
         }
       });
@@ -95,15 +95,15 @@ describe('applyWidgetChanges', () => {
     });
 
     it('should populate missing fields with defaults', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'add',
-          widgets: [
+          components: [
             {
               type: 'text',
               config: { content: '<p>New text</p>' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget
+            } as Partial<PageComponent> as PageComponent
           ]
         }
       });
@@ -117,26 +117,26 @@ describe('applyWidgetChanges', () => {
   });
 
   describe('remove action', () => {
-    it('should remove widgets by ID', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should remove components by ID', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'remove',
-          widgetIds: ['widget-1']
+          componentIds: ['component-1']
         }
       });
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('widget-2');
+      expect(result[0].id).toBe('component-2');
       expect(result[0].position).toBe(0);
     });
 
-    it('should remove multiple widgets', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should remove multiple components', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'remove',
-          widgetIds: ['widget-1', 'widget-2']
+          componentIds: ['component-1', 'component-2']
         }
       });
 
@@ -144,11 +144,11 @@ describe('applyWidgetChanges', () => {
     });
 
     it('should reindex positions after removal', () => {
-      const widgets: PageWidget[] = [
-        { ...mockWidgets[0], position: 0 },
-        { ...mockWidgets[1], position: 1 },
+      const components: PageComponent[] = [
+        { ...mockComponents[0], position: 0 },
+        { ...mockComponents[1], position: 1 },
         {
-          id: 'widget-3',
+          id: 'component-3',
           page_id: 'page-1',
           type: 'image',
           position: 2,
@@ -158,11 +158,11 @@ describe('applyWidgetChanges', () => {
         }
       ];
 
-      const result = applyWidgetChanges(widgets, {
-        type: 'widget_changes',
+      const result = applyComponentChanges(components, {
+        type: 'component_changes',
         changes: {
           action: 'remove',
-          widgetIds: ['widget-2']
+          componentIds: ['component-2']
         }
       });
 
@@ -173,16 +173,16 @@ describe('applyWidgetChanges', () => {
   });
 
   describe('update action', () => {
-    it('should update widget config', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should update component config', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'update',
-          widgets: [
+          components: [
             {
-              id: 'widget-1',
+              id: 'component-1',
               config: { heading: 'Updated Hero' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget
+            } as Partial<PageComponent> as PageComponent
           ]
         }
       });
@@ -192,9 +192,9 @@ describe('applyWidgetChanges', () => {
     });
 
     it('should merge config instead of replacing', () => {
-      const widgets: PageWidget[] = [
+      const components: PageComponent[] = [
         {
-          id: 'widget-1',
+          id: 'component-1',
           page_id: 'page-1',
           type: 'hero',
           position: 0,
@@ -207,15 +207,15 @@ describe('applyWidgetChanges', () => {
         }
       ];
 
-      const result = applyWidgetChanges(widgets, {
-        type: 'widget_changes',
+      const result = applyComponentChanges(components, {
+        type: 'component_changes',
         changes: {
           action: 'update',
-          widgets: [
+          components: [
             {
-              id: 'widget-1',
+              id: 'component-1',
               config: { heading: 'New Heading' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget
+            } as Partial<PageComponent> as PageComponent
           ]
         }
       });
@@ -228,20 +228,20 @@ describe('applyWidgetChanges', () => {
       });
     });
 
-    it('should update multiple widgets', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should update multiple components', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'update',
-          widgets: [
+          components: [
             {
-              id: 'widget-1',
+              id: 'component-1',
               config: { heading: 'New Hero' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget,
+            } as Partial<PageComponent> as PageComponent,
             {
-              id: 'widget-2',
+              id: 'component-2',
               config: { content: '<p>New content</p>' } as Record<string, unknown>
-            } as Partial<PageWidget> as PageWidget
+            } as Partial<PageComponent> as PageComponent
           ]
         }
       });
@@ -254,22 +254,22 @@ describe('applyWidgetChanges', () => {
   });
 
   describe('reorder action', () => {
-    it('should reorder widgets', () => {
-      const result = applyWidgetChanges(mockWidgets, {
-        type: 'widget_changes',
+    it('should reorder components', () => {
+      const result = applyComponentChanges(mockComponents, {
+        type: 'component_changes',
         changes: {
           action: 'reorder',
-          widgets: [
-            { id: 'widget-2' } as Partial<PageWidget> as PageWidget,
-            { id: 'widget-1' } as Partial<PageWidget> as PageWidget
+          components: [
+            { id: 'component-2' } as Partial<PageComponent> as PageComponent,
+            { id: 'component-1' } as Partial<PageComponent> as PageComponent
           ]
         }
       });
 
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('widget-2');
+      expect(result[0].id).toBe('component-2');
       expect(result[0].position).toBe(0);
-      expect(result[1].id).toBe('widget-1');
+      expect(result[1].id).toBe('component-1');
       expect(result[1].position).toBe(1);
     });
   });

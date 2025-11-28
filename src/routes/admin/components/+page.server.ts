@@ -7,7 +7,7 @@ import {
   createComponent,
   resetBuiltInComponent
 } from '$lib/server/db/components';
-import { getComponentWidgets } from '$lib/server/db/componentWidgets';
+import { getComponentChildren } from '$lib/server/db/componentChildren';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 
@@ -77,8 +77,8 @@ export const actions: Actions = {
         return fail(404, { error: 'Component not found' });
       }
 
-      // Get source component widgets if any
-      const sourceWidgets = await getComponentWidgets(db, componentId);
+      // Get source component children if any
+      const sourceChildren = await getComponentChildren(db, componentId);
 
       // Create a new component with cloned data
       const newComponent = await createComponent(db, siteId, {
@@ -86,10 +86,10 @@ export const actions: Actions = {
         description: sourceComponent.description || '',
         type: sourceComponent.type,
         config: sourceComponent.config as Record<string, unknown>,
-        widgets: sourceWidgets.map((w) => ({
-          type: w.type,
-          config: w.config as Record<string, unknown>,
-          position: w.position
+        widgets: sourceChildren.map((c) => ({
+          type: c.type,
+          config: c.config as Record<string, unknown>,
+          position: c.position
         }))
       });
 

@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error as svelteKitError } from '@sveltejs/kit';
-import { updateLayoutWidgets, getLayoutWidgets } from '$lib/server/db/layouts';
+import { updateLayoutComponents, getLayoutComponents } from '$lib/server/db/layouts';
 import { getDB } from '$lib/server/db/connection';
 
 export const GET: RequestHandler = async ({ params, platform }) => {
@@ -12,11 +12,11 @@ export const GET: RequestHandler = async ({ params, platform }) => {
   }
 
   try {
-    const widgets = await getLayoutWidgets(db, layoutId);
-    return json({ widgets });
+    const components = await getLayoutComponents(db, layoutId);
+    return json({ components });
   } catch (err) {
-    console.error('Failed to get layout widgets:', err);
-    throw svelteKitError(500, 'Failed to get layout widgets');
+    console.error('Failed to get layout components:', err);
+    throw svelteKitError(500, 'Failed to get layout components');
   }
 };
 
@@ -29,19 +29,19 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
   }
 
   try {
-    const body = (await request.json()) as { widgets?: unknown };
-    const { widgets } = body;
+    const body = (await request.json()) as { components?: unknown };
+    const { components } = body;
 
-    if (!Array.isArray(widgets)) {
-      throw svelteKitError(400, 'Invalid widgets data');
+    if (!Array.isArray(components)) {
+      throw svelteKitError(400, 'Invalid components data');
     }
 
-    await updateLayoutWidgets(db, widgets);
+    await updateLayoutComponents(db, components);
 
     return json({ success: true });
   } catch (err) {
     if (err instanceof Response) throw err;
-    console.error('Failed to update layout widgets:', err);
-    throw svelteKitError(500, 'Failed to update layout widgets');
+    console.error('Failed to update layout components:', err);
+    throw svelteKitError(500, 'Failed to update layout components');
   }
 };

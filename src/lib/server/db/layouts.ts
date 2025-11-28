@@ -212,26 +212,34 @@ export async function deleteLayout(
 }
 
 /**
- * Get all widgets for a layout
+ * Get all components for a layout
  */
-export async function getLayoutWidgets(db: D1Database, layoutId: number): Promise<LayoutWidget[]> {
+export async function getLayoutComponents(
+  db: D1Database,
+  layoutId: number
+): Promise<LayoutWidget[]> {
   try {
     const result = await db
       .prepare('SELECT * FROM layout_widgets WHERE layout_id = ? ORDER BY position ASC')
       .bind(layoutId)
       .all();
 
-    const widgets = (result.results || []).map((widget) => ({
-      ...widget,
-      config: typeof widget.config === 'string' ? JSON.parse(widget.config) : widget.config
+    const components = (result.results || []).map((component) => ({
+      ...component,
+      config: typeof component.config === 'string' ? JSON.parse(component.config) : component.config
     })) as LayoutWidget[];
 
-    return widgets;
+    return components;
   } catch (error) {
-    console.error('Failed to get layout widgets:', error);
+    console.error('Failed to get layout components:', error);
     throw error;
   }
 }
+
+/**
+ * @deprecated Use getLayoutComponents instead
+ */
+export const getLayoutWidgets = getLayoutComponents;
 
 /**
  * Create a layout widget
@@ -338,11 +346,11 @@ export async function deleteLayoutWidget(db: D1Database, widgetId: string): Prom
 }
 
 /**
- * Update multiple layout widgets (for batch operations like reordering)
+ * Update multiple layout components (for batch operations like reordering)
  */
-export async function updateLayoutWidgets(
+export async function updateLayoutComponents(
   db: D1Database,
-  widgets: Array<{
+  components: Array<{
     id: string;
     type?: string;
     position?: number;
@@ -351,25 +359,25 @@ export async function updateLayoutWidgets(
 ): Promise<void> {
   try {
     // Use a transaction for batch updates
-    const batch = widgets.map((widget) => {
+    const batch = components.map((component) => {
       const updates: string[] = [];
       const values: (string | number)[] = [];
 
-      if (widget.type !== undefined) {
+      if (component.type !== undefined) {
         updates.push('type = ?');
-        values.push(widget.type);
+        values.push(component.type);
       }
-      if (widget.position !== undefined) {
+      if (component.position !== undefined) {
         updates.push('position = ?');
-        values.push(widget.position);
+        values.push(component.position);
       }
-      if (widget.config !== undefined) {
+      if (component.config !== undefined) {
         updates.push('config = ?');
-        values.push(JSON.stringify(widget.config));
+        values.push(JSON.stringify(component.config));
       }
 
       updates.push('updated_at = CURRENT_TIMESTAMP');
-      values.push(widget.id);
+      values.push(component.id);
 
       return db
         .prepare(`UPDATE layout_widgets SET ${updates.join(', ')} WHERE id = ?`)
@@ -378,7 +386,12 @@ export async function updateLayoutWidgets(
 
     await db.batch(batch);
   } catch (error) {
-    console.error('Failed to update layout widgets:', error);
+    console.error('Failed to update layout components:', error);
     throw error;
   }
 }
+
+/**
+ * @deprecated Use updateLayoutComponents instead
+ */
+export const updateLayoutWidgets = updateLayoutComponents;

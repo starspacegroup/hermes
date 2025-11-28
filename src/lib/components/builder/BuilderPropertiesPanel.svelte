@@ -1,19 +1,19 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { ChevronDown, X } from 'lucide-svelte';
-  import type { PageWidget, ColorTheme, Component } from '$lib/types/pages';
+  import type { PageComponent, ColorTheme, Component } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
-  import WidgetPropertiesPanel from '$lib/components/admin/WidgetPropertiesPanel.svelte';
+  import ComponentPropertiesPanel from '$lib/components/admin/ComponentPropertiesPanel.svelte';
   import ThemeColorInput from '$lib/components/admin/ThemeColorInput.svelte';
   import MediaBrowser from '$lib/components/admin/MediaBrowser.svelte';
   import MediaUpload from '$lib/components/admin/MediaUpload.svelte';
   import TailwindFlexEditor from './TailwindFlexEditor.svelte';
   import TailwindGridEditor from './TailwindGridEditor.svelte';
   import FlexChildPropertiesEditor from './FlexChildPropertiesEditor.svelte';
-  import { getWidgetDisplayLabel } from '$lib/utils/editor/widgetDefaults';
+  import { getComponentDisplayLabel } from '$lib/utils/editor/componentDefaults';
 
-  export let widgets: PageWidget[] = [];
-  export let selectedWidget: PageWidget | null = null;
+  export let pageComponents: PageComponent[] = [];
+  export let selectedComponent: PageComponent | null = null;
   export let pageProperties:
     | { backgroundColor: string; backgroundImage: string; minHeight: string }
     | undefined = undefined;
@@ -22,15 +22,15 @@
   export let entityLabel = 'Page';
   export let components: Component[] = [];
 
-  // Track which component is expanded (null = none, 'page' = page, widget.id = specific widget)
-  let expandedComponentId: string | 'page' | null = selectedWidget?.id || 'page';
+  // Track which component is expanded (null = none, 'page' = page, component.id = specific component)
+  let expandedComponentId: string | 'page' | null = selectedComponent?.id || 'page';
 
   // Track active tab for page properties
   let pageActiveTab: 'content' | 'style' | 'responsive' = 'style';
 
-  // React to selectedWidget changes
-  $: if (selectedWidget) {
-    expandedComponentId = selectedWidget.id;
+  // React to selectedComponent changes
+  $: if (selectedComponent) {
+    expandedComponentId = selectedComponent.id;
   }
 
   const dispatch = createEventDispatcher();
@@ -242,119 +242,119 @@
       </div>
     {/if}
 
-    <!-- All Widget Components -->
-    {#each widgets as widgetItem, _index (widgetItem.id)}
+    <!-- All Page Components -->
+    {#each pageComponents as componentItem, _index (componentItem.id)}
       <div class="component-section">
         <button
           class="component-section-header"
-          class:expanded={expandedComponentId === widgetItem.id}
-          class:selected={selectedWidget?.id === widgetItem.id}
+          class:expanded={expandedComponentId === componentItem.id}
+          class:selected={selectedComponent?.id === componentItem.id}
           on:click={() => {
-            if (expandedComponentId === widgetItem.id) {
+            if (expandedComponentId === componentItem.id) {
               expandedComponentId = null;
-              dispatch('selectWidget', null);
+              dispatch('selectComponent', null);
             } else {
-              expandedComponentId = widgetItem.id;
-              dispatch('selectWidget', widgetItem);
+              expandedComponentId = componentItem.id;
+              dispatch('selectComponent', componentItem);
             }
           }}
         >
           <ChevronDown
             size={16}
             class="chevron"
-            style="transform: rotate({expandedComponentId === widgetItem.id
+            style="transform: rotate({expandedComponentId === componentItem.id
               ? 0
               : -90}deg); transition: transform 0.2s;"
           />
           <div class="component-info">
             <span class="component-label">
-              {getWidgetDisplayLabel(widgetItem, components)}
+              {getComponentDisplayLabel(componentItem, components)}
             </span>
-            {#if widgetItem.config?.anchorName}
-              <span class="component-id">{widgetItem.config.anchorName}</span>
+            {#if componentItem.config?.anchorName}
+              <span class="component-id">{componentItem.config.anchorName}</span>
             {:else}
-              <span class="component-id">ID: {widgetItem.id}</span>
+              <span class="component-id">ID: {componentItem.id}</span>
             {/if}
           </div>
         </button>
 
-        {#if expandedComponentId === widgetItem.id}
-          <div class="expanded-widget-header">
-            <div class="widget-meta">
-              <span class="meta-item">ID: {widgetItem.id}</span>
+        {#if expandedComponentId === componentItem.id}
+          <div class="expanded-component-header">
+            <div class="component-meta">
+              <span class="meta-item">ID: {componentItem.id}</span>
             </div>
           </div>
-          <div class="widget-properties">
-            {#if widgetItem.type === 'flex'}
+          <div class="component-properties">
+            {#if componentItem.type === 'flex'}
               <div class="flex-editor-tabs">
                 <div class="editor-tab-header">
                   <h4>Flex/Grid Layout Editor</h4>
                   <label class="grid-toggle">
                     <input
                       type="checkbox"
-                      checked={widgetItem.config?.useGrid || false}
+                      checked={componentItem.config?.useGrid || false}
                       on:change={(e) => {
-                        const updatedWidget = {
-                          ...widgetItem,
-                          config: { ...widgetItem.config, useGrid: e.currentTarget.checked }
+                        const updatedComponent = {
+                          ...componentItem,
+                          config: { ...componentItem.config, useGrid: e.currentTarget.checked }
                         };
-                        dispatch('updateWidget', updatedWidget);
+                        dispatch('updateComponent', updatedComponent);
                       }}
                     />
                     <span>Use Grid</span>
                   </label>
                 </div>
 
-                {#if widgetItem.config?.useGrid}
+                {#if componentItem.config?.useGrid}
                   <TailwindGridEditor
-                    config={widgetItem.config}
+                    config={componentItem.config}
                     {currentBreakpoint}
                     on:update={(e) => {
-                      const updatedWidget = { ...widgetItem, config: e.detail };
-                      dispatch('updateWidget', updatedWidget);
+                      const updatedComponent = { ...componentItem, config: e.detail };
+                      dispatch('updateComponent', updatedComponent);
                     }}
                   />
                 {:else}
                   <TailwindFlexEditor
-                    config={widgetItem.config}
+                    config={componentItem.config}
                     {currentBreakpoint}
                     on:update={(e) => {
-                      const updatedWidget = { ...widgetItem, config: e.detail };
-                      dispatch('updateWidget', updatedWidget);
+                      const updatedComponent = { ...componentItem, config: e.detail };
+                      dispatch('updateComponent', updatedComponent);
                     }}
                   />
                 {/if}
               </div>
             {:else}
-              <WidgetPropertiesPanel
-                widget={widgetItem}
+              <ComponentPropertiesPanel
+                component={componentItem}
                 {currentBreakpoint}
                 onUpdate={(config) => {
-                  const updatedWidget = { ...widgetItem, config };
-                  dispatch('updateWidget', updatedWidget);
+                  const updatedComponent = { ...componentItem, config };
+                  dispatch('updateComponent', updatedComponent);
                 }}
               />
             {/if}
 
-            <!-- Show child properties editor if widget has a flex/grid parent -->
-            {#if widgetItem.config?.children}
+            <!-- Show child properties editor if component has a flex/grid parent -->
+            {#if componentItem.config?.children}
               <!-- This is a parent flex/grid container - children can have child props -->
               <div class="child-props-section">
                 <p class="info-hint">
-                  💡 Children of this {widgetItem.config?.useGrid ? 'grid' : 'flex'} container can have
-                  individual positioning properties. Select a child widget to edit its properties.
+                  💡 Children of this {componentItem.config?.useGrid ? 'grid' : 'flex'} container can
+                  have individual positioning properties. Select a child component to edit its properties.
                 </p>
               </div>
             {/if}
 
-            <!-- Always show child properties for the selected widget if it exists -->
-            {#if selectedWidget?.id === widgetItem.id}
+            <!-- Always show child properties for the selected component if it exists -->
+            {#if selectedComponent?.id === componentItem.id}
               <FlexChildPropertiesEditor
-                widget={widgetItem}
+                component={componentItem}
                 {currentBreakpoint}
-                isGridParent={widgetItem.config?.useGrid || false}
+                isGridParent={componentItem.config?.useGrid || false}
                 on:update={(e) => {
-                  dispatch('updateWidget', e.detail);
+                  dispatch('updateComponent', e.detail);
                 }}
               />
             {/if}
@@ -482,13 +482,13 @@
     text-overflow: ellipsis;
   }
 
-  .expanded-widget-header {
+  .expanded-component-header {
     padding: 0.75rem 1rem;
     background: var(--color-bg-secondary);
     border-bottom: 1px solid var(--color-border-secondary);
   }
 
-  .widget-meta {
+  .component-meta {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;

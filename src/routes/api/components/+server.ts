@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createComponent } from '$lib/server/db/components';
-import { saveComponentWidgets } from '$lib/server/db/componentWidgets';
+import { saveComponentChildren } from '$lib/server/db/componentChildren';
 
 /**
  * POST /api/components
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       type: string;
       config: Record<string, unknown>;
       is_global?: boolean;
-      widgets?: Array<{
+      children?: Array<{
         id: string;
         type: string;
         position: number;
@@ -48,9 +48,9 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       is_global: data.is_global
     });
 
-    // Save component widgets if provided
-    if (data.widgets && data.widgets.length > 0) {
-      await saveComponentWidgets(db, component.id, data.widgets);
+    // Save component children if provided
+    if (data.children && data.children.length > 0) {
+      await saveComponentChildren(db, component.id, data.children);
     }
 
     return json({ componentId: component.id, component });

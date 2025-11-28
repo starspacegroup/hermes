@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import BuilderCanvas from '$lib/components/builder/BuilderCanvas.svelte';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageComponent } from '$lib/types/pages';
 
-describe('Yield Widget Protection in Layout Mode', () => {
-  const mockYieldWidget: PageWidget = {
+describe('Yield Component Protection in Layout Mode', () => {
+  const mockYieldComponent: PageComponent = {
     id: 'yield-1',
     page_id: '1',
     type: 'yield',
@@ -14,7 +14,7 @@ describe('Yield Widget Protection in Layout Mode', () => {
     updated_at: Date.now()
   };
 
-  const mockTextWidget: PageWidget = {
+  const mockTextComponent: PageComponent = {
     id: 'text-1',
     page_id: '1',
     type: 'text',
@@ -24,13 +24,13 @@ describe('Yield Widget Protection in Layout Mode', () => {
     updated_at: Date.now()
   };
 
-  it('hides delete button for Yield widget in layout mode', () => {
+  it('hides delete button for Yield Component in layout mode', () => {
     const { container } = render(BuilderCanvas, {
       props: {
         mode: 'layout',
-        widgets: [mockYieldWidget],
-        selectedWidget: mockYieldWidget,
-        hoveredWidget: null,
+        pageComponents: [mockYieldComponent],
+        selectedComponent: mockYieldComponent,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop',
         colorTheme: 'default',
         userCurrentThemeId: 'default',
@@ -38,18 +38,18 @@ describe('Yield Widget Protection in Layout Mode', () => {
       }
     });
 
-    // The delete button should not be present for yield widget in layout mode
+    // The delete button should not be present for Yield Component in layout mode
     const deleteButtons = container.querySelectorAll('.btn-danger');
     expect(deleteButtons.length).toBe(0);
   });
 
-  it('shows delete button for non-Yield widgets in layout mode', () => {
+  it('shows delete button for non-Yield Components in layout mode', () => {
     const { container } = render(BuilderCanvas, {
       props: {
         mode: 'layout',
-        widgets: [mockTextWidget],
-        selectedWidget: mockTextWidget,
-        hoveredWidget: null,
+        pageComponents: [mockTextComponent],
+        selectedComponent: mockTextComponent,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop',
         colorTheme: 'default',
         userCurrentThemeId: 'default',
@@ -57,18 +57,18 @@ describe('Yield Widget Protection in Layout Mode', () => {
       }
     });
 
-    // The delete button should be present for non-yield widgets
+    // The delete button should be present for non-Yield Components
     const deleteButtons = container.querySelectorAll('.btn-danger');
     expect(deleteButtons.length).toBe(1);
   });
 
-  it('shows delete button for Yield widget in page mode', () => {
+  it('shows delete button for Yield Component in page mode', () => {
     const { container } = render(BuilderCanvas, {
       props: {
         mode: 'page',
-        widgets: [mockYieldWidget],
-        selectedWidget: mockYieldWidget,
-        hoveredWidget: null,
+        pageComponents: [mockYieldComponent],
+        selectedComponent: mockYieldComponent,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop',
         colorTheme: 'default',
         userCurrentThemeId: 'default',
@@ -76,20 +76,20 @@ describe('Yield Widget Protection in Layout Mode', () => {
       }
     });
 
-    // The delete button should be present for yield widgets in page mode
+    // The delete button should be present for Yield Components in page mode
     const deleteButtons = container.querySelectorAll('.btn-danger');
     expect(deleteButtons.length).toBe(1);
   });
 
-  it('prevents deletion event from being dispatched for Yield widget in layout mode', () => {
+  it('prevents deletion event from being dispatched for Yield Component in layout mode', () => {
     const deleteWidgetSpy = vi.fn();
 
     const { component, container } = render(BuilderCanvas, {
       props: {
         mode: 'layout',
-        widgets: [mockYieldWidget, mockTextWidget],
-        selectedWidget: mockYieldWidget,
-        hoveredWidget: null,
+        pageComponents: [mockYieldComponent, mockTextComponent],
+        selectedComponent: mockYieldComponent,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop',
         colorTheme: 'default',
         userCurrentThemeId: 'default',
@@ -99,7 +99,7 @@ describe('Yield Widget Protection in Layout Mode', () => {
 
     component.$on('deleteWidget', deleteWidgetSpy);
 
-    // Since the delete button should not exist for yield widget, we can't click it
+    // Since the delete button should not exist for Yield Component, we can't click it
     const deleteButtons = container.querySelectorAll('.btn-danger');
     expect(deleteButtons.length).toBe(0);
     expect(deleteWidgetSpy).not.toHaveBeenCalled();

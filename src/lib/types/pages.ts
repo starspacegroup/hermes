@@ -1,10 +1,10 @@
 /**
- * Page and Widget types for WYSIWYG page editor
+ * Page and Component types for WYSIWYG page editor
  */
 
 export type PageStatus = 'draft' | 'published';
 
-export type WidgetType =
+export type ComponentType =
   | 'single_product'
   | 'product_list'
   | 'text'
@@ -20,10 +20,15 @@ export type WidgetType =
   | 'cta'
   | 'navbar'
   | 'footer'
-  | 'yield' // Special widget type for layouts - renders page content
+  | 'yield' // Special component type for layouts - renders page content
   | 'container' // Container with padding and background
   | 'flex' // Flexible layout container (flex or grid)
-  | 'component_ref'; // Reference to a component (renders component's widget composition)
+  | 'component_ref'; // Reference to a saved component (renders component's composition)
+
+/**
+ * @deprecated Use ComponentType instead
+ */
+export type WidgetType = ComponentType;
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -85,52 +90,69 @@ export interface Layout {
   updated_at: string;
 }
 
-export interface LayoutWidget {
+export interface LayoutComponent {
   id: string;
   layout_id: number;
-  type: WidgetType;
-  config: WidgetConfig;
+  type: ComponentType;
+  config: ComponentConfig;
   position: number;
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * @deprecated Use LayoutComponent instead
+ */
+export type LayoutWidget = LayoutComponent;
 
 export interface Component {
   id: number;
   site_id: string;
   name: string;
   description?: string;
-  type: string; // Widget type this component represents (kept for backward compatibility)
+  type: string; // Component type this represents (kept for backward compatibility)
   config: Record<string, unknown>; // JSON configuration (kept for backward compatibility)
   is_global: boolean; // If true, available to all sites (system component)
   created_at: string;
   updated_at: string;
 }
 
-export interface ComponentWidget {
+export interface ChildComponent {
   id: string;
   component_id: number;
-  type: WidgetType;
-  config: WidgetConfig;
+  type: ComponentType;
+  config: ComponentConfig;
   position: number;
-  parent_id?: string; // Parent widget ID for nested widgets
+  parent_id?: string; // Parent component ID for nested components
   created_at: string;
   updated_at: string;
 }
 
-export interface ComponentWithWidgets extends Component {
-  widgets: ComponentWidget[];
+/**
+ * @deprecated Use ChildComponent instead
+ */
+export type ComponentWidget = ChildComponent;
+
+export interface ComponentWithChildren extends Component {
+  children: ChildComponent[];
 }
 
-export interface PageWidget {
+/**
+ * @deprecated Use ComponentWithChildren instead
+ */
+export type ComponentWithWidgets = ComponentWithChildren & {
+  widgets: ChildComponent[];
+};
+
+export interface PageComponent {
   id: string;
   page_id: string;
-  type: WidgetType;
-  config: WidgetConfig;
+  type: ComponentType;
+  config: ComponentConfig;
   position: number;
   created_at: number;
   updated_at: number;
-  // Child-specific flex/grid properties (when widget is inside a flex/grid container)
+  // Child-specific flex/grid properties (when component is inside a flex/grid container)
   flexChildProps?: {
     flexGrow?: ResponsiveValue<number>;
     flexShrink?: ResponsiveValue<number>;
@@ -143,6 +165,11 @@ export interface PageWidget {
     justifySelf?: ResponsiveValue<'auto' | 'start' | 'center' | 'end' | 'stretch'>;
   };
 }
+
+/**
+ * @deprecated Use PageComponent instead
+ */
+export type PageWidget = PageComponent;
 
 // Responsive value type - allows different values per breakpoint
 export interface ResponsiveValue<T> {
@@ -296,13 +323,13 @@ export interface ResponsiveStyles {
   textAlign?: ResponsiveValue<'left' | 'center' | 'right' | 'justify'>;
 }
 
-// Widget configuration types
-export interface WidgetConfig {
+// Component configuration types
+export interface ComponentConfig {
   // Common fields
   id?: string;
-  anchorName?: string; // Optional anchor name for linking to this widget (e.g., /#section-name)
+  anchorName?: string; // Optional anchor name for linking to this component (e.g., /#section-name)
   styles?: ResponsiveStyles;
-  themeOverrides?: Partial<ThemeColors>; // Widget-specific theme color overrides
+  themeOverrides?: Partial<ThemeColors>; // Component-specific theme color overrides
 
   // Advanced styling properties (responsive)
   boxShadow?: ResponsiveValue<ShadowConfig | ShadowConfig[]>; // Support multiple shadows
@@ -366,13 +393,13 @@ export interface WidgetConfig {
     | 'luminosity'
   >;
 
-  // Single product widget
+  // Single product component
   productId?: string;
   showPrice?: boolean;
   showDescription?: boolean;
   layout?: 'card' | 'inline' | 'detailed';
 
-  // Product list widget
+  // Product list component
   category?: string;
   tags?: string[];
   limit?: number;
@@ -380,7 +407,7 @@ export interface WidgetConfig {
   sortOrder?: 'asc' | 'desc';
   columns?: ResponsiveValue<number>;
 
-  // Text widget
+  // Text component
   text?: string;
   html?: string;
   alignment?: 'left' | 'center' | 'right' | 'justify';
@@ -389,11 +416,11 @@ export interface WidgetConfig {
   fontSize?: number;
   lineHeight?: number;
 
-  // Heading widget
+  // Heading component
   level?: 1 | 2 | 3 | 4 | 5 | 6;
   heading?: string;
 
-  // Image widget
+  // Image component
   src?: string;
   alt?: string;
   width?: number | string;
@@ -402,7 +429,7 @@ export interface WidgetConfig {
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   link?: string;
 
-  // Hero widget
+  // Hero component
   title?: string;
   subtitle?: string;
   titleColor?: string | ThemeSpecificColor;
@@ -420,7 +447,7 @@ export interface WidgetConfig {
   ctaFontWeight?: string;
   contentAlign?: 'left' | 'center' | 'right';
 
-  // Button widget
+  // Button component
   label?: string;
   url?: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'text';
@@ -429,22 +456,22 @@ export interface WidgetConfig {
   icon?: string;
   openInNewTab?: boolean;
 
-  // Spacer widget
+  // Spacer component
   space?: ResponsiveValue<number>;
 
-  // Columns widget
+  // Columns component
   columnCount?: ResponsiveValue<number>;
   gap?: ResponsiveValue<number>;
   verticalAlign?: 'stretch' | 'start' | 'center' | 'end';
-  children?: PageWidget[];
+  children?: PageComponent[];
 
-  // Divider widget
+  // Divider component
   thickness?: number;
   dividerColor?: string | ThemeSpecificColor;
   dividerStyle?: 'solid' | 'dashed' | 'dotted';
   spacing?: ResponsiveValue<number>;
 
-  // Features widget
+  // Features component
   features?: Array<{
     icon: string;
     title: string;
@@ -457,9 +484,9 @@ export interface WidgetConfig {
   featuresGap?: ResponsiveValue<number>;
   featuresLimit?: ResponsiveValue<number>; // Max number of features to display per breakpoint
 
-  // Pricing widget
+  // Pricing component
   tagline?: string;
-  pricingFeatures?: string[]; // Simple string list for pricing widget
+  pricingFeatures?: string[]; // Simple string list for pricing
   tiers?: Array<{
     range: string;
     fee: string;
@@ -468,7 +495,7 @@ export interface WidgetConfig {
   }>;
   ctaNote?: string;
 
-  // CTA widget (and Hero widget's secondary CTA)
+  // CTA component (and Hero component's secondary CTA)
   primaryCtaText?: string;
   primaryCtaLink?: string;
   secondaryCtaText?: string;
@@ -479,8 +506,8 @@ export interface WidgetConfig {
   secondaryCtaFontSize?: string;
   secondaryCtaFontWeight?: string;
 
-  // Component reference widget (component_ref type)
-  componentId?: number; // Reference to a component - renders its widget composition
+  // Component reference (component_ref type)
+  componentId?: number; // Reference to a saved component - renders its composition
   logo?: {
     text?: string;
     image?: string;
@@ -526,7 +553,7 @@ export interface WidgetConfig {
   dropdownTextColor?: string | ThemeSpecificColor; // Dropdown text color
   dropdownHoverBackground?: string | ThemeSpecificColor; // Dropdown hover background
 
-  // Footer widget (references a component)
+  // Footer component
   copyright?: string;
   footerLinks?: Array<{
     text: string;
@@ -540,10 +567,10 @@ export interface WidgetConfig {
   footerBackground?: string | ThemeSpecificColor;
   footerTextColor?: string | ThemeSpecificColor;
 
-  // Yield widget (special - renders page content in layout)
+  // Yield component (special - renders page content in layout)
   // No configuration needed - just a placeholder
 
-  // Container widget - wraps content with padding and background (horizontal row layout)
+  // Container component - wraps content with padding and background (horizontal row layout)
   containerPadding?: ResponsiveValue<SpacingConfig>;
   containerMargin?: ResponsiveValue<SpacingConfig>;
   containerBackground?: string | ThemeSpecificColor;
@@ -621,7 +648,7 @@ export interface WidgetConfig {
   containerCursor?: ResponsiveValue<string>;
   containerPointerEvents?: ResponsiveValue<'auto' | 'none'>;
 
-  // Row widget - horizontal flexbox layout
+  // Row component - horizontal flexbox layout
   rowGap?: ResponsiveValue<number>;
   rowJustifyContent?:
     | 'flex-start'
@@ -635,7 +662,7 @@ export interface WidgetConfig {
   rowPadding?: ResponsiveValue<SpacingConfig>;
   rowBackground?: string | ThemeSpecificColor;
 
-  // Flex widget - flexible container (grid or flex)
+  // Flex component - flexible container (grid or flex)
   // Core flex properties
   flexDirection?: ResponsiveValue<'row' | 'column' | 'row-reverse' | 'column-reverse'>;
   flexWrap?: ResponsiveValue<'nowrap' | 'wrap' | 'wrap-reverse'>;
@@ -689,9 +716,21 @@ export interface WidgetConfig {
   // These would be stored per-child in the children array
 }
 
-export interface PageWithWidgets extends Page {
-  widgets: PageWidget[];
+/**
+ * @deprecated Use ComponentConfig instead
+ */
+export type WidgetConfig = ComponentConfig;
+
+export interface PageWithComponents extends Page {
+  components: PageComponent[];
 }
+
+/**
+ * @deprecated Use PageWithComponents instead
+ */
+export type PageWithWidgets = PageWithComponents & {
+  widgets: PageComponent[];
+};
 
 // Form data for creating/updating pages
 export interface PageFormData {
@@ -701,12 +740,17 @@ export interface PageFormData {
   content?: string;
 }
 
-// Form data for creating/updating widgets
-export interface WidgetFormData {
-  type: WidgetType;
-  config: WidgetConfig;
+// Form data for creating/updating components
+export interface ComponentFormData {
+  type: ComponentType;
+  config: ComponentConfig;
   position: number;
 }
+
+/**
+ * @deprecated Use ComponentFormData instead
+ */
+export type WidgetFormData = ComponentFormData;
 
 // Page revision for history tracking (Git-like system)
 export interface PageRevision {
@@ -718,7 +762,7 @@ export interface PageRevision {
   slug: string;
   status: PageStatus;
   color_theme?: string;
-  widgets_snapshot: string; // JSON string of PageWidget[]
+  widgets_snapshot: string; // JSON string of PageComponent[] - DB column name preserved
   created_by?: string;
   created_at: number;
   is_published: boolean;
@@ -732,9 +776,9 @@ export interface RevisionNode extends ParsedPageRevision {
   branch: number; // Branch number for graph layout
 }
 
-// Parsed revision with widgets as objects
+// Parsed revision with components as objects (widgets_snapshot parsed to components)
 export interface ParsedPageRevision extends Omit<PageRevision, 'widgets_snapshot'> {
-  widgets: PageWidget[];
+  components: PageComponent[];
 }
 
 // Form data for creating revisions
@@ -743,6 +787,6 @@ export interface CreateRevisionData {
   slug: string;
   status: PageStatus;
   colorTheme?: string;
-  widgets: PageWidget[];
+  components: PageComponent[];
   notes?: string;
 }

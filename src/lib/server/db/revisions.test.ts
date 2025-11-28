@@ -70,7 +70,7 @@ describe('Revisions Database Functions', () => {
       expect(mockStatement.bind).toHaveBeenCalledWith(siteId, pageId);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(revisionId);
-      expect(result[0].widgets).toEqual([mockWidget]);
+      expect(result[0].components).toEqual([mockWidget]);
     });
 
     it('should parse widgets snapshot into array', async () => {
@@ -83,8 +83,8 @@ describe('Revisions Database Functions', () => {
 
       const result = await getPageRevisions(mockDb, siteId, pageId);
 
-      expect(result[0].widgets).toBeInstanceOf(Array);
-      expect(result[0].widgets[0].id).toBe('widget-1');
+      expect(result[0].components).toBeInstanceOf(Array);
+      expect(result[0].components[0].id).toBe('widget-1');
     });
 
     it('should return empty array when no revisions exist', async () => {
@@ -129,7 +129,7 @@ describe('Revisions Database Functions', () => {
       expect(mockStatement.bind).toHaveBeenCalledWith(siteId, pageId, revisionId);
       expect(result).not.toBeNull();
       expect(result!.id).toBe(revisionId);
-      expect(result!.widgets).toEqual([mockWidget]);
+      expect(result!.components).toEqual([mockWidget]);
     });
 
     it('should return null when revision not found', async () => {
@@ -152,7 +152,7 @@ describe('Revisions Database Functions', () => {
       slug: 'new-revision',
       status: 'draft' as const,
       colorTheme: 'dark',
-      widgets: [mockWidget],
+      components: [mockWidget],
       notes: 'Test revision',
       created_by: 'user-1'
     };
@@ -184,7 +184,7 @@ describe('Revisions Database Functions', () => {
       expect(result.title).toBe(createData.title);
       expect(result.revision_hash).toBeDefined();
       expect(result.revision_hash.length).toBe(8);
-      expect(result.widgets).toEqual(createData.widgets);
+      expect(result.components).toEqual(createData.components);
     });
 
     it('should generate unique revision hash', async () => {
@@ -279,7 +279,7 @@ describe('Revisions Database Functions', () => {
         title: 'Minimal',
         slug: 'minimal',
         status: 'draft' as const,
-        widgets: []
+        components: []
       };
 
       const result = await createRevision(mockDb, siteId, pageId, minimalData);
@@ -403,7 +403,7 @@ describe('Revisions Database Functions', () => {
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('is_published = 1'));
       expect(result).not.toBeNull();
       expect(result!.is_published).toBe(1);
-      expect(result!.widgets).toEqual([mockWidget]);
+      expect(result!.components).toEqual([mockWidget]);
     });
 
     it('should return null when no published revision exists', async () => {

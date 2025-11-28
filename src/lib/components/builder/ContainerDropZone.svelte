@@ -1,10 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { Plus } from 'lucide-svelte';
-  import type { PageWidget } from '$lib/types/pages';
+  import type { PageComponent } from '$lib/types/pages';
 
   export let containerId: string;
-  export let children: PageWidget[] = [];
+  export let children: PageComponent[] = [];
   export let isActive = false;
   export let allowedTypes: string[] = [];
   export let containerStyles = '';
@@ -12,7 +12,7 @@
   export let showLayoutHints = true;
 
   const dispatch = createEventDispatcher<{
-    drop: { containerId: string; widgetType: string; insertIndex: number };
+    drop: { containerId: string; componentType: string; insertIndex: number };
     reorder: { containerId: string; fromIndex: number; toIndex: number };
     childClick: { childId: string };
   }>();
@@ -24,12 +24,12 @@
     event.preventDefault();
     if (!event.dataTransfer) return;
 
-    const widgetType = event.dataTransfer.types.includes('widget-type')
-      ? event.dataTransfer.getData('widget-type')
+    const componentType = event.dataTransfer.types.includes('component-type')
+      ? event.dataTransfer.getData('component-type')
       : null;
-    const isReorder = event.dataTransfer.types.includes('widget-reorder');
+    const isReorder = event.dataTransfer.types.includes('component-reorder');
 
-    if (widgetType && allowedTypes.length > 0 && !allowedTypes.includes(widgetType)) {
+    if (componentType && allowedTypes.length > 0 && !allowedTypes.includes(componentType)) {
       event.dataTransfer.dropEffect = 'none';
       return;
     }
@@ -38,7 +38,7 @@
     isDragOver = true;
 
     const dropZone = event.currentTarget as HTMLElement;
-    const childElements = Array.from(dropZone.querySelectorAll('.child-widget'));
+    const childElements = Array.from(dropZone.querySelectorAll('.child-component'));
 
     if (childElements.length === 0) {
       dropIndicatorIndex = 0;
@@ -83,8 +83,8 @@
     dropIndicatorIndex = null;
 
     // Check if this is a reorder operation
-    if (event.dataTransfer.types.includes('widget-reorder')) {
-      const fromIndex = parseInt(event.dataTransfer.getData('widget-reorder'));
+    if (event.dataTransfer.types.includes('component-reorder')) {
+      const fromIndex = parseInt(event.dataTransfer.getData('component-reorder'));
       const fromContainerId = event.dataTransfer.getData('container-id');
 
       if (fromContainerId === containerId && !isNaN(fromIndex)) {
@@ -93,15 +93,15 @@
       return;
     }
 
-    // Handle new widget drop
-    const widgetType = event.dataTransfer.getData('widget-type');
-    if (widgetType) {
+    // Handle new component drop
+    const componentType = event.dataTransfer.getData('component-type');
+    if (componentType) {
       // Check if allowed
-      if (allowedTypes.length > 0 && !allowedTypes.includes(widgetType)) {
+      if (allowedTypes.length > 0 && !allowedTypes.includes(componentType)) {
         return;
       }
 
-      dispatch('drop', { containerId, widgetType, insertIndex });
+      dispatch('drop', { containerId, componentType, insertIndex });
     }
   }
 
@@ -109,7 +109,7 @@
     if (!event.dataTransfer) return;
 
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('widget-reorder', index.toString());
+    event.dataTransfer.setData('component-reorder', index.toString());
     event.dataTransfer.setData('container-id', containerId);
 
     // Set a transparent drag image
@@ -134,18 +134,18 @@
   on:dragleave={handleDragLeave}
   on:drop={handleDrop}
   role="region"
-  aria-label="Widget drop zone"
+  aria-label="Component drop zone"
 >
   {#if children.length === 0}
     <div class="empty-state">
       <Plus size={32} />
-      <p>Drop widgets here</p>
+      <p>Drop components here</p>
       <span class="hint">Drag from the sidebar</span>
     </div>
   {:else}
     {#each children as child, index (child.id)}
       <div
-        class="child-widget"
+        class="child-component"
         draggable="true"
         on:dragstart={(e) => handleChildDragStart(e, index)}
         on:click|stopPropagation={() => dispatch('childClick', { childId: child.id })}
@@ -287,31 +287,31 @@
     opacity: 0.7;
   }
 
-  .child-widget {
+  .child-component {
     position: relative;
     cursor: pointer;
   }
 
-  .child-widget:hover {
+  .child-component:hover {
     opacity: 0.8;
   }
 
   /* Only add margin for block layouts, flex/grid handle spacing via gap */
-  .container-drop-zone:not(.flex-layout):not(.grid-layout) .child-widget {
+  .container-drop-zone:not(.flex-layout):not(.grid-layout) .child-component {
     margin-bottom: 8px;
   }
 
-  .container-drop-zone:not(.flex-layout):not(.grid-layout) .child-widget:last-child {
+  .container-drop-zone:not(.flex-layout):not(.grid-layout) .child-component:last-child {
     margin-bottom: 0;
   }
 
-  /* Add subtle outlines for child widgets in layout mode */
-  .show-hints .child-widget {
+  /* Add subtle outlines for child components in layout mode */
+  .show-hints .child-component {
     outline: 1px dashed rgba(59, 130, 246, 0.2);
     outline-offset: -1px;
   }
 
-  .show-hints.grid-layout .child-widget {
+  .show-hints.grid-layout .child-component {
     outline-color: rgba(16, 185, 129, 0.2);
   }
 
@@ -347,7 +347,7 @@
   }
 
   /* Drag preview styling */
-  :global(.child-widget.dragging) {
+  :global(.child-component.dragging) {
     opacity: 0.5;
     transform: scale(0.98);
   }

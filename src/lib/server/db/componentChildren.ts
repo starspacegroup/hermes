@@ -1,45 +1,53 @@
 /**
- * Database operations for component widgets (widget composition of components)
+ * Database operations for component children (child composition of components)
  */
 
 import type { ComponentWidget } from '$lib/types/pages';
 
+// Type alias for clarity - ComponentWidget represents a child component in the database
+type ComponentChild = ComponentWidget;
+
 /**
- * Get all widgets for a component
+ * Get all children for a component
  */
-export async function getComponentWidgets(
+export async function getComponentChildren(
   db: D1Database,
   componentId: number
-): Promise<ComponentWidget[]> {
+): Promise<ComponentChild[]> {
   try {
     const result = await db
       .prepare('SELECT * FROM component_widgets WHERE component_id = ? ORDER BY position ASC')
       .bind(componentId)
       .all();
 
-    const widgets = (result.results || []).map((widget) => ({
-      ...widget,
-      config: typeof widget.config === 'string' ? JSON.parse(widget.config) : widget.config
-    })) as ComponentWidget[];
+    const children = (result.results || []).map((child) => ({
+      ...child,
+      config: typeof child.config === 'string' ? JSON.parse(child.config) : child.config
+    })) as ComponentChild[];
 
-    return widgets;
+    return children;
   } catch (error) {
-    console.error('Failed to get component widgets:', error);
+    console.error('Failed to get component children:', error);
     throw error;
   }
 }
 
 /**
- * Get a single component widget by ID
+ * @deprecated Use getComponentChildren instead
  */
-export async function getComponentWidget(
+export const getComponentWidgets = getComponentChildren;
+
+/**
+ * Get a single component child by ID
+ */
+export async function getComponentChild(
   db: D1Database,
-  widgetId: string
-): Promise<ComponentWidget | null> {
+  childId: string
+): Promise<ComponentChild | null> {
   try {
     const result = await db
       .prepare('SELECT * FROM component_widgets WHERE id = ?')
-      .bind(widgetId)
+      .bind(childId)
       .first();
 
     if (!result) {
@@ -49,17 +57,22 @@ export async function getComponentWidget(
     return {
       ...result,
       config: typeof result.config === 'string' ? JSON.parse(result.config) : result.config
-    } as ComponentWidget;
+    } as ComponentChild;
   } catch (error) {
-    console.error('Failed to get component widget:', error);
+    console.error('Failed to get component child:', error);
     throw error;
   }
 }
 
 /**
- * Create a new component widget
+ * @deprecated Use getComponentChild instead
  */
-export async function createComponentWidget(
+export const getComponentWidget = getComponentChild;
+
+/**
+ * Create a new component child
+ */
+export async function createComponentChild(
   db: D1Database,
   data: {
     id: string;
@@ -69,7 +82,7 @@ export async function createComponentWidget(
     config: Record<string, unknown>;
     parent_id?: string;
   }
-): Promise<ComponentWidget> {
+): Promise<ComponentChild> {
   try {
     const now = new Date().toISOString();
     const configJson = JSON.stringify(data.config);
@@ -94,7 +107,7 @@ export async function createComponentWidget(
     return {
       id: data.id,
       component_id: data.component_id,
-      type: data.type as ComponentWidget['type'],
+      type: data.type as ComponentChild['type'],
       position: data.position,
       config: data.config,
       parent_id: data.parent_id,
@@ -102,17 +115,22 @@ export async function createComponentWidget(
       updated_at: now
     };
   } catch (error) {
-    console.error('Failed to create component widget:', error);
+    console.error('Failed to create component child:', error);
     throw error;
   }
 }
 
 /**
- * Update a component widget
+ * @deprecated Use createComponentChild instead
  */
-export async function updateComponentWidget(
+export const createComponentWidget = createComponentChild;
+
+/**
+ * Update a component child
+ */
+export async function updateComponentChild(
   db: D1Database,
-  widgetId: string,
+  childId: string,
   data: {
     type?: string;
     position?: number;
@@ -147,52 +165,67 @@ export async function updateComponentWidget(
     updates.push('updated_at = ?');
     values.push(new Date().toISOString());
 
-    values.push(widgetId);
+    values.push(childId);
 
     await db
       .prepare(`UPDATE component_widgets SET ${updates.join(', ')} WHERE id = ?`)
       .bind(...values)
       .run();
   } catch (error) {
-    console.error('Failed to update component widget:', error);
+    console.error('Failed to update component child:', error);
     throw error;
   }
 }
 
 /**
- * Delete a component widget
+ * @deprecated Use updateComponentChild instead
  */
-export async function deleteComponentWidget(db: D1Database, widgetId: string): Promise<void> {
+export const updateComponentWidget = updateComponentChild;
+
+/**
+ * Delete a component child
+ */
+export async function deleteComponentChild(db: D1Database, childId: string): Promise<void> {
   try {
-    await db.prepare('DELETE FROM component_widgets WHERE id = ?').bind(widgetId).run();
+    await db.prepare('DELETE FROM component_widgets WHERE id = ?').bind(childId).run();
   } catch (error) {
-    console.error('Failed to delete component widget:', error);
+    console.error('Failed to delete component child:', error);
     throw error;
   }
 }
 
 /**
- * Delete all widgets for a component
+ * @deprecated Use deleteComponentChild instead
  */
-export async function deleteComponentWidgets(db: D1Database, componentId: number): Promise<void> {
+export const deleteComponentWidget = deleteComponentChild;
+
+/**
+ * Delete all children for a component
+ */
+export async function deleteComponentChildren(db: D1Database, componentId: number): Promise<void> {
   try {
     await db
       .prepare('DELETE FROM component_widgets WHERE component_id = ?')
       .bind(componentId)
       .run();
   } catch (error) {
-    console.error('Failed to delete component widgets:', error);
+    console.error('Failed to delete component children:', error);
     throw error;
   }
 }
 
 /**
- * Bulk save component widgets (delete all existing and create new ones)
+ * @deprecated Use deleteComponentChildren instead
  */
-export async function saveComponentWidgets(
+export const deleteComponentWidgets = deleteComponentChildren;
+
+/**
+ * Bulk save component children (delete all existing and create new ones)
+ */
+export async function saveComponentChildren(
   db: D1Database,
   componentId: number,
-  widgets: Array<{
+  children: Array<{
     id: string;
     type: string;
     position: number;
@@ -201,18 +234,23 @@ export async function saveComponentWidgets(
   }>
 ): Promise<void> {
   try {
-    // Delete all existing widgets
-    await deleteComponentWidgets(db, componentId);
+    // Delete all existing children
+    await deleteComponentChildren(db, componentId);
 
-    // Insert new widgets
-    for (const widget of widgets) {
-      await createComponentWidget(db, {
-        ...widget,
+    // Insert new children
+    for (const child of children) {
+      await createComponentChild(db, {
+        ...child,
         component_id: componentId
       });
     }
   } catch (error) {
-    console.error('Failed to save component widgets:', error);
+    console.error('Failed to save component children:', error);
     throw error;
   }
 }
+
+/**
+ * @deprecated Use saveComponentChildren instead
+ */
+export const saveComponentWidgets = saveComponentChildren;

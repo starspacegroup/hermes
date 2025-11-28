@@ -1,9 +1,23 @@
 /**
- * Database operations for components (reusable widgets)
+ * Database operations for components (reusable components)
  */
 
 import type { Component, ComponentWithWidgets } from '$lib/types/pages';
-import { getComponentWidgets, saveComponentWidgets } from './componentWidgets';
+import { getComponentChildren, saveComponentChildren } from './componentChildren';
+
+// Re-export deprecated aliases for backward compatibility
+export { getComponentWidgets, saveComponentWidgets } from './componentChildren';
+
+/**
+ * Type alias for backward compatibility
+ * @deprecated Use ComponentWithChildren instead
+ */
+export type ComponentWithWidgetsAlias = ComponentWithWidgets;
+
+/**
+ * Type alias for components with their child composition
+ */
+export type ComponentWithChildren = ComponentWithWidgets;
 
 /**
  * Get all components for a site (including global components)
@@ -134,15 +148,15 @@ export async function createComponent(
       is_global: Boolean(result.is_global)
     } as Component;
 
-    // If widgets were provided, save them
+    // If children were provided, save them
     if (data.widgets && data.widgets.length > 0) {
-      const widgetsWithIds = data.widgets.map((w, index) => ({
-        id: `widget-${Date.now()}-${index}`,
+      const childrenWithIds = data.widgets.map((w, index) => ({
+        id: `child-${Date.now()}-${index}`,
         type: w.type,
         config: w.config,
         position: w.position
       }));
-      await saveComponentWidgets(db, component.id, widgetsWithIds);
+      await saveComponentChildren(db, component.id, childrenWithIds);
     }
 
     return component;
@@ -293,35 +307,41 @@ export async function isComponentInUse(
 }
 
 /**
- * Get a component with its widget composition
+ * Get a component with its child composition
  */
-export async function getComponentWithWidgets(
+export async function getComponentWithChildren(
   db: D1Database,
   siteId: string,
   componentId: number
-): Promise<ComponentWithWidgets | null> {
+): Promise<ComponentWithChildren | null> {
   try {
     const component = await getComponent(db, siteId, componentId);
     if (!component) {
       return null;
     }
 
-    const widgets = await getComponentWidgets(db, componentId);
+    const children = await getComponentChildren(db, componentId);
 
     return {
       ...component,
-      widgets
+      children,
+      widgets: children // Backward compatibility
     };
   } catch (error) {
-    console.error('Failed to get component with widgets:', error);
+    console.error('Failed to get component with children:', error);
     throw error;
   }
 }
 
 /**
- * Save a component with its widget composition
+ * @deprecated Use getComponentWithChildren instead
  */
-export async function saveComponentWithWidgets(
+export const getComponentWithWidgets = getComponentWithChildren;
+
+/**
+ * Save a component with its child composition
+ */
+export async function saveComponentWithChildren(
   db: D1Database,
   siteId: string,
   componentId: number,
@@ -329,7 +349,7 @@ export async function saveComponentWithWidgets(
     name?: string;
     description?: string;
     type?: string;
-    widgets: Array<{
+    children: Array<{
       id: string;
       type: string;
       position: number;
@@ -337,7 +357,7 @@ export async function saveComponentWithWidgets(
       parent_id?: string;
     }>;
   }
-): Promise<ComponentWithWidgets> {
+): Promise<ComponentWithChildren> {
   try {
     // Update component metadata
     const component = await updateComponent(db, siteId, componentId, {
@@ -346,21 +366,27 @@ export async function saveComponentWithWidgets(
       type: data.type
     });
 
-    // Save widgets
-    await saveComponentWidgets(db, componentId, data.widgets);
+    // Save children
+    await saveComponentChildren(db, componentId, data.children);
 
-    // Get updated widgets
-    const widgets = await getComponentWidgets(db, componentId);
+    // Get updated children
+    const children = await getComponentChildren(db, componentId);
 
     return {
       ...component,
-      widgets
+      children,
+      widgets: children // Backward compatibility
     };
   } catch (error) {
-    console.error('Failed to save component with widgets:', error);
+    console.error('Failed to save component with children:', error);
     throw error;
   }
 }
+
+/**
+ * @deprecated Use saveComponentWithChildren instead
+ */
+export const saveComponentWithWidgets = saveComponentWithChildren;
 
 /**
  * Reset a built-in component to its original default configuration
@@ -382,7 +408,7 @@ export async function resetBuiltInComponent(
       .bind(JSON.stringify(defaultConfig), componentId)
       .run();
 
-    // Delete any existing component widgets (reset to clean state)
+    // Delete any existing component children (reset to clean state)
     await db
       .prepare('DELETE FROM component_widgets WHERE component_id = ?')
       .bind(componentId)

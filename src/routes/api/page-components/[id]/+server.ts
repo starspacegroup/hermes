@@ -4,12 +4,12 @@ import * as pagesDb from '$lib/server/db/pages';
 import type { RequestHandler } from './$types';
 
 /**
- * PUT /api/widgets/[id]
- * Update a widget
+ * PUT /api/page-components/[id]
+ * Update a page component
  */
 export const PUT: RequestHandler = async ({ params, request, platform }) => {
   const db = getDB(platform);
-  const widgetId = params.id;
+  const componentId = params.id;
 
   try {
     const data = (await request.json()) as {
@@ -18,39 +18,39 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
       position?: number;
     };
 
-    const updateData: pagesDb.UpdateWidgetData = {
+    const updateData: pagesDb.UpdatePageComponentData = {
       type: data.type as 'single_product' | 'product_list' | 'text' | 'image' | undefined,
       config: data.config,
       position: data.position
     };
 
-    const widget = await pagesDb.updateWidget(db, widgetId, updateData);
-    if (!widget) {
-      throw error(404, 'Widget not found');
+    const component = await pagesDb.updatePageComponent(db, componentId, updateData);
+    if (!component) {
+      throw error(404, 'Page component not found');
     }
 
-    return json(widget);
+    return json(component);
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {
       throw err;
     }
-    console.error('Error updating widget:', err);
-    throw error(500, 'Failed to update widget');
+    console.error('Error updating page component:', err);
+    throw error(500, 'Failed to update page component');
   }
 };
 
 /**
- * DELETE /api/widgets/[id]
- * Delete a widget
+ * DELETE /api/page-components/[id]
+ * Delete a page component
  */
 export const DELETE: RequestHandler = async ({ params, platform }) => {
   const db = getDB(platform);
-  const widgetId = params.id;
+  const componentId = params.id;
 
   try {
-    const deleted = await pagesDb.deleteWidget(db, widgetId);
+    const deleted = await pagesDb.deletePageComponent(db, componentId);
     if (!deleted) {
-      throw error(404, 'Widget not found');
+      throw error(404, 'Page component not found');
     }
 
     return json({ success: true });
@@ -58,7 +58,7 @@ export const DELETE: RequestHandler = async ({ params, platform }) => {
     if (err && typeof err === 'object' && 'status' in err) {
       throw err;
     }
-    console.error('Error deleting widget:', err);
-    throw error(500, 'Failed to delete widget');
+    console.error('Error deleting page component:', err);
+    throw error(500, 'Failed to delete page component');
   }
 };

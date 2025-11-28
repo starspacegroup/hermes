@@ -38,9 +38,9 @@ export const load: PageServerLoad = async ({
       }
     }
 
-    // Fetch widgets from published revision (Builder content)
+    // Fetch components from published revision (Builder content)
     const publishedRevision = await getPublishedRevision(db, siteId, page.id);
-    const widgets = publishedRevision?.widgets || [];
+    const components = publishedRevision?.components || [];
 
     // Log page view (only for published pages, not previews)
     if (!isPreview && page.status === 'published') {
@@ -63,7 +63,7 @@ export const load: PageServerLoad = async ({
 
     return {
       page,
-      widgets,
+      components,
       colorTheme: page.colorTheme || null,
       isPreview: isPreview && page.status === 'draft',
       isAdmin: locals.isAdmin || false

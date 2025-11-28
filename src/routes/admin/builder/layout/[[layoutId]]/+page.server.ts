@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   if (!params.layoutId) {
     return {
       layout: null,
-      widgets: [
+      components: [
         {
           id: crypto.randomUUID(),
           layout_id: 0,
@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       ],
       revisions: [],
       colorThemes,
-      components,
+      customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
       isNewLayout: true
     };
@@ -83,12 +83,12 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
   return {
     layout,
-    widgets,
+    components: widgets,
     revisions,
     currentRevisionId: null,
     currentRevisionIsPublished: false,
     colorThemes,
-    components,
+    customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
     isNewLayout: false
   };

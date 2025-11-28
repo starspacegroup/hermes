@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let widgetType: string;
+  export let componentType: string;
   export let canMoveUp: boolean;
   export let canMoveDown: boolean;
 
@@ -12,7 +12,7 @@
 
   export let events: Events;
 
-  function getWidgetLabel(type: string): string {
+  function getComponentLabel(type: string): string {
     const labels: Record<string, string> = {
       text: 'Text Content',
       heading: 'Heading',
@@ -29,9 +29,9 @@
   }
 </script>
 
-<div class="widget-controls">
-  <div class="widget-label">{getWidgetLabel(widgetType)}</div>
-  <div class="widget-actions">
+<div class="component-controls">
+  <div class="component-label">{getComponentLabel(componentType)}</div>
+  <div class="component-actions">
     <button
       type="button"
       class="icon-btn-sm"
@@ -84,7 +84,7 @@
 </div>
 
 <style>
-  .widget-controls {
+  .component-controls {
     display: flex;
     position: absolute;
     top: -2.5rem;
@@ -99,14 +99,14 @@
     z-index: 10;
   }
 
-  .widget-label {
+  .component-label {
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-secondary);
     text-transform: uppercase;
   }
 
-  .widget-actions {
+  .component-actions {
     display: flex;
     gap: 0.25rem;
   }

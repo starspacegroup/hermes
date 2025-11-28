@@ -6,7 +6,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type {
   PageRevision,
   ParsedPageRevision,
-  PageWidget,
+  PageComponent,
   CreateRevisionData,
   RevisionNode
 } from '$lib/types/pages';
@@ -36,7 +36,7 @@ export async function getPageRevisions(
 
   return (result.results || []).map((rev) => ({
     ...rev,
-    widgets: JSON.parse(rev.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(rev.widgets_snapshot) as PageComponent[]
   }));
 }
 
@@ -65,7 +65,7 @@ export async function getRevisionById(
 
   return {
     ...result,
-    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
   };
 }
 
@@ -104,7 +104,7 @@ export async function createRevision(
 
   const revisionId = nanoid();
   const now = Math.floor(Date.now() / 1000);
-  const widgetsSnapshot = JSON.stringify(data.widgets);
+  const componentsSnapshot = JSON.stringify(data.components);
 
   await db
     .prepare(
@@ -125,7 +125,7 @@ export async function createRevision(
       data.slug,
       data.status,
       data.colorTheme || null,
-      widgetsSnapshot,
+      componentsSnapshot,
       data.created_by || null,
       now,
       data.status === 'published' ? 1 : 0,
@@ -142,7 +142,7 @@ export async function createRevision(
     slug: data.slug,
     status: data.status,
     color_theme: data.colorTheme || undefined,
-    widgets: data.widgets,
+    components: data.components,
     created_by: data.created_by,
     created_at: now,
     is_published: data.status === 'published',
@@ -177,7 +177,7 @@ export async function publishRevision(
     slug: revisionToPublish.slug,
     status: 'published',
     colorTheme: revisionToPublish.color_theme,
-    widgets: revisionToPublish.widgets,
+    components: revisionToPublish.components,
     notes: `Published from revision ${revisionToPublish.revision_hash}`,
     created_by: createdBy,
     parent_revision_id: currentPublished?.id || revisionToPublish.id
@@ -212,12 +212,12 @@ export async function publishRevision(
       )
   ];
 
-  // Delete all current widgets for the page
+  // Delete all current components for the page
   batch.push(db.prepare('DELETE FROM page_widgets WHERE page_id = ?').bind(pageId));
 
-  // Insert widgets from the new revision
-  for (const widget of newRevision.widgets) {
-    const widgetId = widget.id.startsWith('temp-') ? nanoid() : widget.id;
+  // Insert components from the new revision
+  for (const component of newRevision.components) {
+    const componentId = component.id.startsWith('temp-') ? nanoid() : component.id;
     batch.push(
       db
         .prepare(
@@ -227,12 +227,12 @@ export async function publishRevision(
         `
         )
         .bind(
-          widgetId,
+          componentId,
           pageId,
-          widget.type,
-          JSON.stringify(widget.config),
-          widget.position,
-          widget.created_at || Math.floor(Date.now() / 1000),
+          component.type,
+          JSON.stringify(component.config),
+          component.position,
+          component.created_at || Math.floor(Date.now() / 1000),
           Math.floor(Date.now() / 1000)
         )
     );
@@ -269,7 +269,7 @@ export async function getPublishedRevision(
 
   return {
     ...result,
-    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
   };
 }
 
@@ -299,7 +299,7 @@ export async function getMostRecentDraftRevision(
 
   return {
     ...result,
-    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
   };
 }
 

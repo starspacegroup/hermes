@@ -1,12 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { PageWidget, Breakpoint, ResponsiveValue } from '$lib/types/pages';
+  import type { PageComponent, Breakpoint, ResponsiveValue } from '$lib/types/pages';
 
-  export let widget: PageWidget;
+  export let component: PageComponent;
   export let currentBreakpoint: Breakpoint = 'desktop';
   export let isGridParent = false;
 
-  const dispatch = createEventDispatcher<{ update: PageWidget }>();
+  const dispatch = createEventDispatcher<{ update: PageComponent }>();
 
   // Helper to get responsive value
   function getResponsiveValue<T>(value: ResponsiveValue<T> | undefined, fallback: T): T {
@@ -29,7 +29,7 @@
   }
 
   // Current values for flex child props
-  $: flexChildProps = widget.flexChildProps || {};
+  $: flexChildProps = component.flexChildProps || {};
   $: flexGrow = getResponsiveValue(flexChildProps.flexGrow, 0);
   $: flexShrink = getResponsiveValue(flexChildProps.flexShrink, 1);
   $: flexBasis = getResponsiveValue(flexChildProps.flexBasis, 'auto');
@@ -42,7 +42,7 @@
 
   function updateFlexChildProps(updates: Partial<typeof flexChildProps>): void {
     const updatedWidget = {
-      ...widget,
+      ...component,
       flexChildProps: {
         ...flexChildProps,
         ...updates

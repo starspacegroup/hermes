@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import {
   updateComponent,
   deleteComponent,
-  saveComponentWithWidgets
+  saveComponentWithChildren
 } from '$lib/server/db/components';
 
 /**
@@ -34,7 +34,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       type?: string;
       config?: Record<string, unknown>;
       is_global?: boolean;
-      widgets?: Array<{
+      children?: Array<{
         id: string;
         type: string;
         position: number;
@@ -43,15 +43,15 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       }>;
     };
 
-    // If widgets are provided, use the saveComponentWithWidgets function
-    if (data.widgets) {
-      const componentWithWidgets = await saveComponentWithWidgets(db, siteId, componentId, {
+    // If children are provided, use the saveComponentWithChildren function
+    if (data.children) {
+      const componentWithChildren = await saveComponentWithChildren(db, siteId, componentId, {
         name: data.name,
         description: data.description,
         type: data.type,
-        widgets: data.widgets
+        children: data.children
       });
-      return json({ success: true, component: componentWithWidgets });
+      return json({ success: true, component: componentWithChildren });
     }
 
     // Otherwise, just update the component metadata

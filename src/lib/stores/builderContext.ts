@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageComponent } from '$lib/types/pages';
 
 /**
  * Builder Context Store
@@ -13,7 +13,7 @@ export interface BuilderContextState {
   entityId: string | null;
   entityName: string;
   slug: string;
-  widgets: PageWidget[];
+  components: PageComponent[];
   isActive: boolean;
   layoutId: number | null;
 }
@@ -23,7 +23,7 @@ const initialState: BuilderContextState = {
   entityId: null,
   entityName: '',
   slug: '',
-  widgets: [],
+  components: [],
   isActive: false,
   layoutId: null
 };
@@ -42,7 +42,7 @@ function createBuilderContextStore() {
       entityId: string | null,
       entityName: string,
       slug: string,
-      widgets: PageWidget[],
+      components: PageComponent[],
       layoutId: number | null = null
     ) => {
       set({
@@ -50,7 +50,7 @@ function createBuilderContextStore() {
         entityId,
         entityName,
         slug,
-        widgets: JSON.parse(JSON.stringify(widgets)), // Deep clone
+        components: JSON.parse(JSON.stringify(components)), // Deep clone
         isActive: true,
         layoutId
       });
@@ -63,18 +63,20 @@ function createBuilderContextStore() {
       update((state) => ({
         ...state,
         ...updates,
-        // Deep clone widgets if provided
-        widgets: updates.widgets ? JSON.parse(JSON.stringify(updates.widgets)) : state.widgets
+        // Deep clone components if provided
+        components: updates.components
+          ? JSON.parse(JSON.stringify(updates.components))
+          : state.components
       }));
     },
 
     /**
-     * Update widgets only
+     * Update components only
      */
-    updateWidgets: (widgets: PageWidget[]) => {
+    updateComponents: (components: PageComponent[]) => {
       update((state) => ({
         ...state,
-        widgets: JSON.parse(JSON.stringify(widgets))
+        components: JSON.parse(JSON.stringify(components))
       }));
     },
 

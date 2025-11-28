@@ -1,11 +1,16 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte';
   import { Copy, Trash2, MoveUp, MoveDown, RotateCcw } from 'lucide-svelte';
-  import type { PageWidget, WidgetConfig, ColorThemeDefinition, Component } from '$lib/types/pages';
-  import WidgetRenderer from '$lib/components/admin/WidgetRenderer.svelte';
-  import { stableSortWidgets } from '$lib/utils/widgetPositions';
+  import type {
+    PageComponent,
+    ComponentConfig,
+    ColorThemeDefinition,
+    Component
+  } from '$lib/types/pages';
+  import ComponentRenderer from '$lib/components/admin/ComponentRenderer.svelte';
+  import { stableSortComponents } from '$lib/utils/componentPositions';
   import { getThemeColors, generateThemeStyles } from '$lib/utils/editor/colorThemes';
-  import { getWidgetDisplayLabel } from '$lib/utils/editor/widgetDefaults';
+  import { getComponentDisplayLabel } from '$lib/utils/editor/componentDefaults';
 
   type BuilderMode = 'page' | 'layout' | 'component';
 
@@ -13,18 +18,18 @@
   let canvasElement: HTMLDivElement;
 
   /**
-   * Scrolls the canvas to make the specified widget visible
-   * @param widgetId - The ID of the widget to scroll to
+   * Scrolls the canvas to make the specified component visible
+   * @param componentId - The ID of the component to scroll to
    */
-  export async function scrollToWidget(widgetId: string): Promise<void> {
+  export async function scrollToComponent(componentId: string): Promise<void> {
     // Wait for the DOM to update
     await tick();
 
     if (!canvasElement) return;
 
-    const widgetElement = canvasElement.querySelector(`[data-widget-id="${widgetId}"]`);
-    if (widgetElement) {
-      widgetElement.scrollIntoView({
+    const componentElement = canvasElement.querySelector(`[data-component-id="${componentId}"]`);
+    if (componentElement) {
+      componentElement.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
       });
@@ -32,9 +37,9 @@
   }
 
   export let mode: BuilderMode = 'page';
-  export let widgets: PageWidget[];
-  export let selectedWidget: PageWidget | null;
-  export let hoveredWidget: PageWidget | null;
+  export let pageComponents: PageComponent[];
+  export let selectedComponent: PageComponent | null;
+  export let hoveredComponent: PageComponent | null;
   export let currentBreakpoint: 'mobile' | 'tablet' | 'desktop';
   export let colorTheme: string;
   export let userCurrentThemeId: string;
@@ -52,8 +57,8 @@
   // This should compare against the user's active theme, not the page's saved theme
   $: isPreviewingDifferentTheme = colorTheme !== userCurrentThemeId;
 
-  // Map theme variables to global color variables for widget compatibility
-  $: widgetThemeOverrides = `
+  // Map theme variables to global color variables for component compatibility
+  $: componentThemeOverrides = `
     --color-bg-primary: ${themeColors.background};
     --color-bg-secondary: ${themeColors.surface};
     --color-text-primary: ${themeColors.text};
@@ -68,9 +73,9 @@
     --color-error: ${themeColors.error};
   `.trim();
 
-  // Compute sorted widgets reactively using stable sort
+  // Compute sorted components reactively using stable sort
   // This ensures consistent ordering even with duplicate positions
-  $: sortedWidgets = stableSortWidgets(widgets);
+  $: sortedComponents = stableSortComponents(pageComponents);
 
   // Reactive canvas width based on breakpoint
   $: canvasWidth = {
@@ -79,72 +84,72 @@
     desktop: '1200px'
   }[currentBreakpoint];
 
-  function handleWidgetClick(widget: PageWidget, event: MouseEvent) {
+  function handleComponentClick(component: PageComponent, event: MouseEvent) {
     event.stopPropagation();
-    dispatch('selectWidget', widget);
+    dispatch('selectComponent', component);
   }
 
-  function handleWidgetMouseEnter(widget: PageWidget) {
-    dispatch('hoverWidget', widget);
+  function handleComponentMouseEnter(component: PageComponent) {
+    dispatch('hoverComponent', component);
   }
 
-  function handleWidgetMouseLeave() {
-    dispatch('hoverWidget', null);
+  function handleComponentMouseLeave() {
+    dispatch('hoverComponent', null);
   }
 
   function handleCanvasClick() {
-    dispatch('selectWidget', null);
+    dispatch('selectComponent', null);
   }
 
-  function moveUp(widget: PageWidget): void {
-    // Use the reactive sortedWidgets to get current display order
-    const index = sortedWidgets.findIndex((w) => w.id === widget.id);
+  function moveUp(component: PageComponent): void {
+    // Use the reactive sortedComponents to get current display order
+    const index = sortedComponents.findIndex((c) => c.id === component.id);
 
     if (index > 0) {
-      // Create a new array with the widgets swapped
-      const newOrder = [...sortedWidgets];
+      // Create a new array with the components swapped
+      const newOrder = [...sortedComponents];
       const temp = newOrder[index];
       newOrder[index] = newOrder[index - 1];
       newOrder[index - 1] = temp;
 
       // Renumber all positions to match the new order (0, 1, 2, ...)
-      const updatedWidgets = newOrder.map((w, i) => ({
-        ...w,
+      const updatedComponents = newOrder.map((c, i) => ({
+        ...c,
         position: i
       }));
 
-      // Dispatch update for all widgets to ensure positions are correct
-      dispatch('batchUpdateWidgets', updatedWidgets);
+      // Dispatch update for all components to ensure positions are correct
+      dispatch('batchUpdateComponents', updatedComponents);
     }
   }
 
-  function moveDown(widget: PageWidget): void {
-    // Use the reactive sortedWidgets to get current display order
-    const index = sortedWidgets.findIndex((w) => w.id === widget.id);
-    if (index < sortedWidgets.length - 1) {
-      // Create a new array with the widgets swapped
-      const newOrder = [...sortedWidgets];
+  function moveDown(component: PageComponent): void {
+    // Use the reactive sortedComponents to get current display order
+    const index = sortedComponents.findIndex((c) => c.id === component.id);
+    if (index < sortedComponents.length - 1) {
+      // Create a new array with the components swapped
+      const newOrder = [...sortedComponents];
       const temp = newOrder[index];
       newOrder[index] = newOrder[index + 1];
       newOrder[index + 1] = temp;
 
       // Renumber all positions to match the new order (0, 1, 2, ...)
-      const updatedWidgets = newOrder.map((w, i) => ({
-        ...w,
+      const updatedComponents = newOrder.map((c, i) => ({
+        ...c,
         position: i
       }));
 
-      // Dispatch update for all widgets to ensure positions are correct
-      dispatch('batchUpdateWidgets', updatedWidgets);
+      // Dispatch update for all components to ensure positions are correct
+      dispatch('batchUpdateComponents', updatedComponents);
     }
   }
 
-  function handleWidgetConfigUpdate(widget: PageWidget, newConfig: WidgetConfig) {
-    const updatedWidget = {
-      ...widget,
+  function handleComponentConfigUpdate(component: PageComponent, newConfig: ComponentConfig) {
+    const updatedComponent = {
+      ...component,
       config: newConfig
     };
-    dispatch('updateWidget', updatedWidget);
+    dispatch('updateComponent', updatedComponent);
   }
 
   function resetToActiveTheme() {
@@ -194,32 +199,32 @@
     </div>
   {/if}
   <div class="canvas-viewport" style="width: {canvasWidth}; max-width: 100%;">
-    <div class="canvas-content" style="{themeStyles}; {widgetThemeOverrides}">
-      {#each sortedWidgets as widget, index (widget.id)}
+    <div class="canvas-content" style="{themeStyles}; {componentThemeOverrides}">
+      {#each sortedComponents as component, index (component.id)}
         <div
-          class="widget-wrapper"
-          class:selected={selectedWidget?.id === widget.id}
-          class:hovered={hoveredWidget?.id === widget.id}
-          data-widget-id={widget.id}
-          on:click={(e) => handleWidgetClick(widget, e)}
-          on:mouseenter={() => handleWidgetMouseEnter(widget)}
-          on:mouseleave={handleWidgetMouseLeave}
+          class="component-wrapper"
+          class:selected={selectedComponent?.id === component.id}
+          class:hovered={hoveredComponent?.id === component.id}
+          data-component-id={component.id}
+          on:click={(e) => handleComponentClick(component, e)}
+          on:mouseenter={() => handleComponentMouseEnter(component)}
+          on:mouseleave={handleComponentMouseLeave}
           role="button"
           tabindex="0"
           on:keydown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              dispatch('selectWidget', widget);
+              dispatch('selectComponent', component);
             }
           }}
         >
-          {#if selectedWidget?.id === widget.id || hoveredWidget?.id === widget.id}
-            <div class="widget-controls">
-              <div class="widget-label">{getWidgetDisplayLabel(widget, components)}</div>
-              <div class="widget-actions">
+          {#if selectedComponent?.id === component.id || hoveredComponent?.id === component.id}
+            <div class="component-controls">
+              <div class="component-label">{getComponentDisplayLabel(component, components)}</div>
+              <div class="component-actions">
                 <button
                   class="btn-control"
-                  on:click|stopPropagation={() => moveUp(widget)}
+                  on:click|stopPropagation={() => moveUp(component)}
                   disabled={index === 0}
                   aria-label="Move up"
                   title="Move up"
@@ -228,8 +233,8 @@
                 </button>
                 <button
                   class="btn-control"
-                  on:click|stopPropagation={() => moveDown(widget)}
-                  disabled={index === sortedWidgets.length - 1}
+                  on:click|stopPropagation={() => moveDown(component)}
+                  disabled={index === sortedComponents.length - 1}
                   aria-label="Move down"
                   title="Move down"
                 >
@@ -237,16 +242,16 @@
                 </button>
                 <button
                   class="btn-control"
-                  on:click|stopPropagation={() => dispatch('duplicateWidget', widget)}
+                  on:click|stopPropagation={() => dispatch('duplicateComponent', component)}
                   aria-label="Duplicate"
                   title="Duplicate"
                 >
                   <Copy size={14} />
                 </button>
-                {#if !(mode === 'layout' && widget.type === 'yield')}
+                {#if !(mode === 'layout' && component.type === 'yield')}
                   <button
                     class="btn-control btn-danger"
-                    on:click|stopPropagation={() => dispatch('deleteWidget', widget.id)}
+                    on:click|stopPropagation={() => dispatch('deleteComponent', component.id)}
                     aria-label="Delete"
                     title="Delete"
                   >
@@ -257,26 +262,29 @@
             </div>
           {/if}
           <div
-            class="widget-content"
-            class:has-controls={selectedWidget?.id === widget.id || hoveredWidget?.id === widget.id}
+            class="component-content"
+            class:has-controls={selectedComponent?.id === component.id ||
+              hoveredComponent?.id === component.id}
           >
-            <WidgetRenderer
-              {widget}
+            <ComponentRenderer
+              {component}
               {currentBreakpoint}
               {colorTheme}
-              onUpdate={(newConfig) => handleWidgetConfigUpdate(widget, newConfig)}
+              onUpdate={(newConfig) => handleComponentConfigUpdate(component, newConfig)}
               isEditable={true}
             />
           </div>
         </div>
       {/each}
 
-      {#if widgets.length === 0}
+      {#if pageComponents.length === 0}
         <div class="empty-canvas">
           {#if mode === 'component'}
             <div class="empty-icon">📦</div>
             <h3>Create Your Component</h3>
-            <p>Choose a widget type from the sidebar to start building your reusable component.</p>
+            <p>
+              Choose a component type from the sidebar to start building your reusable component.
+            </p>
             <div class="empty-hints">
               <p class="hint">💡 <strong>Tip:</strong> Popular components include:</p>
               <ul class="hint-list">
@@ -289,10 +297,10 @@
           {:else if mode === 'layout'}
             <div class="empty-icon">🎨</div>
             <h3>Build Your Layout</h3>
-            <p>Add widgets from the sidebar to create your layout structure.</p>
+            <p>Add components from the sidebar to create your layout structure.</p>
             <p class="hint">
-              💡 <strong>Tip:</strong> Use the <strong>Yield</strong> widget to define where page content
-              should appear.
+              💡 <strong>Tip:</strong> Use the <strong>Yield</strong> component to define where page
+              content should appear.
             </p>
           {:else}
             <div class="empty-icon">📄</div>
@@ -337,22 +345,22 @@
     min-height: 400px;
   }
 
-  .widget-wrapper {
+  .component-wrapper {
     position: relative;
     transition: all 0.2s;
   }
 
-  .widget-wrapper.hovered {
+  .component-wrapper.hovered {
     outline: 2px dashed var(--color-primary);
     outline-offset: -2px;
   }
 
-  .widget-wrapper.selected {
+  .component-wrapper.selected {
     outline: 2px solid var(--color-primary);
     outline-offset: -2px;
   }
 
-  .widget-controls {
+  .component-controls {
     position: absolute;
     top: 0;
     left: 0;
@@ -367,12 +375,12 @@
     z-index: 10;
   }
 
-  .widget-label {
+  .component-label {
     font-weight: 600;
     text-transform: capitalize;
   }
 
-  .widget-actions {
+  .component-actions {
     display: flex;
     gap: 0.25rem;
   }
@@ -405,11 +413,11 @@
     background: var(--color-danger);
   }
 
-  .widget-content {
+  .component-content {
     position: relative;
   }
 
-  .widget-content.has-controls {
+  .component-content.has-controls {
     padding-top: 32px;
   }
 

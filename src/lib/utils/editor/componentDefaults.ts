@@ -1,6 +1,6 @@
-import type { WidgetType, WidgetConfig } from '$lib/types/pages';
+import type { ComponentType, ComponentConfig } from '$lib/types/pages';
 
-export function getDefaultConfig(type: WidgetType): WidgetConfig {
+export function getDefaultConfig(type: ComponentType): ComponentConfig {
   switch (type) {
     case 'text':
       return { text: 'Enter your text here', alignment: 'left' };
@@ -204,8 +204,8 @@ export function getDefaultConfig(type: WidgetType): WidgetConfig {
   }
 }
 
-export function getWidgetLabel(type: WidgetType): string {
-  const labels: Record<WidgetType, string> = {
+export function getComponentLabel(type: ComponentType): string {
+  const labels: Record<ComponentType, string> = {
     text: 'Text Content',
     heading: 'Heading',
     image: 'Image',
@@ -229,23 +229,29 @@ export function getWidgetLabel(type: WidgetType): string {
   return labels[type] || type;
 }
 
+// Deprecated: Use getComponentLabel instead
+export const getWidgetLabel = getComponentLabel;
+
 /**
- * Get the display label for a widget, resolving component names for component_ref widgets.
- * @param widget - The widget to get the label for
+ * Get the display label for a component, resolving component names for component_ref types.
+ * @param component - The component to get the label for
  * @param components - Optional list of components to look up component names
- * @returns The display label for the widget
+ * @returns The display label for the component
  */
-export function getWidgetDisplayLabel(
-  widget: { type: WidgetType; config?: { componentId?: number } },
+export function getComponentDisplayLabel(
+  component: { type: ComponentType; config?: { componentId?: number } },
   components?: { id: number; name: string }[]
 ): string {
-  // For component_ref widgets, try to resolve the component name
-  if (widget.type === 'component_ref' && widget.config?.componentId && components) {
-    const component = components.find((c) => c.id === widget.config?.componentId);
-    if (component) {
-      return component.name;
+  // For component_ref types, try to resolve the component name
+  if (component.type === 'component_ref' && component.config?.componentId && components) {
+    const found = components.find((c) => c.id === component.config?.componentId);
+    if (found) {
+      return found.name;
     }
   }
 
-  return getWidgetLabel(widget.type);
+  return getComponentLabel(component.type);
 }
+
+// Deprecated: Use getComponentDisplayLabel instead
+export const getWidgetDisplayLabel = getComponentDisplayLabel;

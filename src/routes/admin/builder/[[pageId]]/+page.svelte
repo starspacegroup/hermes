@@ -4,28 +4,28 @@
   import type { PageData } from './$types';
   import AdvancedBuilder from '$lib/components/builder/AdvancedBuilder.svelte';
   import { toastStore } from '$lib/stores/toast';
-  import type { PageWidget } from '$lib/types/pages';
+  import type { PageComponent } from '$lib/types/pages';
 
   export let data: PageData;
 
   console.log('[Builder Page] Loaded data:', {
     hasPage: !!data.page,
     pageId: data.page?.id,
-    widgetCount: data.widgets?.length || 0,
-    widgets: data.widgets,
+    componentCount: data.pageComponents?.length || 0,
+    components: data.pageComponents,
     revisionCount: data.revisions?.length || 0,
     currentRevisionId: data.currentRevisionId
   });
 
-  // Widgets are already in the correct format (PageWidget[]) when coming from revisions
+  // Components are already in the correct format (PageComponent[]) when coming from revisions
   // They only need parsing when coming from DB page_widgets table (which we no longer use here)
-  const parsedWidgets: PageWidget[] = data.widgets;
+  const parsedComponents: PageComponent[] = data.pageComponents;
 
   interface SaveData {
     id?: string;
     title: string;
     slug: string;
-    widgets: PageWidget[];
+    components: PageComponent[];
     layout_id?: number;
   }
 
@@ -34,8 +34,8 @@
       id: pageData.id,
       title: pageData.title,
       slug: pageData.slug,
-      widgetCount: pageData.widgets.length,
-      widgets: pageData.widgets
+      componentCount: pageData.components.length,
+      components: pageData.components
     });
 
     try {
@@ -58,9 +58,9 @@
 
         const newPage = (await response.json()) as { id: string };
 
-        console.log('[Builder] Creating initial revision with widgets:', pageData.widgets);
+        console.log('[Builder] Creating initial revision with components:', pageData.components);
 
-        // Create initial revision with widgets
+        // Create initial revision with components
         const revisionResponse = await fetch(`/api/pages/${newPage.id}/revisions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@
             title: pageData.title,
             slug: pageData.slug,
             status: 'draft',
-            widgets: pageData.widgets,
+            components: pageData.components,
             notes: 'Initial revision'
           })
         });
@@ -98,9 +98,9 @@
           throw new Error('Failed to update page');
         }
 
-        console.log('[Builder] Creating revision with widgets:', {
-          widgetCount: pageData.widgets.length,
-          widgets: pageData.widgets
+        console.log('[Builder] Creating revision with components:', {
+          componentCount: pageData.components.length,
+          components: pageData.components
         });
 
         // Then create a new revision with the updated content
@@ -111,7 +111,7 @@
             title: pageData.title,
             slug: pageData.slug,
             status: 'draft',
-            widgets: pageData.widgets,
+            components: pageData.components,
             notes: 'Draft save'
           })
         });
@@ -138,7 +138,7 @@
     id?: string;
     title: string;
     slug: string;
-    widgets: PageWidget[];
+    components: PageComponent[];
     layout_id?: number;
   }) {
     try {
@@ -170,7 +170,7 @@
           title: pageData.title,
           slug: pageData.slug,
           status: 'published',
-          widgets: pageData.widgets,
+          components: pageData.components,
           notes: 'Published from Builder'
         })
       });
@@ -212,14 +212,14 @@
 
 <AdvancedBuilder
   page={data.page}
-  initialWidgets={parsedWidgets}
+  initialComponents={parsedComponents}
   revisions={data.revisions}
   currentRevisionId={data.currentRevisionId}
   currentRevisionIsPublished={data.currentRevisionIsPublished}
   colorThemes={data.colorThemes}
   layouts={data.layouts}
   defaultLayoutId={data.defaultLayoutId}
-  components={data.components}
+  components={data.customComponents}
   userName={data.userName}
   onSave={handleSave}
   onPublish={handlePublish}

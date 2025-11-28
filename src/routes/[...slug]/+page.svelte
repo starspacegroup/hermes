@@ -1,23 +1,23 @@
 <script lang="ts">
-  import TextWidget from '$lib/components/widgets/TextWidget.svelte';
-  import ImageWidget from '$lib/components/widgets/ImageWidget.svelte';
-  import SingleProductWidget from '$lib/components/widgets/SingleProductWidget.svelte';
-  import ProductListWidget from '$lib/components/widgets/ProductListWidget.svelte';
-  import HeroWidget from '$lib/components/widgets/HeroWidget.svelte';
-  import ButtonWidget from '$lib/components/widgets/ButtonWidget.svelte';
-  import SpacerWidget from '$lib/components/widgets/SpacerWidget.svelte';
-  import DividerWidget from '$lib/components/widgets/DividerWidget.svelte';
-  import ColumnsWidget from '$lib/components/widgets/ColumnsWidget.svelte';
-  import HeadingWidget from '$lib/components/widgets/HeadingWidget.svelte';
-  import FeaturesWidget from '$lib/components/widgets/FeaturesWidget.svelte';
-  import PricingWidget from '$lib/components/widgets/PricingWidget.svelte';
-  import CTAWidget from '$lib/components/widgets/CTAWidget.svelte';
+  import TextComponent from '$lib/components/builtin/Text.svelte';
+  import ImageComponent from '$lib/components/builtin/Image.svelte';
+  import SingleProductComponent from '$lib/components/builtin/SingleProduct.svelte';
+  import ProductListComponent from '$lib/components/builtin/ProductList.svelte';
+  import HeroComponent from '$lib/components/builtin/Hero.svelte';
+  import ButtonComponent from '$lib/components/builtin/Button.svelte';
+  import SpacerComponent from '$lib/components/builtin/Spacer.svelte';
+  import DividerComponent from '$lib/components/builtin/Divider.svelte';
+  import ColumnsComponent from '$lib/components/builtin/Columns.svelte';
+  import HeadingComponent from '$lib/components/builtin/Heading.svelte';
+  import FeaturesComponent from '$lib/components/builtin/Features.svelte';
+  import PricingComponent from '$lib/components/builtin/Pricing.svelte';
+  import CTAComponent from '$lib/components/builtin/CTA.svelte';
   import { browser } from '$app/environment';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
-  const { page, widgets, isPreview, isAdmin } = data;
+  const { page, components, isPreview, isAdmin } = data;
 
   // Get the current applied theme (light or dark) from the document
   const getCurrentTheme = (): 'light' | 'dark' => {
@@ -71,34 +71,34 @@
   <h1>{page.title}</h1>
 
   <div class="page-content">
-    {#each widgets as widget}
-      <div class="widget-container" data-widget-type={widget.type}>
-        {#if widget.type === 'text'}
-          <TextWidget config={widget.config} />
-        {:else if widget.type === 'image'}
-          <ImageWidget config={widget.config} />
-        {:else if widget.type === 'single_product'}
-          <SingleProductWidget config={widget.config} />
-        {:else if widget.type === 'product_list'}
-          <ProductListWidget config={widget.config} />
-        {:else if widget.type === 'hero'}
-          <HeroWidget config={widget.config} {colorTheme} />
-        {:else if widget.type === 'button'}
-          <ButtonWidget config={widget.config} />
-        {:else if widget.type === 'spacer'}
-          <SpacerWidget config={widget.config} />
-        {:else if widget.type === 'divider'}
-          <DividerWidget config={widget.config} {colorTheme} />
-        {:else if widget.type === 'columns'}
-          <ColumnsWidget config={widget.config} />
-        {:else if widget.type === 'heading'}
-          <HeadingWidget config={widget.config} {colorTheme} />
-        {:else if widget.type === 'features'}
-          <FeaturesWidget config={widget.config} {colorTheme} />
-        {:else if widget.type === 'pricing'}
-          <PricingWidget config={widget.config} />
-        {:else if widget.type === 'cta'}
-          <CTAWidget config={widget.config} {colorTheme} />
+    {#each components as component}
+      <div class="component-container" data-component-type={component.type}>
+        {#if component.type === 'text'}
+          <TextComponent config={component.config} />
+        {:else if component.type === 'image'}
+          <ImageComponent config={component.config} />
+        {:else if component.type === 'single_product'}
+          <SingleProductComponent config={component.config} />
+        {:else if component.type === 'product_list'}
+          <ProductListComponent config={component.config} />
+        {:else if component.type === 'hero'}
+          <HeroComponent config={component.config} {colorTheme} />
+        {:else if component.type === 'button'}
+          <ButtonComponent config={component.config} />
+        {:else if component.type === 'spacer'}
+          <SpacerComponent config={component.config} />
+        {:else if component.type === 'divider'}
+          <DividerComponent config={component.config} {colorTheme} />
+        {:else if component.type === 'columns'}
+          <ColumnsComponent config={component.config} />
+        {:else if component.type === 'heading'}
+          <HeadingComponent config={component.config} {colorTheme} />
+        {:else if component.type === 'features'}
+          <FeaturesComponent config={component.config} {colorTheme} />
+        {:else if component.type === 'pricing'}
+          <PricingComponent config={component.config} />
+        {:else if component.type === 'cta'}
+          <CTAComponent config={component.config} {colorTheme} />
         {/if}
       </div>
     {/each}
@@ -177,7 +177,7 @@
     gap: 1.5rem;
   }
 
-  .widget-container {
+  .component-container {
     width: 100%;
   }
 

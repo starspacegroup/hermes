@@ -3,7 +3,7 @@
   import { browser } from '$app/environment';
   import type {
     Page,
-    PageWidget,
+    PageComponent,
     RevisionNode,
     ParsedPageRevision,
     ColorThemeDefinition,
@@ -26,13 +26,13 @@
     id?: string;
     title: string;
     slug: string;
-    widgets: PageWidget[];
+    components: PageComponent[];
     layout_id?: number;
   }
 
   export let mode: BuilderMode = 'page';
   export let page: Page | null;
-  export let initialWidgets: PageWidget[] = [];
+  export let initialComponents: PageComponent[] = [];
   export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
   export let currentRevisionIsPublished = false;
@@ -56,9 +56,9 @@
   let title = page?.title || `Untitled ${entityLabel}`;
   let slug = page?.slug || `/${entityLabelLower}-${Date.now()}`;
   let layoutId: number | null = page?.layout_id || defaultLayoutId;
-  let widgets: PageWidget[] = JSON.parse(JSON.stringify(initialWidgets));
-  let selectedWidget: PageWidget | null = null;
-  let hoveredWidget: PageWidget | null = null;
+  let pageComponents: PageComponent[] = JSON.parse(JSON.stringify(initialComponents));
+  let selectedComponent: PageComponent | null = null;
+  let hoveredComponent: PageComponent | null = null;
 
   // Canvas component reference for scrolling
   let canvasComponent: BuilderCanvas;
@@ -109,7 +109,7 @@
     activeColorTheme = page?.colorTheme || userCurrentThemeId;
   }
 
-  // Track initialization to only load widgets once at mount
+  // Track initialization to only load components once at mount
   let initialized = false;
 
   // UI state
@@ -124,7 +124,7 @@
   interface HistoryEntry {
     title: string;
     slug: string;
-    widgets: PageWidget[];
+    components: PageComponent[];
     timestamp: number;
   }
   let history: HistoryEntry[] = [];
@@ -135,14 +135,14 @@
   let hasUnsavedChanges = false;
   let isSaving = false;
   let lastSavedAt: Date | null = null;
-  let lastSavedState: { title: string; slug: string; widgets: PageWidget[] } | null = null;
+  let lastSavedState: { title: string; slug: string; components: PageComponent[] } | null = null;
 
   // Add to history when state changes
   function addToHistory() {
     const state: HistoryEntry = {
       title,
       slug,
-      widgets: JSON.parse(JSON.stringify(widgets)),
+      components: JSON.parse(JSON.stringify(pageComponents)),
       timestamp: Date.now()
     };
 
@@ -166,7 +166,7 @@
       const state = history[historyIndex];
       title = state.title;
       slug = state.slug;
-      widgets = JSON.parse(JSON.stringify(state.widgets));
+      pageComponents = JSON.parse(JSON.stringify(state.components));
       hasUnsavedChanges = true;
     }
   }
@@ -177,41 +177,43 @@
       const state = history[historyIndex];
       title = state.title;
       slug = state.slug;
-      widgets = JSON.parse(JSON.stringify(state.widgets));
+      pageComponents = JSON.parse(JSON.stringify(state.components));
       hasUnsavedChanges = true;
     }
   }
 
-  // Widget operations
-  function handleAddWidget(widget: PageWidget) {
-    widgets = [...widgets, widget];
+  // Component operations
+  function handleAddComponent(component: PageComponent) {
+    pageComponents = [...pageComponents, component];
     addToHistory();
 
-    // Scroll to the newly added widget
+    // Scroll to the newly added component
     if (canvasComponent) {
-      canvasComponent.scrollToWidget(widget.id);
+      canvasComponent.scrollToComponent(component.id);
     }
   }
 
-  function handleUpdateWidget(updatedWidget: PageWidget) {
-    widgets = widgets.map((w) => (w.id === updatedWidget.id ? updatedWidget : w));
-    // Update selectedWidget to keep it in sync
-    if (selectedWidget?.id === updatedWidget.id) {
-      selectedWidget = updatedWidget;
+  function handleUpdateComponent(updatedComponent: PageComponent) {
+    pageComponents = pageComponents.map((c) =>
+      c.id === updatedComponent.id ? updatedComponent : c
+    );
+    // Update selectedComponent to keep it in sync
+    if (selectedComponent?.id === updatedComponent.id) {
+      selectedComponent = updatedComponent;
     }
     addToHistory();
   }
 
-  function handleBatchUpdateWidgets(updatedWidgets: PageWidget[]) {
+  function handleBatchUpdateComponents(updatedComponents: PageComponent[]) {
     // Create a map for faster lookup
-    const updateMap = new Map(updatedWidgets.map((w) => [w.id, w]));
+    const updateMap = new Map(updatedComponents.map((c) => [c.id, c]));
 
-    // Update widgets array - this creates a new array reference
-    widgets = widgets.map((w) => updateMap.get(w.id) || w);
+    // Update pageComponents array - this creates a new array reference
+    pageComponents = pageComponents.map((c) => updateMap.get(c.id) || c);
 
     // CRITICAL FIX: Normalize positions to ensure they're sequential (0, 1, 2, ...)
     // This fixes the bug where duplicate positions prevent proper reordering
-    const sortedWidgets = [...widgets].sort((a, b) => {
+    const sortedComponents = [...pageComponents].sort((a, b) => {
       // Sort by position first
       if (a.position !== b.position) {
         return a.position - b.position;
@@ -222,16 +224,16 @@
     });
 
     // Reassign sequential positions
-    widgets = sortedWidgets.map((w, index) => ({
-      ...w,
+    pageComponents = sortedComponents.map((c, index) => ({
+      ...c,
       position: index
     }));
 
-    // Update selectedWidget if it was updated
-    if (selectedWidget) {
-      const updatedSelected = widgets.find((w) => w.id === selectedWidget!.id);
+    // Update selectedComponent if it was updated
+    if (selectedComponent) {
+      const updatedSelected = pageComponents.find((c) => c.id === selectedComponent!.id);
       if (updatedSelected) {
-        selectedWidget = updatedSelected;
+        selectedComponent = updatedSelected;
       }
     }
 
@@ -239,30 +241,30 @@
     addToHistory();
   }
 
-  function handleDeleteWidget(widgetId: string) {
-    // Prevent deletion of Yield widget in layout mode
-    const widgetToDelete = widgets.find((w) => w.id === widgetId);
-    if (mode === 'layout' && widgetToDelete?.type === 'yield') {
+  function handleDeleteComponent(componentId: string) {
+    // Prevent deletion of Yield component in layout mode
+    const componentToDelete = pageComponents.find((c) => c.id === componentId);
+    if (mode === 'layout' && componentToDelete?.type === 'yield') {
       return; // Silently ignore deletion attempts
     }
 
-    widgets = widgets.filter((w) => w.id !== widgetId);
-    if (selectedWidget?.id === widgetId) {
-      selectedWidget = null;
+    pageComponents = pageComponents.filter((c) => c.id !== componentId);
+    if (selectedComponent?.id === componentId) {
+      selectedComponent = null;
     }
     addToHistory();
   }
 
-  function handleSelectWidget(widget: PageWidget | null) {
-    selectedWidget = widget;
-    if (widget) {
+  function handleSelectComponent(component: PageComponent | null) {
+    selectedComponent = component;
+    if (component) {
       showPropertiesPanel = true;
     }
   }
 
   function handleShowPageProperties() {
     showPropertiesPanel = true;
-    selectedWidget = null;
+    selectedComponent = null;
   }
 
   function handleUpdatePageProperties(properties: typeof pageProperties) {
@@ -270,13 +272,13 @@
     addToHistory();
   }
 
-  function handleDuplicateWidget(widget: PageWidget) {
+  function handleDuplicateComponent(component: PageComponent) {
     const duplicate = {
-      ...JSON.parse(JSON.stringify(widget)),
+      ...JSON.parse(JSON.stringify(component)),
       id: `temp-${Date.now()}`,
-      position: widget.position + 1
+      position: component.position + 1
     };
-    widgets = [...widgets, duplicate];
+    pageComponents = [...pageComponents, duplicate];
     addToHistory();
   }
 
@@ -288,14 +290,14 @@
         id: page?.id,
         title,
         slug,
-        widgets,
+        components: pageComponents,
         layout_id: layoutId || undefined
       });
       // Capture the saved state for future comparison
       lastSavedState = {
         title,
         slug,
-        widgets: JSON.parse(JSON.stringify(widgets))
+        components: JSON.parse(JSON.stringify(pageComponents))
       };
       hasUnsavedChanges = false;
       lastSavedAt = new Date();
@@ -312,7 +314,7 @@
       id: page?.id,
       title,
       slug,
-      widgets,
+      components: pageComponents,
       layout_id: layoutId || undefined
     });
     // After publishing, we're now viewing a published revision
@@ -367,7 +369,7 @@
       // Load revision data into editor
       title = revision.title;
       slug = revision.slug;
-      widgets = revision.widgets;
+      pageComponents = revision.components;
 
       // Update whether we're viewing a published revision
       isViewingPublishedRevision = revision.is_published;
@@ -377,7 +379,7 @@
       lastSavedState = {
         title: revision.title,
         slug: revision.slug,
-        widgets: JSON.parse(JSON.stringify(revision.widgets))
+        components: JSON.parse(JSON.stringify(revision.components))
       };
 
       addToHistory();
@@ -424,15 +426,15 @@
         event.preventDefault();
         handleViewHistory();
       }
-    } else if (event.key === 'Delete' && selectedWidget) {
+    } else if (event.key === 'Delete' && selectedComponent) {
       event.preventDefault();
-      // Don't delete Yield widget in layout mode
-      if (!(mode === 'layout' && selectedWidget.type === 'yield')) {
-        handleDeleteWidget(selectedWidget.id);
+      // Don't delete Yield component in layout mode
+      if (!(mode === 'layout' && selectedComponent.type === 'yield')) {
+        handleDeleteComponent(selectedComponent.id);
       }
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      handleSelectWidget(null);
+      handleSelectComponent(null);
     }
   }
 
@@ -441,7 +443,7 @@
     if (!lastSavedState) return hasUnsavedChanges;
 
     // Compare current state with last saved state
-    const currentState = JSON.stringify({ title, slug, widgets });
+    const currentState = JSON.stringify({ title, slug, components: pageComponents });
     const savedState = JSON.stringify(lastSavedState);
 
     return currentState !== savedState;
@@ -455,7 +457,7 @@
   // Auto-save
   let autoSaveInterval: ReturnType<typeof setInterval>;
   onMount(() => {
-    // Mark as initialized so we don't reload widgets from props
+    // Mark as initialized so we don't reload components from props
     initialized = true;
 
     // Initialize history
@@ -465,11 +467,11 @@
     lastSavedState = {
       title,
       slug,
-      widgets: JSON.parse(JSON.stringify(widgets))
+      components: JSON.parse(JSON.stringify(pageComponents))
     };
 
     // Activate builder context store for AI awareness
-    builderContextStore.activate(mode, page?.id || null, title, slug, widgets, layoutId);
+    builderContextStore.activate(mode, page?.id || null, title, slug, pageComponents, layoutId);
 
     // Setup auto-save
     autoSaveInterval = setInterval(() => {
@@ -494,7 +496,7 @@
       entityId: page?.id || null,
       entityName: title,
       slug,
-      widgets,
+      components: pageComponents,
       layoutId
     });
   }
@@ -551,12 +553,12 @@
     {#if showLeftSidebar}
       <BuilderSidebar
         {mode}
-        {widgets}
+        {pageComponents}
         {title}
         {slug}
         {components}
-        on:addWidget={(e) => handleAddWidget(e.detail)}
-        on:selectWidget={(e) => handleSelectWidget(e.detail)}
+        on:addComponent={(e) => handleAddComponent(e.detail)}
+        on:selectComponent={(e) => handleSelectComponent(e.detail)}
         on:showPageProperties={handleShowPageProperties}
         on:updateTitle={(e) => {
           title = e.detail;
@@ -575,52 +577,52 @@
     <BuilderCanvas
       bind:this={canvasComponent}
       {mode}
-      {widgets}
-      {selectedWidget}
-      {hoveredWidget}
+      {pageComponents}
+      {selectedComponent}
+      {hoveredComponent}
       {currentBreakpoint}
       {colorTheme}
       {userCurrentThemeId}
       {colorThemes}
       {components}
-      on:selectWidget={(e) => handleSelectWidget(e.detail)}
-      on:updateWidget={(e) => handleUpdateWidget(e.detail)}
-      on:batchUpdateWidgets={(e) => handleBatchUpdateWidgets(e.detail)}
-      on:deleteWidget={(e) => handleDeleteWidget(e.detail)}
-      on:duplicateWidget={(e) => handleDuplicateWidget(e.detail)}
-      on:hoverWidget={(e) => {
-        hoveredWidget = e.detail;
+      on:selectComponent={(e) => handleSelectComponent(e.detail)}
+      on:updateComponent={(e) => handleUpdateComponent(e.detail)}
+      on:batchUpdateComponents={(e) => handleBatchUpdateComponents(e.detail)}
+      on:deleteComponent={(e) => handleDeleteComponent(e.detail)}
+      on:duplicateComponent={(e) => handleDuplicateComponent(e.detail)}
+      on:hoverComponent={(e) => {
+        hoveredComponent = e.detail;
       }}
       on:resetTheme={handleResetTheme}
     />
 
     {#if showPropertiesPanel}
       <BuilderPropertiesPanel
-        {widgets}
-        {selectedWidget}
+        {pageComponents}
+        {selectedComponent}
         {pageProperties}
         {currentBreakpoint}
         {colorTheme}
         {entityLabel}
         {components}
-        on:selectWidget={(e) => handleSelectWidget(e.detail)}
-        on:updateWidget={(e) => handleUpdateWidget(e.detail)}
+        on:selectComponent={(e) => handleSelectComponent(e.detail)}
+        on:updateComponent={(e) => handleUpdateComponent(e.detail)}
         on:updatePageProperties={(e) => handleUpdatePageProperties(e.detail)}
         on:close={() => {
           showPropertiesPanel = false;
-          selectedWidget = null;
+          selectedComponent = null;
         }}
       />
     {/if}
 
     {#if showAIPanel}
       <BuilderAIPanel
-        {widgets}
+        components={pageComponents}
         {title}
         {slug}
         on:applyChanges={(e) => {
-          const { widgets: newWidgets, title: newTitle, slug: newSlug } = e.detail;
-          if (newWidgets) widgets = newWidgets;
+          const { components: newComponents, title: newTitle, slug: newSlug } = e.detail;
+          if (newComponents) pageComponents = newComponents;
           if (newTitle) title = newTitle;
           if (newSlug) slug = newSlug;
           addToHistory();

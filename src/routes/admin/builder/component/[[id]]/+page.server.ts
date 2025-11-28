@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       widgets: [],
       revisions: [],
       colorThemes,
-      components,
+      customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
       isNewComponent: true
     };
@@ -76,7 +76,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     currentRevisionId: null,
     currentRevisionIsPublished: false,
     colorThemes,
-    components,
+    customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
     isNewComponent: false
   };

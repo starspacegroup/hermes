@@ -4,7 +4,7 @@
   import type { PageData } from './$types';
   import AdvancedBuilder from '$lib/components/builder/AdvancedBuilder.svelte';
   import { toastStore } from '$lib/stores/toast';
-  import type { PageWidget } from '$lib/types/pages';
+  import type { PageComponent } from '$lib/types/pages';
 
   export let data: PageData;
 
@@ -15,11 +15,11 @@
     widgets: data.widgets
   });
 
-  // Convert component widget to PageWidget format expected by AdvancedBuilder
-  const parsedWidgets: PageWidget[] = data.widgets.map((w) => ({
+  // Convert component widgets to PageComponent format expected by AdvancedBuilder
+  const parsedComponents: PageComponent[] = data.widgets.map((w) => ({
     id: w.id,
     page_id: data.component ? String(data.component.id) : 'new',
-    type: w.type as PageWidget['type'],
+    type: w.type as PageComponent['type'],
     position: w.position,
     config: w.config,
     created_at: new Date(w.created_at).getTime(),
@@ -30,22 +30,22 @@
     id?: string;
     title: string;
     slug: string;
-    widgets: PageWidget[];
+    components: PageComponent[];
   }
 
   async function handleSave(saveData: SaveData): Promise<void> {
     try {
-      // Convert PageWidget[] to component widget format
-      const widgets = saveData.widgets.map((w, index) => ({
-        id: w.id,
-        type: w.type,
+      // Convert PageComponent[] to component children format
+      const children = saveData.components.map((c, index) => ({
+        id: c.id,
+        type: c.type,
         position: index,
-        config: w.config,
-        parent_id: undefined // TODO: Add parent_id support for nested widgets
+        config: c.config,
+        parent_id: undefined // TODO: Add parent_id support for nested components
       }));
 
-      // Determine component type - use 'composite' if multiple widgets, otherwise use first widget type
-      const componentType = widgets.length > 1 ? 'composite' : widgets[0]?.type || 'text';
+      // Determine component type - use 'composite' if multiple children, otherwise use first child type
+      const componentType = children.length > 1 ? 'composite' : children[0]?.type || 'text';
 
       if (data.isNewComponent) {
         // Create new component
@@ -57,7 +57,7 @@
             type: componentType,
             config: {},
             description: '',
-            widgets: widgets
+            children: children
           })
         });
 
@@ -80,7 +80,7 @@
           body: JSON.stringify({
             name: saveData.title,
             type: componentType,
-            widgets: widgets
+            children: children
           })
         });
 
@@ -132,12 +132,12 @@
 <AdvancedBuilder
   mode="component"
   page={pageFormatted}
-  initialWidgets={parsedWidgets}
+  initialComponents={parsedComponents}
   revisions={data.revisions}
   currentRevisionId={data.currentRevisionId}
   currentRevisionIsPublished={data.currentRevisionIsPublished}
   colorThemes={data.colorThemes}
-  components={data.components}
+  components={data.customComponents}
   userName={data.userName}
   onSave={handleSave}
   onPublish={handlePublish}

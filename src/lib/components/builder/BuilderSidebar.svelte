@@ -12,12 +12,12 @@
     ChevronDown,
     Package
   } from 'lucide-svelte';
-  import type { PageWidget, WidgetType, Component } from '$lib/types/pages';
+  import type { PageComponent, ComponentType, Component } from '$lib/types/pages';
 
   type BuilderMode = 'page' | 'layout' | 'component';
 
   export let mode: BuilderMode = 'page';
-  export let widgets: PageWidget[];
+  export let pageComponents: PageComponent[];
   export let title: string;
   export let slug: string;
   export let components: Component[] = [];
@@ -33,15 +33,9 @@
   let pageSettingsExpanded = true;
   let componentsExpanded = true;
 
-  // Widget library organized by category
-  const widgetLibrary = {
+  // Component library organized by category
+  const componentLibrary = {
     layout: [
-      {
-        type: 'navbar',
-        name: 'Navigation Bar',
-        icon: Layout,
-        description: 'Site navigation header'
-      },
       { type: 'container', name: 'Container', icon: Box, description: 'Container with padding' },
       { type: 'flex', name: 'Flex Box', icon: Layout, description: 'Flexible layout container' },
       { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner section' },
@@ -85,15 +79,15 @@
     { id: 'custom', name: 'Custom', icon: Package }
   ];
 
-  // Reactive filtered widgets based on search and category
-  $: filteredWidgets = (() => {
-    // Using any here because widgetLibrary has complex union types
+  // Reactive filtered components based on search and category
+  $: filteredComponents = (() => {
+    // Using any here because componentLibrary has complex union types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let allWidgets: any[] = [];
+    let allComponents: any[] = [];
 
     if (activeCategory === 'custom') {
       // Show custom components
-      allWidgets = components.map((c) => ({
+      allComponents = components.map((c) => ({
         type: `component:${c.id}`,
         name: c.name,
         icon: Package,
@@ -103,13 +97,13 @@
         componentConfig: c.config
       }));
     } else if (activeCategory === 'all') {
-      // Show all built-in widgets
-      Object.values(widgetLibrary).forEach((category) => {
-        allWidgets = [...allWidgets, ...category];
+      // Show all built-in components
+      Object.values(componentLibrary).forEach((category) => {
+        allComponents = [...allComponents, ...category];
       });
       // Add custom components to 'all' view
       components.forEach((c) => {
-        allWidgets.push({
+        allComponents.push({
           type: `component:${c.id}`,
           name: c.name,
           icon: Package,
@@ -120,60 +114,60 @@
         });
       });
     } else {
-      allWidgets = widgetLibrary[activeCategory as keyof typeof widgetLibrary] || [];
+      allComponents = componentLibrary[activeCategory as keyof typeof componentLibrary] || [];
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      allWidgets = allWidgets.filter(
-        (w) =>
-          w.name.toLowerCase().includes(query) ||
-          w.description.toLowerCase().includes(query) ||
-          w.type.toLowerCase().includes(query)
+      allComponents = allComponents.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.description.toLowerCase().includes(query) ||
+          c.type.toLowerCase().includes(query)
       );
     }
 
-    return allWidgets;
+    return allComponents;
   })();
 
-  function addWidget(type: string) {
-    let widgetType: WidgetType;
-    let widgetConfig: Record<string, unknown>;
+  function addComponent(type: string) {
+    let componentType: ComponentType;
+    let componentConfig: Record<string, unknown>;
 
     // Check if this is a custom component (format: "component:123")
     if (type.startsWith('component:')) {
       const componentId = parseInt(type.split(':')[1]);
-      const component = components.find((c) => c.id === componentId);
+      const customComponent = components.find((c) => c.id === componentId);
 
-      if (!component) {
+      if (!customComponent) {
         console.error('Component not found:', componentId);
         return;
       }
 
-      // Create a component_ref widget that references this component
-      widgetType = 'component_ref';
-      widgetConfig = { componentId: component.id };
+      // Create a component_ref that references this component
+      componentType = 'component_ref';
+      componentConfig = { componentId: customComponent.id };
     } else {
-      // Built-in widget type
-      widgetType = type as WidgetType;
-      widgetConfig = getDefaultConfig(widgetType);
+      // Built-in component type
+      componentType = type as ComponentType;
+      componentConfig = getDefaultConfig(componentType);
     }
 
-    const newWidget: PageWidget = {
+    const newComponent: PageComponent = {
       id: `temp-${Date.now()}`,
-      type: widgetType,
-      config: widgetConfig,
-      position: widgets.length,
+      type: componentType,
+      config: componentConfig,
+      position: pageComponents.length,
       page_id: '',
       created_at: Date.now(),
       updated_at: Date.now()
     };
-    dispatch('addWidget', newWidget);
+    dispatch('addComponent', newComponent);
   }
 
-  function getDefaultConfig(type: WidgetType): Record<string, unknown> {
+  function getDefaultConfig(type: ComponentType): Record<string, unknown> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const defaults: Record<WidgetType, any> = {
+    const defaults: Record<ComponentType, any> = {
       hero: {
         // Content
         title: 'Welcome to Our Site',
@@ -544,7 +538,7 @@
       {#if searchQuery || activeCategory !== 'all'}
         <div class="filter-status">
           <span class="result-count"
-            >{filteredWidgets.length} component{filteredWidgets.length !== 1 ? 's' : ''}</span
+            >{filteredComponents.length} component{filteredComponents.length !== 1 ? 's' : ''}</span
           >
           {#if searchQuery || activeCategory !== 'all'}
             <button
@@ -560,8 +554,8 @@
         </div>
       {/if}
 
-      <div class="widget-list">
-        {#if filteredWidgets.length === 0}
+      <div class="component-list">
+        {#if filteredComponents.length === 0}
           <div class="no-results">
             <p>No components found</p>
             {#if searchQuery.trim()}
@@ -569,27 +563,27 @@
             {/if}
           </div>
         {:else}
-          {#each filteredWidgets as widget}
+          {#each filteredComponents as componentItem}
             <button
-              class="widget-item"
+              class="component-item"
               draggable="true"
-              on:click={() => addWidget(widget.type)}
+              on:click={() => addComponent(componentItem.type)}
               on:dragstart={(e) => {
                 if (e.dataTransfer) {
                   e.dataTransfer.effectAllowed = 'copy';
-                  e.dataTransfer.setData('widget-type', widget.type);
-                  e.dataTransfer.setData('text/plain', widget.name);
+                  e.dataTransfer.setData('component-type', componentItem.type);
+                  e.dataTransfer.setData('text/plain', componentItem.name);
                 }
               }}
             >
-              <div class="widget-icon">
-                <svelte:component this={widget.icon} size={20} />
+              <div class="component-icon">
+                <svelte:component this={componentItem.icon} size={20} />
               </div>
-              <div class="widget-info">
-                <div class="widget-name">{widget.name}</div>
-                <div class="widget-description">{widget.description}</div>
+              <div class="component-info">
+                <div class="component-name">{componentItem.name}</div>
+                <div class="component-description">{componentItem.description}</div>
               </div>
-              <div class="widget-add">
+              <div class="component-add">
                 <Plus size={16} />
               </div>
             </button>
@@ -888,7 +882,7 @@
     border-color: var(--color-text-secondary);
   }
 
-  .widget-list {
+  .component-list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -896,20 +890,20 @@
     scrollbar-width: thin;
   }
 
-  .widget-list::-webkit-scrollbar {
+  .component-list::-webkit-scrollbar {
     width: 6px;
   }
 
-  .widget-list::-webkit-scrollbar-track {
+  .component-list::-webkit-scrollbar-track {
     background: var(--color-bg-secondary);
   }
 
-  .widget-list::-webkit-scrollbar-thumb {
+  .component-list::-webkit-scrollbar-thumb {
     background: var(--color-border-secondary);
     border-radius: 3px;
   }
 
-  .widget-list::-webkit-scrollbar-thumb:hover {
+  .component-list::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-secondary);
   }
 
@@ -934,7 +928,7 @@
     opacity: 0.7;
   }
 
-  .widget-item {
+  .component-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -949,12 +943,12 @@
     text-align: left;
   }
 
-  .widget-item:hover {
+  .component-item:hover {
     background: var(--color-bg-tertiary);
     border-color: var(--color-primary);
   }
 
-  .widget-icon {
+  .component-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -965,23 +959,23 @@
     color: var(--color-primary);
   }
 
-  .widget-info {
+  .component-info {
     flex: 1;
   }
 
-  .widget-name {
+  .component-name {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--color-text-primary);
     margin-bottom: 0.25rem;
   }
 
-  .widget-description {
+  .component-description {
     font-size: 0.75rem;
     color: var(--color-text-secondary);
   }
 
-  .widget-add {
+  .component-add {
     color: var(--color-text-secondary);
   }
 

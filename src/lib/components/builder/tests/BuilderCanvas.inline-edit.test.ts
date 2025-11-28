@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import BuilderCanvas from '../BuilderCanvas.svelte';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageComponent } from '$lib/types/pages';
 
 describe('BuilderCanvas - Inline Editing', () => {
-  it('dispatches updateWidget when hero title is edited', async () => {
-    const widgets: PageWidget[] = [
+  it('dispatches updateComponent when hero title is edited', async () => {
+    const pageComponents: PageComponent[] = [
       {
-        id: 'widget-1',
+        id: 'component-1',
         page_id: 'test-page',
         type: 'hero',
         position: 0,
@@ -21,20 +21,20 @@ describe('BuilderCanvas - Inline Editing', () => {
       }
     ];
 
-    const updateWidgetSpy = vi.fn();
+    const updateComponentSpy = vi.fn();
 
     const { component } = render(BuilderCanvas, {
       props: {
-        widgets,
-        selectedWidget: null,
-        hoveredWidget: null,
+        pageComponents,
+        selectedComponent: null,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop' as const,
         colorTheme: 'default-light',
         userCurrentThemeId: 'default-light'
       }
     });
 
-    component.$on('updateWidget', updateWidgetSpy);
+    component.$on('updateComponent', updateComponentSpy);
 
     // Find the h1 element which should be contenteditable
     const titleElement = screen.getByText('Original Title');
@@ -48,20 +48,20 @@ describe('BuilderCanvas - Inline Editing', () => {
     // Wait a bit for the event to propagate
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // The updateWidget event should be dispatched with updated config
-    expect(updateWidgetSpy).toHaveBeenCalled();
+    // The updateComponent event should be dispatched with updated config
+    expect(updateComponentSpy).toHaveBeenCalled();
 
-    const lastCall = updateWidgetSpy.mock.calls[updateWidgetSpy.mock.calls.length - 1];
+    const lastCall = updateComponentSpy.mock.calls[updateComponentSpy.mock.calls.length - 1];
     const updatedWidget = lastCall[0].detail;
 
     expect(updatedWidget.config.title).toBe('New Title');
-    expect(updatedWidget.id).toBe('widget-1');
+    expect(updatedWidget.id).toBe('component-1');
   });
 
-  it('dispatches updateWidget when hero subtitle is edited', async () => {
-    const widgets: PageWidget[] = [
+  it('dispatches updateComponent when hero subtitle is edited', async () => {
+    const pageComponents: PageComponent[] = [
       {
-        id: 'widget-2',
+        id: 'component-2',
         page_id: 'test-page',
         type: 'hero',
         position: 0,
@@ -75,20 +75,20 @@ describe('BuilderCanvas - Inline Editing', () => {
       }
     ];
 
-    const updateWidgetSpy = vi.fn();
+    const updateComponentSpy = vi.fn();
 
     const { component } = render(BuilderCanvas, {
       props: {
-        widgets,
-        selectedWidget: null,
-        hoveredWidget: null,
+        pageComponents,
+        selectedComponent: null,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop' as const,
         colorTheme: 'default-light',
         userCurrentThemeId: 'default-light'
       }
     });
 
-    component.$on('updateWidget', updateWidgetSpy);
+    component.$on('updateComponent', updateComponentSpy);
 
     // Find the subtitle paragraph element
     const subtitleElement = screen.getByText('Original Subtitle');
@@ -102,20 +102,20 @@ describe('BuilderCanvas - Inline Editing', () => {
     // Wait a bit for the event to propagate
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // The updateWidget event should be dispatched
-    expect(updateWidgetSpy).toHaveBeenCalled();
+    // The updateComponent event should be dispatched
+    expect(updateComponentSpy).toHaveBeenCalled();
 
-    const lastCall = updateWidgetSpy.mock.calls[updateWidgetSpy.mock.calls.length - 1];
+    const lastCall = updateComponentSpy.mock.calls[updateComponentSpy.mock.calls.length - 1];
     const updatedWidget = lastCall[0].detail;
 
     expect(updatedWidget.config.subtitle).toBe('New Subtitle');
-    expect(updatedWidget.id).toBe('widget-2');
+    expect(updatedWidget.id).toBe('component-2');
   });
 
-  it('renders hero widget with contenteditable elements', async () => {
-    const widgets: PageWidget[] = [
+  it('renders hero component with contenteditable elements', async () => {
+    const pageComponents: PageComponent[] = [
       {
-        id: 'widget-3',
+        id: 'component-3',
         page_id: 'test-page',
         type: 'hero',
         position: 0,
@@ -129,20 +129,20 @@ describe('BuilderCanvas - Inline Editing', () => {
       }
     ];
 
-    const updateWidgetSpy = vi.fn();
+    const updateComponentSpy = vi.fn();
 
     const { component } = render(BuilderCanvas, {
       props: {
-        widgets,
-        selectedWidget: null,
-        hoveredWidget: null,
+        pageComponents,
+        selectedComponent: null,
+        hoveredComponent: null,
         currentBreakpoint: 'desktop' as const,
         colorTheme: 'default-light',
         userCurrentThemeId: 'default-light'
       }
     });
 
-    component.$on('updateWidget', updateWidgetSpy);
+    component.$on('updateComponent', updateComponentSpy);
 
     // Verify that elements are contenteditable
     const titleElement = screen.getByText('Hero Title');

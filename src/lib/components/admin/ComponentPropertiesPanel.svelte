@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PageWidget, WidgetConfig, Breakpoint, ColorTheme } from '$lib/types/pages';
+  import type { PageComponent, ComponentConfig, Breakpoint, ColorTheme } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
   import MediaBrowser from './MediaBrowser.svelte';
   import MediaUpload from './MediaUpload.svelte';
@@ -8,20 +8,20 @@
   import TailwindContainerEditor from '../builder/TailwindContainerEditor.svelte';
   import { GripVertical, Trash2 } from 'lucide-svelte';
 
-  export let widget: PageWidget;
+  export let component: PageComponent;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
-  export let onUpdate: (config: WidgetConfig) => void;
+  export let onUpdate: (config: ComponentConfig) => void;
 
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
-  let lastWidgetId = widget.id;
+  let lastComponentId = component.id;
   let showMediaBrowser = false;
   let selectedMediaItems: MediaLibraryItem[] = [];
 
-  // Feature card collapse/expand state - initialize with all features collapsed if widget is features type
+  // Feature card collapse/expand state - initialize with all features collapsed if component is features type
   let collapsedFeatures = new Set<number>(
-    widget.type === 'features' && widget.config.features
-      ? widget.config.features.map((_, i) => i)
+    component.type === 'features' && component.config.features
+      ? component.config.features.map((_, i) => i)
       : []
   );
 
@@ -41,11 +41,14 @@
   let updateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Initialize config with defaults only for missing properties (not empty strings)
-  function initConfig(widgetConfig: WidgetConfig, applyDefaults: boolean = false): WidgetConfig {
-    const newConfig = { ...widgetConfig };
+  function initConfig(
+    ComponentConfig: ComponentConfig,
+    applyDefaults: boolean = false
+  ): ComponentConfig {
+    const newConfig = { ...ComponentConfig };
 
-    // Only apply defaults when explicitly requested (on widget switch)
-    if (applyDefaults && widget.type === 'hero') {
+    // Only apply defaults when explicitly requested (on component switch)
+    if (applyDefaults && component.type === 'hero') {
       if (newConfig.backgroundColor === undefined) newConfig.backgroundColor = '#3b82f6';
       if (newConfig.backgroundImage === undefined) newConfig.backgroundImage = '';
       if (newConfig.title === undefined) newConfig.title = 'Hero Title';
@@ -64,7 +67,7 @@
       }
     }
 
-    if (applyDefaults && widget.type === 'features') {
+    if (applyDefaults && component.type === 'features') {
       if (newConfig.title === undefined) newConfig.title = 'Features';
       if (newConfig.subtitle === undefined) newConfig.subtitle = '';
       if (newConfig.features === undefined) {
@@ -102,28 +105,28 @@
     return newConfig;
   }
 
-  let config: WidgetConfig = initConfig(widget.config, false);
-  let _lastConfigString = JSON.stringify(widget.config);
+  let config: ComponentConfig = initConfig(component.config, false);
+  let _lastConfigString = JSON.stringify(component.config);
   let _isLocalUpdate = false;
 
   // Only sync when switching widgets
-  $: if (widget.id !== lastWidgetId) {
-    lastWidgetId = widget.id;
-    config = initConfig(widget.config, false); // Don't apply defaults, just copy existing config
-    _lastConfigString = JSON.stringify(widget.config);
+  $: if (component.id !== lastComponentId) {
+    lastComponentId = component.id;
+    config = initConfig(component.config, false); // Don't apply defaults, just copy existing config
+    _lastConfigString = JSON.stringify(component.config);
     showMediaBrowser = false;
     selectedMediaItems = [];
     _isLocalUpdate = false;
 
     // Collapse all feature cards by default when switching to a features widget
-    if (widget.type === 'features' && config.features) {
+    if (component.type === 'features' && config.features) {
       collapsedFeatures = new Set(config.features.map((_, index) => index));
     } else {
       collapsedFeatures = new Set();
     }
   }
   // Helper function to create new child widgets
-  function _createTextWidget(): PageWidget {
+  function _createTextWidget(): PageComponent {
     return {
       id: `temp-${Date.now()}`,
       type: 'text',
@@ -141,14 +144,14 @@
 
   // Sync external widget config changes to local config (e.g., from contenteditable)
   $: {
-    const currentConfigString = JSON.stringify(widget.config);
+    const currentConfigString = JSON.stringify(component.config);
     if (currentConfigString !== _lastConfigString) {
       // If it's not a local update, or if the change came from outside (like contenteditable)
       // we should sync it to the local config
       if (!_isLocalUpdate) {
         // Update individual properties to maintain bind:value reactivity
-        Object.keys(widget.config).forEach((key) => {
-          (config as Record<string, unknown>)[key] = (widget.config as Record<string, unknown>)[
+        Object.keys(component.config).forEach((key) => {
+          (config as Record<string, unknown>)[key] = (component.config as Record<string, unknown>)[
             key
           ];
         });
@@ -157,7 +160,7 @@
         // Even if it's marked as local update, if the external config differs significantly,
         // it means another component (like contenteditable) made the change, so sync it
         // Check if the difference is in a field we care about
-        const currentConfig = widget.config;
+        const currentConfig = component.config;
         const hasExternalChange =
           currentConfig.title !== config.title ||
           currentConfig.subtitle !== config.subtitle ||
@@ -199,7 +202,7 @@
   }
 
   // Handle visual style updates
-  function handleVisualStyleUpdate(event: CustomEvent<WidgetConfig>): void {
+  function handleVisualStyleUpdate(event: CustomEvent<ComponentConfig>): void {
     config = event.detail;
     handleUpdate();
   }
@@ -231,7 +234,7 @@
 
   function handleMediaSelected(media: MediaLibraryItem[]) {
     // For image widget with single selection, immediately apply and close
-    if (media.length > 0 && widget.type === 'image') {
+    if (media.length > 0 && component.type === 'image') {
       config.src = media[0].url;
       showMediaBrowser = false;
       handleImmediateUpdate();
@@ -420,7 +423,7 @@
     }
   }
 
-  function handleChildUpdate(childIndex: number, childConfig: WidgetConfig): void {
+  function handleChildUpdate(childIndex: number, childConfig: ComponentConfig): void {
     if (!config.children) return;
 
     const children = [...config.children];
@@ -433,8 +436,8 @@
   }
 
   // Helper to create typed child update handlers
-  function createChildUpdateHandler(childIndex: number): (childConfig: WidgetConfig) => void {
-    return (childConfig: WidgetConfig) => handleChildUpdate(childIndex, childConfig);
+  function createChildUpdateHandler(childIndex: number): (childConfig: ComponentConfig) => void {
+    return (childConfig: ComponentConfig) => handleChildUpdate(childIndex, childConfig);
   }
 </script>
 
@@ -495,7 +498,7 @@
           </small>
         </div>
 
-        {#if widget.type === 'text'}
+        {#if component.type === 'text'}
           <div class="section">
             <h4>Content</h4>
             <div class="form-group">
@@ -510,7 +513,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'heading'}
+        {:else if component.type === 'heading'}
           <div class="section">
             <h4>Content</h4>
             <div class="form-group">
@@ -538,7 +541,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'image'}
+        {:else if component.type === 'image'}
           <div class="section">
             <h4>Image</h4>
             {#if config.src}
@@ -639,7 +642,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'hero'}
+        {:else if component.type === 'hero'}
           <div class="section">
             <h4>Text Content</h4>
             <div class="form-group">
@@ -715,7 +718,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'button'}
+        {:else if component.type === 'button'}
           <div class="section">
             <h4>Button Content</h4>
             <div class="form-group">
@@ -751,9 +754,9 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'divider'}
+        {:else if component.type === 'divider'}
           <p class="tab-info">All divider settings are in the Style tab.</p>
-        {:else if widget.type === 'single_product'}
+        {:else if component.type === 'single_product'}
           <div class="section">
             <h4>Product Selection</h4>
             <div class="form-group">
@@ -801,7 +804,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'product_list'}
+        {:else if component.type === 'product_list'}
           <div class="section">
             <h4>Products</h4>
             <div class="form-group">
@@ -851,7 +854,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'spacer'}
+        {:else if component.type === 'spacer'}
           <div class="section">
             <h4>Spacing</h4>
             <div class="form-group">
@@ -878,7 +881,7 @@
               <p class="field-hint">Use the Responsive tab to set different spacing per device.</p>
             </div>
           </div>
-        {:else if widget.type === 'columns'}
+        {:else if component.type === 'columns'}
           <div class="section">
             <h4>Layout</h4>
             <div class="form-group">
@@ -916,7 +919,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'container'}
+        {:else if component.type === 'container'}
           <!-- Show container content -->
           <div class="section">
             <h4>Container Content</h4>
@@ -984,7 +987,7 @@
               </div>
             {/if}
           </div>
-        {:else if widget.type === 'features'}
+        {:else if component.type === 'features'}
           <div class="section">
             <h4>Section Header</h4>
             <div class="form-group">
@@ -1160,7 +1163,7 @@
               </div>
             </div>
           </div>
-        {:else if widget.type === 'navbar'}
+        {:else if component.type === 'navbar'}
           <div class="section">
             <h4>Logo</h4>
             <div class="form-group">
@@ -1510,7 +1513,7 @@
     {:else if activeTab === 'style'}
       <div class="style-tab">
         <!-- Widget-Specific Style Settings -->
-        {#if widget.type === 'hero'}
+        {#if component.type === 'hero'}
           <div class="section">
             <h4>Layout</h4>
             <div class="form-group">
@@ -1687,7 +1690,7 @@
           </div>
         {/if}
 
-        {#if widget.type === 'text'}
+        {#if component.type === 'text'}
           <div class="section">
             <h4>Alignment</h4>
             <div class="form-group">
@@ -1744,7 +1747,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'heading'}
+        {:else if component.type === 'heading'}
           <div class="section">
             <h4>Styling</h4>
             <div class="form-group">
@@ -1770,7 +1773,7 @@
               />
             </div>
           </div>
-        {:else if widget.type === 'image'}
+        {:else if component.type === 'image'}
           <div class="section">
             <h4>Dimensions</h4>
             <div class="form-group">
@@ -1810,7 +1813,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'hero'}
+        {:else if component.type === 'hero'}
           {#if config.ctaText}
             <div class="section">
               <h4>Primary Button Styling</h4>
@@ -1928,7 +1931,7 @@
               </div>
             </div>
           {/if}
-        {:else if widget.type === 'button'}
+        {:else if component.type === 'button'}
           <div class="section">
             <h4>Style</h4>
             <div class="form-group">
@@ -1975,7 +1978,7 @@
               <p class="field-hint">Use the Responsive tab for per-device full width control.</p>
             </div>
           </div>
-        {:else if widget.type === 'divider'}
+        {:else if component.type === 'divider'}
           <div class="section">
             <h4>Styling</h4>
             <div class="form-group">
@@ -2039,7 +2042,7 @@
               </p>
             </div>
           </div>
-        {:else if widget.type === 'columns'}
+        {:else if component.type === 'columns'}
           <div class="section">
             <h4>Spacing</h4>
             <div class="form-group">
@@ -2066,7 +2069,7 @@
               <p class="field-hint">Use Responsive tab for per-device gap control.</p>
             </div>
           </div>
-        {:else if widget.type === 'container'}
+        {:else if component.type === 'container'}
           <TailwindContainerEditor
             {config}
             {currentBreakpoint}
@@ -2076,7 +2079,7 @@
               handleImmediateUpdate();
             }}
           />
-        {:else if widget.type === 'features'}
+        {:else if component.type === 'features'}
           <div class="section">
             <h4>Card Styling</h4>
             <div class="form-group">
@@ -2116,7 +2119,7 @@
               </label>
             </div>
           </div>
-        {:else if widget.type === 'navbar'}
+        {:else if component.type === 'navbar'}
           <div class="section">
             <h4>Colors</h4>
             <div class="form-group">
@@ -2245,7 +2248,7 @@
           </div>
         </div>
 
-        {#if widget.type === 'spacer' && config.space}
+        {#if component.type === 'spacer' && config.space}
           <div class="form-group">
             <label>
               <span>Spacing ({currentBreakpoint})</span>
@@ -2258,7 +2261,7 @@
               />
             </label>
           </div>
-        {:else if widget.type === 'divider' && config.spacing}
+        {:else if component.type === 'divider' && config.spacing}
           <div class="form-group">
             <label>
               <span>Spacing ({currentBreakpoint})</span>
@@ -2271,7 +2274,7 @@
               />
             </label>
           </div>
-        {:else if widget.type === 'hero' && config.heroHeight}
+        {:else if component.type === 'hero' && config.heroHeight}
           <div class="form-group">
             <label>
               <span>Height ({currentBreakpoint})</span>
@@ -2283,11 +2286,11 @@
               />
             </label>
           </div>
-        {:else if widget.type === 'product_list' || widget.type === 'columns'}
+        {:else if component.type === 'product_list' || component.type === 'columns'}
           <div class="form-group">
             <label>
               <span>Columns ({currentBreakpoint})</span>
-              {#if widget.type === 'product_list'}
+              {#if component.type === 'product_list'}
                 {#if !config.columns}
                   {(() => {
                     config.columns = { desktop: 3 };
@@ -2318,7 +2321,7 @@
               {/if}
             </label>
           </div>
-          {#if widget.type === 'columns'}
+          {#if component.type === 'columns'}
             <div class="form-group">
               <label>
                 <span>Gap ({currentBreakpoint}) - pixels</span>
@@ -2338,7 +2341,7 @@
               </label>
             </div>
           {/if}
-        {:else if widget.type === 'button' && config.fullWidth}
+        {:else if component.type === 'button' && config.fullWidth}
           <div class="form-group">
             <label class="checkbox-label">
               <input
@@ -2349,7 +2352,7 @@
               <span>Full Width on {currentBreakpoint}</span>
             </label>
           </div>
-        {:else if widget.type === 'features'}
+        {:else if component.type === 'features'}
           <div class="form-group">
             <label>
               <span>Columns ({currentBreakpoint})</span>
@@ -2417,7 +2420,7 @@
               all.
             </p>
           </div>
-        {:else if widget.type === 'navbar' && config.navbarPadding}
+        {:else if component.type === 'navbar' && config.navbarPadding}
           <div class="form-group">
             <h4>Padding ({currentBreakpoint})</h4>
             {#if !config.navbarPadding[currentBreakpoint]}
@@ -2538,7 +2541,7 @@
 </div>
 
 <!-- Child widget properties panels (always shown for container widgets) -->
-{#if widget.type === 'container' && config.children && config.children.length > 0}
+{#if component.type === 'container' && config.children && config.children.length > 0}
   <div class="child-properties-container">
     {#each config.children as child, index (child.id)}
       <div class="child-properties-panel" id="child-panel-{child.id}">

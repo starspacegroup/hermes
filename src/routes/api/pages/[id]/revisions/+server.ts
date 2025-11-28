@@ -49,8 +49,8 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
       title: data.title,
       slug: data.slug,
       status: data.status,
-      widgetCount: data.widgets?.length || 0,
-      widgets: data.widgets
+      componentCount: data.components?.length || 0,
+      components: data.components
     });
 
     const revision = await revisionsDb.createRevision(db, siteId, pageId, {
@@ -60,7 +60,7 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
 
     console.log('[API] Revision created:', {
       id: revision.id,
-      widgetCount: revision.widgets.length
+      componentCount: revision.components.length
     });
 
     // Get page name for logging

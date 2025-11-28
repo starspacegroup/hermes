@@ -6,7 +6,10 @@ import {
   getPublishedRevision,
   getMostRecentDraftRevision
 } from '$lib/server/db/revisions';
-import { normalizeWidgetPositions, needsPositionNormalization } from '$lib/utils/widgetPositions';
+import {
+  normalizeComponentPositions,
+  needsPositionNormalization
+} from '$lib/utils/componentPositions';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
 import { getLayouts, getDefaultLayout } from '$lib/server/db/layouts';
 import { getComponents } from '$lib/server/db/components';
@@ -33,12 +36,12 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   if (!params.pageId) {
     return {
       page: null,
-      widgets: [],
+      pageComponents: [],
       revisions: [],
       colorThemes,
       layouts,
       defaultLayoutId: defaultLayout?.id || null,
-      components,
+      customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
       isNewPage: true
     };
@@ -84,14 +87,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     currentRevisionIsPublished = false;
   }
 
-  // Use widgets from the selected revision, or empty array if no revision exists
-  let widgets = currentRevision?.widgets || [];
+  // Use components from the selected revision, or empty array if no revision exists
+  let pageComponents = currentRevision?.components || [];
   const currentRevisionId = currentRevision?.id || null;
 
-  // Normalize widget positions if needed (fixes duplicate positions bug)
-  if (needsPositionNormalization(widgets)) {
-    console.log('[Builder Load] Normalizing widget positions due to duplicates or gaps');
-    widgets = normalizeWidgetPositions(widgets);
+  // Normalize component positions if needed (fixes duplicate positions bug)
+  if (needsPositionNormalization(pageComponents)) {
+    console.log('[Builder Load] Normalizing component positions due to duplicates or gaps');
+    pageComponents = normalizeComponentPositions(pageComponents);
   }
 
   console.log('[Builder Load] Loaded revision data:', {
@@ -99,20 +102,20 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     hasRevision: !!currentRevision,
     revisionId: currentRevisionId,
     isPublished: currentRevisionIsPublished,
-    widgetCount: widgets.length,
-    widgets: widgets
+    componentCount: pageComponents.length,
+    components: pageComponents
   });
 
   return {
     page,
-    widgets,
+    pageComponents: pageComponents,
     revisions,
     currentRevisionId,
     currentRevisionIsPublished,
     colorThemes,
     layouts,
     defaultLayoutId: defaultLayout?.id || null,
-    components,
+    customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
     isNewPage: false
   };

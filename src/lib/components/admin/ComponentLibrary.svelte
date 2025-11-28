@@ -1,20 +1,20 @@
 <script lang="ts">
-  import type { WidgetType } from '$lib/types/pages';
+  import type { ComponentType } from '$lib/types/pages';
 
-  export let onSelectWidget: (type: WidgetType) => void;
+  export let onSelectComponent: (type: ComponentType) => void;
 
   let searchQuery = '';
   let selectedCategory: string | null = null;
 
-  type WidgetDefinition = {
-    type: WidgetType;
+  type ComponentDefinition = {
+    type: ComponentType;
     label: string;
     description: string;
     category: 'Layout' | 'Content' | 'Commerce' | 'Media';
     icon: string;
   };
 
-  const widgets: WidgetDefinition[] = [
+  const componentDefinitions: ComponentDefinition[] = [
     {
       type: 'hero',
       label: 'Hero Section',
@@ -110,23 +110,23 @@
 
   const categories = ['Layout', 'Content', 'Commerce', 'Media'];
 
-  $: filteredWidgets = widgets.filter((widget) => {
+  $: filteredComponents = componentDefinitions.filter((component) => {
     const matchesSearch =
       searchQuery === '' ||
-      widget.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      widget.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || widget.category === selectedCategory;
+      component.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      component.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || component.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 </script>
 
-<div class="widget-library">
+<div class="component-library">
   <div class="library-header">
-    <h3>Widget Library</h3>
+    <h3>Component Library</h3>
     <input
       type="search"
       bind:value={searchQuery}
-      placeholder="Search widgets..."
+      placeholder="Search components..."
       class="search-input"
     />
   </div>
@@ -152,36 +152,41 @@
     {/each}
   </div>
 
-  <div class="widgets-grid">
-    {#each filteredWidgets as widget}
+  <div class="components-grid">
+    {#each filteredComponents as component}
       <button
         type="button"
-        class="widget-card"
-        on:click={() => onSelectWidget(widget.type)}
+        class="component-card"
+        on:click={() => onSelectComponent(component.type)}
         draggable="true"
         on:dragstart={(e) => {
           if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'copy';
-            e.dataTransfer.setData('widget-type', widget.type);
+            e.dataTransfer.setData('component-type', component.type);
           }
         }}
       >
-        <div class="widget-icon">
+        <div class="component-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d={widget.icon} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+              d={component.icon}
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
-        <div class="widget-info">
-          <span class="widget-name">{widget.label}</span>
-          <span class="widget-desc">{widget.description}</span>
+        <div class="component-info">
+          <span class="component-name">{component.label}</span>
+          <span class="component-desc">{component.description}</span>
         </div>
       </button>
     {/each}
   </div>
 
-  {#if filteredWidgets.length === 0}
+  {#if filteredComponents.length === 0}
     <div class="no-results">
-      <p>No widgets found</p>
+      <p>No components found</p>
       <button type="button" on:click={() => ((searchQuery = ''), (selectedCategory = null))}>
         Clear filters
       </button>
@@ -190,7 +195,7 @@
 </div>
 
 <style>
-  .widget-library {
+  .component-library {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -240,13 +245,13 @@
     border-color: var(--color-primary);
   }
 
-  .widgets-grid {
+  .components-grid {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .widget-card {
+  .component-card {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -259,13 +264,13 @@
     text-align: left;
   }
 
-  .widget-card:hover {
+  .component-card:hover {
     border-color: var(--color-primary);
     transform: translateX(2px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
-  .widget-icon {
+  .component-icon {
     flex-shrink: 0;
     width: 40px;
     height: 40px;
@@ -277,20 +282,20 @@
     color: var(--color-primary);
   }
 
-  .widget-info {
+  .component-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
   }
 
-  .widget-name {
+  .component-name {
     font-weight: 600;
     font-size: 0.875rem;
     color: var(--color-text-primary);
   }
 
-  .widget-desc {
+  .component-desc {
     font-size: 0.75rem;
     color: var(--color-text-secondary);
     line-height: 1.2;

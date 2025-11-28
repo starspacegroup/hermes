@@ -1,18 +1,18 @@
 <script lang="ts">
   /**
-   * ComponentRefRenderer - Renders a component's widget composition
-   * Fetches component widgets and renders them recursively
+   * ComponentRefRenderer - Renders a component's child composition
+   * Fetches component children and renders them recursively
    */
   import { onMount } from 'svelte';
-  import type { PageWidget, Breakpoint, ColorTheme, ComponentWidget } from '$lib/types/pages';
-  import WidgetRenderer from './WidgetRenderer.svelte';
+  import type { PageComponent, Breakpoint, ColorTheme, ChildComponent } from '$lib/types/pages';
+  import ComponentRenderer from './ComponentRenderer.svelte';
 
   export let componentId: number | undefined;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let isEditable = false;
 
-  let componentWidgets: PageWidget[] = [];
+  let childComponents: PageComponent[] = [];
   let isLoading = true;
   let error: string | null = null;
 
@@ -24,27 +24,27 @@
     }
 
     try {
-      const response = await fetch(`/api/components/${componentId}/widgets`);
+      const response = await fetch(`/api/components/${componentId}/children`);
       if (!response.ok) {
-        throw new Error('Failed to load component widgets');
+        throw new Error('Failed to load component children');
       }
 
-      const data = (await response.json()) as { widgets: ComponentWidget[] };
+      const data = (await response.json()) as { children: ChildComponent[] };
 
-      // Convert ComponentWidget[] to PageWidget[] format
-      componentWidgets = data.widgets.map((w) => ({
-        id: w.id,
+      // Convert ChildComponent[] to PageComponent[] format
+      childComponents = data.children.map((c) => ({
+        id: c.id,
         page_id: String(componentId),
-        type: w.type,
-        position: w.position,
-        config: w.config,
-        created_at: new Date(w.created_at).getTime(),
-        updated_at: new Date(w.updated_at).getTime()
+        type: c.type,
+        position: c.position,
+        config: c.config,
+        created_at: new Date(c.created_at).getTime(),
+        updated_at: new Date(c.updated_at).getTime()
       }));
 
       isLoading = false;
     } catch (err) {
-      console.error('Failed to load component widgets:', err);
+      console.error('Failed to load component children:', err);
       error = err instanceof Error ? err.message : 'Failed to load component';
       isLoading = false;
     }
@@ -60,14 +60,20 @@
   <div class="component-ref-error">
     <span>⚠️ {error}</span>
   </div>
-{:else if componentWidgets.length === 0}
+{:else if childComponents.length === 0}
   <div class="component-ref-empty">
-    <span>Component has no widgets</span>
+    <span>Component has no children</span>
   </div>
 {:else}
   <div class="component-ref-container">
-    {#each componentWidgets as widget (widget.id)}
-      <WidgetRenderer {widget} {currentBreakpoint} {colorTheme} {isEditable} onUpdate={undefined} />
+    {#each childComponents as component (component.id)}
+      <ComponentRenderer
+        {component}
+        {currentBreakpoint}
+        {colorTheme}
+        {isEditable}
+        onUpdate={undefined}
+      />
     {/each}
   </div>
 {/if}

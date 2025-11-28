@@ -2,10 +2,10 @@
   import { createEventDispatcher } from 'svelte';
   import { page } from '$app/stores';
   import AIAssistant from '$lib/components/ai/AIAssistant.svelte';
-  import type { PageWidget } from '$lib/types/pages';
+  import type { PageComponent } from '$lib/types/pages';
   import { builderContextStore } from '$lib/stores/builderContext';
 
-  export let widgets: PageWidget[];
+  export let components: PageComponent[];
   export let title: string;
   export let slug: string;
 
@@ -14,8 +14,8 @@
   // Get builder context from store for AI awareness
   $: builderContext = $builderContextStore;
 
-  // Available widget types for AI to use
-  const availableWidgetTypes = [
+  // Available component types for AI to use
+  const availableComponentTypes = [
     'hero',
     'text',
     'image',
@@ -33,15 +33,15 @@
       entityId: builderContext.entityId,
       entityName: title,
       slug,
-      widgets: widgets.map((w) => ({
-        id: w.id,
-        type: w.type,
-        position: w.position,
-        config: w.config
+      components: components.map((c) => ({
+        id: c.id,
+        type: c.type,
+        position: c.position,
+        config: c.config
       })),
       layoutId: builderContext.layoutId,
-      availableWidgetTypes,
-      widgetCount: widgets.length
+      availableComponentTypes,
+      componentCount: components.length
     },
     // Also include specific entity data based on mode
     ...(builderContext.mode === 'page'
@@ -50,7 +50,7 @@
             id: builderContext.entityId || 'new',
             title,
             slug,
-            widgets: widgets
+            components: components
           }
         }
       : builderContext.mode === 'layout'
@@ -59,15 +59,15 @@
               id: builderContext.entityId || 'new',
               name: title,
               slug,
-              widgets: widgets
+              components: components
             }
           }
         : {
             component: {
               id: builderContext.entityId || 'new',
               name: title,
-              type: widgets[0]?.type || 'text',
-              config: widgets[0]?.config || {}
+              type: components[0]?.type || 'text',
+              config: components[0]?.config || {}
             }
           })
   };
@@ -79,18 +79,18 @@
   function handleApplyChanges(event: CustomEvent) {
     const { type, data } = event.detail;
 
-    if (type === 'widget_changes') {
-      // Import widget changes utility
-      import('$lib/utils/widgetChanges').then(({ applyWidgetChanges }) => {
-        // Apply changes to current widgets
-        const updatedWidgets = applyWidgetChanges(widgets, {
-          type: 'widget_changes',
+    if (type === 'component_changes') {
+      // Import component changes utility
+      import('$lib/utils/componentChanges').then(({ applyComponentChanges }) => {
+        // Apply changes to current components
+        const updatedComponents = applyComponentChanges(components, {
+          type: 'component_changes',
           changes: data
         });
 
-        // Dispatch the updated widgets back to AdvancedBuilder
+        // Dispatch the updated components back to AdvancedBuilder
         dispatch('applyChanges', {
-          widgets: updatedWidgets
+          components: updatedComponents
         });
       });
     } else {
