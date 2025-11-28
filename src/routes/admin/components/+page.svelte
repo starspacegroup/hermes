@@ -406,6 +406,99 @@
       {/each}
     </section>
   {/if}
+
+  <!-- Primitives Section - Base Building Blocks -->
+  {#if data.primitiveComponents && data.primitiveComponents.length > 0}
+    <section class="components-section primitives-section">
+      <div class="primitives-header">
+        <h2 class="section-title">
+          Primitives
+          <span class="section-badge primitive-badge">Building Blocks</span>
+        </h2>
+        <p class="primitives-description">
+          These are the fundamental building blocks used to create components. Edit their default
+          properties to customize the foundation of your design system.
+        </p>
+      </div>
+
+      <div class="components-grid primitives-grid">
+        {#each data.primitiveComponents as component (component.id)}
+          <div class="component-card primitive-card">
+            <div class="component-header">
+              <div>
+                <h3>{component.name}</h3>
+                {#if component.description}
+                  <p class="component-description">{component.description}</p>
+                {/if}
+              </div>
+              <span
+                class="widget-type-badge primitive-type-badge"
+                style="background: {getCategoryInfo(component.type).color}"
+                >{getWidgetTypeLabel(component.type)}</span
+              >
+            </div>
+
+            <div class="component-actions">
+              <a href="/admin/builder/component/{component.id}" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                  <path
+                    d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>
+                Edit Defaults
+              </a>
+              <form
+                method="POST"
+                action="?/reset"
+                use:enhance={() => {
+                  if (
+                    !confirm(
+                      `Reset "${component.name}" to its original defaults? This will undo any customizations.`
+                    )
+                  ) {
+                    return () => {};
+                  }
+                  isResetting = true;
+                  return async ({ update }) => {
+                    await update();
+                    isResetting = false;
+                  };
+                }}
+              >
+                <input type="hidden" name="id" value={component.id} />
+                <button type="submit" class="btn btn-warning" disabled={isResetting}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path
+                      d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                    <path
+                      d="M3 3v5h5"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    ></path>
+                  </svg>
+                  Reset
+                </button>
+              </form>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 </div>
 
 <style>
@@ -474,6 +567,61 @@
 
   .builtin-badge {
     background: var(--color-text-secondary);
+  }
+
+  /* Primitives Section Styles */
+  .primitives-section {
+    padding-top: 2rem;
+    border-top: 2px solid var(--color-border-secondary);
+  }
+
+  .primitives-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .primitives-description {
+    margin: 0.5rem 0 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    max-width: 600px;
+  }
+
+  .primitive-badge {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+  }
+
+  .primitive-card {
+    background: linear-gradient(
+      to bottom right,
+      var(--color-bg-primary),
+      var(--color-bg-secondary)
+    );
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+  }
+
+  .primitive-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    opacity: 0.3;
+  }
+
+  .primitive-card:hover::before {
+    opacity: 0.5;
+  }
+
+  .primitive-type-badge {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  }
+
+  .primitives-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 
   .btn {

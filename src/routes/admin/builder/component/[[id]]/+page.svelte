@@ -138,6 +138,7 @@
   currentRevisionIsPublished={data.currentRevisionIsPublished}
   colorThemes={data.colorThemes}
   components={data.customComponents}
+  currentComponentId={data.component?.id || null}
   userName={data.userName}
   onSave={handleSave}
   onPublish={handlePublish}

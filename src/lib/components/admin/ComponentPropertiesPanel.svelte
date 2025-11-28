@@ -6,12 +6,15 @@
   import ThemeColorInput from './ThemeColorInput.svelte';
   import VisualStyleEditor from '../builder/VisualStyleEditor.svelte';
   import TailwindContainerEditor from '../builder/TailwindContainerEditor.svelte';
+  import ChildLayoutEditor from '../builder/ChildLayoutEditor.svelte';
   import { GripVertical, Trash2 } from 'lucide-svelte';
 
   export let component: PageComponent;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let onUpdate: (config: ComponentConfig) => void;
+  // Context from parent - when this component is a child of a container
+  export let parentDisplayMode: 'flex' | 'grid' | 'block' | undefined = undefined;
 
   let activeTab: 'content' | 'style' | 'responsive' | 'advanced' = 'content';
   let lastComponentId = component.id;
@@ -451,6 +454,17 @@
     >
       Content
     </button>
+    {#if parentDisplayMode}
+      <button
+        type="button"
+        class="tab layout-tab"
+        class:active={activeTab === 'responsive'}
+        on:click={() => (activeTab = 'responsive')}
+        title="Layout settings for this child within the parent container"
+      >
+        Layout
+      </button>
+    {/if}
     <button
       type="button"
       class="tab"
@@ -459,14 +473,16 @@
     >
       Style
     </button>
-    <button
-      type="button"
-      class="tab"
-      class:active={activeTab === 'responsive'}
-      on:click={() => (activeTab = 'responsive')}
-    >
-      Responsive
-    </button>
+    {#if !parentDisplayMode}
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === 'responsive'}
+        on:click={() => (activeTab = 'responsive')}
+      >
+        Responsive
+      </button>
+    {/if}
     <button
       type="button"
       class="tab"
@@ -2241,288 +2257,301 @@
       </div>
     {:else if activeTab === 'responsive'}
       <div class="responsive-tab">
-        <div class="breakpoint-info">
-          <p>Configure different values for each device size:</p>
-          <div class="current-breakpoint">
-            Editing: <strong>{currentBreakpoint}</strong>
+        {#if parentDisplayMode}
+          <!-- Child Layout Editor - shown when this component is inside a container -->
+          <ChildLayoutEditor
+            {config}
+            {currentBreakpoint}
+            {parentDisplayMode}
+            onUpdate={(updatedConfig) => {
+              config = updatedConfig;
+              handleImmediateUpdate();
+            }}
+          />
+        {:else}
+          <div class="breakpoint-info">
+            <p>Configure different values for each device size:</p>
+            <div class="current-breakpoint">
+              Editing: <strong>{currentBreakpoint}</strong>
+            </div>
           </div>
-        </div>
 
-        {#if component.type === 'spacer' && config.space}
-          <div class="form-group">
-            <label>
-              <span>Spacing ({currentBreakpoint})</span>
-              <input
-                type="number"
-                bind:value={config.space[currentBreakpoint]}
-                on:input={handleUpdate}
-                min="0"
-                placeholder="px"
-              />
-            </label>
-          </div>
-        {:else if component.type === 'divider' && config.spacing}
-          <div class="form-group">
-            <label>
-              <span>Spacing ({currentBreakpoint})</span>
-              <input
-                type="number"
-                bind:value={config.spacing[currentBreakpoint]}
-                on:input={handleUpdate}
-                min="0"
-                placeholder="px"
-              />
-            </label>
-          </div>
-        {:else if component.type === 'hero' && config.heroHeight}
-          <div class="form-group">
-            <label>
-              <span>Height ({currentBreakpoint})</span>
-              <input
-                type="text"
-                bind:value={config.heroHeight[currentBreakpoint]}
-                on:input={handleUpdate}
-                placeholder="500px, 50vh, etc."
-              />
-            </label>
-          </div>
-        {:else if component.type === 'product_list' || component.type === 'columns'}
-          <div class="form-group">
-            <label>
-              <span>Columns ({currentBreakpoint})</span>
-              {#if component.type === 'product_list'}
-                {#if !config.columns}
+          {#if component.type === 'spacer' && config.space}
+            <div class="form-group">
+              <label>
+                <span>Spacing ({currentBreakpoint})</span>
+                <input
+                  type="number"
+                  bind:value={config.space[currentBreakpoint]}
+                  on:input={handleUpdate}
+                  min="0"
+                  placeholder="px"
+                />
+              </label>
+            </div>
+          {:else if component.type === 'divider' && config.spacing}
+            <div class="form-group">
+              <label>
+                <span>Spacing ({currentBreakpoint})</span>
+                <input
+                  type="number"
+                  bind:value={config.spacing[currentBreakpoint]}
+                  on:input={handleUpdate}
+                  min="0"
+                  placeholder="px"
+                />
+              </label>
+            </div>
+          {:else if component.type === 'hero' && config.heroHeight}
+            <div class="form-group">
+              <label>
+                <span>Height ({currentBreakpoint})</span>
+                <input
+                  type="text"
+                  bind:value={config.heroHeight[currentBreakpoint]}
+                  on:input={handleUpdate}
+                  placeholder="500px, 50vh, etc."
+                />
+              </label>
+            </div>
+          {:else if component.type === 'product_list' || component.type === 'columns'}
+            <div class="form-group">
+              <label>
+                <span>Columns ({currentBreakpoint})</span>
+                {#if component.type === 'product_list'}
+                  {#if !config.columns}
+                    {(() => {
+                      config.columns = { desktop: 3 };
+                      return '';
+                    })()}
+                  {/if}
+                  <input
+                    type="number"
+                    bind:value={config.columns[currentBreakpoint]}
+                    on:input={handleUpdate}
+                    min="1"
+                    max="6"
+                  />
+                {:else}
+                  {#if !config.columnCount}
+                    {(() => {
+                      config.columnCount = { desktop: 2 };
+                      return '';
+                    })()}
+                  {/if}
+                  <input
+                    type="number"
+                    bind:value={config.columnCount[currentBreakpoint]}
+                    on:input={handleUpdate}
+                    min="1"
+                    max="6"
+                  />
+                {/if}
+              </label>
+            </div>
+            {#if component.type === 'columns'}
+              <div class="form-group">
+                <label>
+                  <span>Gap ({currentBreakpoint}) - pixels</span>
+                  {#if !config.gap}
+                    {(() => {
+                      config.gap = { desktop: 20 };
+                      return '';
+                    })()}
+                  {/if}
+                  <input
+                    type="number"
+                    bind:value={config.gap[currentBreakpoint]}
+                    on:input={handleUpdate}
+                    min="0"
+                    placeholder="20"
+                  />
+                </label>
+              </div>
+            {/if}
+          {:else if component.type === 'button' && config.fullWidth}
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.fullWidth[currentBreakpoint]}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Full Width on {currentBreakpoint}</span>
+              </label>
+            </div>
+          {:else if component.type === 'features'}
+            <div class="form-group">
+              <label>
+                <span>Columns ({currentBreakpoint})</span>
+                {#if !config.featuresColumns}
                   {(() => {
-                    config.columns = { desktop: 3 };
+                    config.featuresColumns = { desktop: 3, tablet: 2, mobile: 1 };
                     return '';
                   })()}
                 {/if}
                 <input
                   type="number"
-                  bind:value={config.columns[currentBreakpoint]}
+                  bind:value={config.featuresColumns[currentBreakpoint]}
                   on:input={handleUpdate}
                   min="1"
-                  max="6"
                 />
-              {:else}
-                {#if !config.columnCount}
-                  {(() => {
-                    config.columnCount = { desktop: 2 };
-                    return '';
-                  })()}
-                {/if}
-                <input
-                  type="number"
-                  bind:value={config.columnCount[currentBreakpoint]}
-                  on:input={handleUpdate}
-                  min="1"
-                  max="6"
-                />
-              {/if}
-            </label>
-          </div>
-          {#if component.type === 'columns'}
+              </label>
+              <p class="field-hint">
+                Number of feature cards per row on {currentBreakpoint} devices.
+              </p>
+            </div>
             <div class="form-group">
               <label>
                 <span>Gap ({currentBreakpoint}) - pixels</span>
-                {#if !config.gap}
+                {#if !config.featuresGap}
                   {(() => {
-                    config.gap = { desktop: 20 };
+                    config.featuresGap = { desktop: 32, tablet: 24, mobile: 16 };
                     return '';
                   })()}
                 {/if}
                 <input
                   type="number"
-                  bind:value={config.gap[currentBreakpoint]}
+                  bind:value={config.featuresGap[currentBreakpoint]}
                   on:input={handleUpdate}
                   min="0"
-                  placeholder="20"
+                  placeholder="32"
                 />
               </label>
+              <p class="field-hint">Space between feature cards on {currentBreakpoint} devices.</p>
             </div>
+            <div class="form-group">
+              <label>
+                <span>Limit ({currentBreakpoint}) - Optional</span>
+                <input
+                  type="number"
+                  value={config.featuresLimit?.[currentBreakpoint] ?? ''}
+                  on:input={(e) => {
+                    const val = e.currentTarget.value;
+                    if (!config.featuresLimit) {
+                      config.featuresLimit = { desktop: 0 };
+                    }
+                    if (val === '') {
+                      // @ts-expect-error - Allow setting to undefined for optional values
+                      config.featuresLimit[currentBreakpoint] = undefined;
+                    } else {
+                      config.featuresLimit[currentBreakpoint] = parseInt(val);
+                    }
+                  }}
+                  on:input={handleUpdate}
+                  min="1"
+                  placeholder="Show all"
+                />
+              </label>
+              <p class="field-hint">
+                Maximum number of features to display on {currentBreakpoint} devices. Leave empty to
+                show all.
+              </p>
+            </div>
+          {:else if component.type === 'navbar' && config.navbarPadding}
+            <div class="form-group">
+              <h4>Padding ({currentBreakpoint})</h4>
+              {#if !config.navbarPadding[currentBreakpoint]}
+                {(() => {
+                  if (!config.navbarPadding) {
+                    config.navbarPadding = {
+                      desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+                      tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+                      mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+                    };
+                  }
+                  if (!config.navbarPadding[currentBreakpoint]) {
+                    config.navbarPadding[currentBreakpoint] = {
+                      top: 16,
+                      right: 24,
+                      bottom: 16,
+                      left: 24
+                    };
+                  }
+                  return '';
+                })()}
+              {/if}
+              <div class="spacing-grid">
+                <label>
+                  <span>Top</span>
+                  <input
+                    type="number"
+                    value={config.navbarPadding?.[currentBreakpoint]?.top ?? 16}
+                    on:input={(e) => {
+                      if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                        const padding = config.navbarPadding[currentBreakpoint];
+                        if (padding) {
+                          padding.top = parseInt(e.currentTarget.value);
+                          handleUpdate();
+                        }
+                      }
+                    }}
+                    min="0"
+                    placeholder="16"
+                  />
+                </label>
+                <label>
+                  <span>Right</span>
+                  <input
+                    type="number"
+                    value={config.navbarPadding?.[currentBreakpoint]?.right ?? 24}
+                    on:input={(e) => {
+                      if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                        const padding = config.navbarPadding[currentBreakpoint];
+                        if (padding) {
+                          padding.right = parseInt(e.currentTarget.value);
+                          handleUpdate();
+                        }
+                      }
+                    }}
+                    min="0"
+                    placeholder="24"
+                  />
+                </label>
+                <label>
+                  <span>Bottom</span>
+                  <input
+                    type="number"
+                    value={config.navbarPadding?.[currentBreakpoint]?.bottom ?? 16}
+                    on:input={(e) => {
+                      if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                        const padding = config.navbarPadding[currentBreakpoint];
+                        if (padding) {
+                          padding.bottom = parseInt(e.currentTarget.value);
+                          handleUpdate();
+                        }
+                      }
+                    }}
+                    min="0"
+                    placeholder="16"
+                  />
+                </label>
+                <label>
+                  <span>Left</span>
+                  <input
+                    type="number"
+                    value={config.navbarPadding?.[currentBreakpoint]?.left ?? 24}
+                    on:input={(e) => {
+                      if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
+                        const padding = config.navbarPadding[currentBreakpoint];
+                        if (padding) {
+                          padding.left = parseInt(e.currentTarget.value);
+                          handleUpdate();
+                        }
+                      }
+                    }}
+                    min="0"
+                    placeholder="24"
+                  />
+                </label>
+              </div>
+              <p class="field-hint">
+                Adjust navbar padding for {currentBreakpoint} devices.
+              </p>
+            </div>
+          {:else}
+            <p class="tab-info">This widget doesn't have responsive settings.</p>
           {/if}
-        {:else if component.type === 'button' && config.fullWidth}
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                bind:checked={config.fullWidth[currentBreakpoint]}
-                on:change={handleImmediateUpdate}
-              />
-              <span>Full Width on {currentBreakpoint}</span>
-            </label>
-          </div>
-        {:else if component.type === 'features'}
-          <div class="form-group">
-            <label>
-              <span>Columns ({currentBreakpoint})</span>
-              {#if !config.featuresColumns}
-                {(() => {
-                  config.featuresColumns = { desktop: 3, tablet: 2, mobile: 1 };
-                  return '';
-                })()}
-              {/if}
-              <input
-                type="number"
-                bind:value={config.featuresColumns[currentBreakpoint]}
-                on:input={handleUpdate}
-                min="1"
-              />
-            </label>
-            <p class="field-hint">
-              Number of feature cards per row on {currentBreakpoint} devices.
-            </p>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Gap ({currentBreakpoint}) - pixels</span>
-              {#if !config.featuresGap}
-                {(() => {
-                  config.featuresGap = { desktop: 32, tablet: 24, mobile: 16 };
-                  return '';
-                })()}
-              {/if}
-              <input
-                type="number"
-                bind:value={config.featuresGap[currentBreakpoint]}
-                on:input={handleUpdate}
-                min="0"
-                placeholder="32"
-              />
-            </label>
-            <p class="field-hint">Space between feature cards on {currentBreakpoint} devices.</p>
-          </div>
-          <div class="form-group">
-            <label>
-              <span>Limit ({currentBreakpoint}) - Optional</span>
-              <input
-                type="number"
-                value={config.featuresLimit?.[currentBreakpoint] ?? ''}
-                on:input={(e) => {
-                  const val = e.currentTarget.value;
-                  if (!config.featuresLimit) {
-                    config.featuresLimit = { desktop: 0 };
-                  }
-                  if (val === '') {
-                    // @ts-expect-error - Allow setting to undefined for optional values
-                    config.featuresLimit[currentBreakpoint] = undefined;
-                  } else {
-                    config.featuresLimit[currentBreakpoint] = parseInt(val);
-                  }
-                }}
-                on:input={handleUpdate}
-                min="1"
-                placeholder="Show all"
-              />
-            </label>
-            <p class="field-hint">
-              Maximum number of features to display on {currentBreakpoint} devices. Leave empty to show
-              all.
-            </p>
-          </div>
-        {:else if component.type === 'navbar' && config.navbarPadding}
-          <div class="form-group">
-            <h4>Padding ({currentBreakpoint})</h4>
-            {#if !config.navbarPadding[currentBreakpoint]}
-              {(() => {
-                if (!config.navbarPadding) {
-                  config.navbarPadding = {
-                    desktop: { top: 16, right: 24, bottom: 16, left: 24 },
-                    tablet: { top: 12, right: 20, bottom: 12, left: 20 },
-                    mobile: { top: 12, right: 16, bottom: 12, left: 16 }
-                  };
-                }
-                if (!config.navbarPadding[currentBreakpoint]) {
-                  config.navbarPadding[currentBreakpoint] = {
-                    top: 16,
-                    right: 24,
-                    bottom: 16,
-                    left: 24
-                  };
-                }
-                return '';
-              })()}
-            {/if}
-            <div class="spacing-grid">
-              <label>
-                <span>Top</span>
-                <input
-                  type="number"
-                  value={config.navbarPadding?.[currentBreakpoint]?.top ?? 16}
-                  on:input={(e) => {
-                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
-                      const padding = config.navbarPadding[currentBreakpoint];
-                      if (padding) {
-                        padding.top = parseInt(e.currentTarget.value);
-                        handleUpdate();
-                      }
-                    }
-                  }}
-                  min="0"
-                  placeholder="16"
-                />
-              </label>
-              <label>
-                <span>Right</span>
-                <input
-                  type="number"
-                  value={config.navbarPadding?.[currentBreakpoint]?.right ?? 24}
-                  on:input={(e) => {
-                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
-                      const padding = config.navbarPadding[currentBreakpoint];
-                      if (padding) {
-                        padding.right = parseInt(e.currentTarget.value);
-                        handleUpdate();
-                      }
-                    }
-                  }}
-                  min="0"
-                  placeholder="24"
-                />
-              </label>
-              <label>
-                <span>Bottom</span>
-                <input
-                  type="number"
-                  value={config.navbarPadding?.[currentBreakpoint]?.bottom ?? 16}
-                  on:input={(e) => {
-                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
-                      const padding = config.navbarPadding[currentBreakpoint];
-                      if (padding) {
-                        padding.bottom = parseInt(e.currentTarget.value);
-                        handleUpdate();
-                      }
-                    }
-                  }}
-                  min="0"
-                  placeholder="16"
-                />
-              </label>
-              <label>
-                <span>Left</span>
-                <input
-                  type="number"
-                  value={config.navbarPadding?.[currentBreakpoint]?.left ?? 24}
-                  on:input={(e) => {
-                    if (config.navbarPadding && config.navbarPadding[currentBreakpoint]) {
-                      const padding = config.navbarPadding[currentBreakpoint];
-                      if (padding) {
-                        padding.left = parseInt(e.currentTarget.value);
-                        handleUpdate();
-                      }
-                    }
-                  }}
-                  min="0"
-                  placeholder="24"
-                />
-              </label>
-            </div>
-            <p class="field-hint">
-              Adjust navbar padding for {currentBreakpoint} devices.
-            </p>
-          </div>
-        {:else}
-          <p class="tab-info">This widget doesn't have responsive settings.</p>
         {/if}
       </div>
     {:else if activeTab === 'advanced'}
@@ -2542,6 +2571,14 @@
 
 <!-- Child widget properties panels (always shown for container widgets) -->
 {#if component.type === 'container' && config.children && config.children.length > 0}
+  {@const containerDisplayMode = (() => {
+    const display = config.containerDisplay;
+    if (!display) return 'flex';
+    if (typeof display === 'object' && display !== null) {
+      return display[currentBreakpoint] || display.desktop || 'flex';
+    }
+    return display;
+  })()}
   <div class="child-properties-container">
     {#each config.children as child, index (child.id)}
       <div class="child-properties-panel" id="child-panel-{child.id}">
@@ -2560,10 +2597,11 @@
         </div>
         <div class="child-panel-content">
           <svelte:self
-            widget={child}
+            component={child}
             {currentBreakpoint}
             {colorTheme}
             onUpdate={createChildUpdateHandler(index)}
+            parentDisplayMode={containerDisplayMode}
           />
         </div>
       </div>

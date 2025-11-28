@@ -40,6 +40,8 @@
   export let layouts: Layout[] = [];
   export let defaultLayoutId: number | null = null;
   export let components: Component[] = [];
+  // Current component ID (for component mode) - used to prevent adding a component to itself
+  export let currentComponentId: number | null = null;
 
   // Track if we're currently viewing a published revision (can change after saves)
   let isViewingPublishedRevision = currentRevisionIsPublished;
@@ -557,6 +559,7 @@
         {title}
         {slug}
         {components}
+        {currentComponentId}
         on:addComponent={(e) => handleAddComponent(e.detail)}
         on:selectComponent={(e) => handleSelectComponent(e.detail)}
         on:showPageProperties={handleShowPageProperties}

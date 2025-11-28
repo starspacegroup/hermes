@@ -21,6 +21,8 @@
   export let title: string;
   export let slug: string;
   export let components: Component[] = [];
+  // Current component ID (for component mode) - used to prevent adding a component to itself
+  export let currentComponentId: number | null = null;
 
   // Entity labels based on mode
   $: entityLabel = mode === 'page' ? 'Page' : mode === 'layout' ? 'Layout' : 'Component';
@@ -79,6 +81,9 @@
     { id: 'custom', name: 'Custom', icon: Package }
   ];
 
+  // Filter out the current component being edited to prevent circular references
+  $: availableComponents = components.filter((c) => c.id !== currentComponentId);
+
   // Reactive filtered components based on search and category
   $: filteredComponents = (() => {
     // Using any here because componentLibrary has complex union types
@@ -86,8 +91,8 @@
     let allComponents: any[] = [];
 
     if (activeCategory === 'custom') {
-      // Show custom components
-      allComponents = components.map((c) => ({
+      // Show custom components (excluding current component to prevent self-reference)
+      allComponents = availableComponents.map((c) => ({
         type: `component:${c.id}`,
         name: c.name,
         icon: Package,
@@ -101,8 +106,8 @@
       Object.values(componentLibrary).forEach((category) => {
         allComponents = [...allComponents, ...category];
       });
-      // Add custom components to 'all' view
-      components.forEach((c) => {
+      // Add custom components to 'all' view (excluding current component)
+      availableComponents.forEach((c) => {
         allComponents.push({
           type: `component:${c.id}`,
           name: c.name,

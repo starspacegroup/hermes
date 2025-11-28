@@ -114,6 +114,7 @@ export interface Component {
   type: string; // Component type this represents (kept for backward compatibility)
   config: Record<string, unknown>; // JSON configuration (kept for backward compatibility)
   is_global: boolean; // If true, available to all sites (system component)
+  is_primitive: boolean; // If true, this is a base building block (Container, Button, Text, etc.)
   created_at: string;
   updated_at: string;
 }
@@ -713,8 +714,35 @@ export interface ComponentConfig {
     'start' | 'center' | 'end' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly'
   >;
 
-  // Individual child grid properties (applied to direct children via config)
-  // These would be stored per-child in the children array
+  // Individual child layout properties (applied to this component when inside a container)
+  // These control how this specific child behaves within its parent's layout
+
+  // Flexbox child properties
+  layoutFlexGrow?: ResponsiveValue<number>; // How much this child should grow (0 = don't grow)
+  layoutFlexShrink?: ResponsiveValue<number>; // How much this child should shrink (1 = can shrink)
+  layoutFlexBasis?: ResponsiveValue<string>; // Initial size before grow/shrink ('auto', '200px', '50%')
+  layoutAlignSelf?: ResponsiveValue<
+    'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline'
+  >; // Override parent's align-items for this child
+
+  // Grid child properties
+  layoutGridColumn?: ResponsiveValue<string>; // Grid column placement ('span 2', '1 / 3', 'auto')
+  layoutGridRow?: ResponsiveValue<string>; // Grid row placement ('span 2', '1 / 3', 'auto')
+  layoutGridColumnStart?: ResponsiveValue<number | string>;
+  layoutGridColumnEnd?: ResponsiveValue<number | string>;
+  layoutGridRowStart?: ResponsiveValue<number | string>;
+  layoutGridRowEnd?: ResponsiveValue<number | string>;
+  layoutPlaceSelf?: ResponsiveValue<string>; // Shorthand for align-self + justify-self
+  layoutJustifySelf?: ResponsiveValue<'start' | 'center' | 'end' | 'stretch'>;
+
+  // Common layout properties (work in both flex and grid)
+  layoutOrder?: ResponsiveValue<number>; // Visual order (-1, 0, 1, 2, etc.)
+  layoutMinWidth?: ResponsiveValue<string>; // Minimum width constraint
+  layoutMaxWidth?: ResponsiveValue<string>; // Maximum width constraint
+  layoutMinHeight?: ResponsiveValue<string>; // Minimum height constraint
+  layoutMaxHeight?: ResponsiveValue<string>; // Maximum height constraint
+  layoutWidth?: ResponsiveValue<string>; // Explicit width ('100%', '200px', 'auto')
+  layoutHeight?: ResponsiveValue<string>; // Explicit height
 }
 
 /**

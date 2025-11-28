@@ -194,6 +194,55 @@
     return styleStr;
   }
 
+  // Generate child layout styles for components inside containers
+  function getChildLayoutStyles(childConfig: ComponentConfig): string {
+    let styles = '';
+
+    // Flex properties
+    const flexGrow = getBreakpointValue(childConfig.layoutFlexGrow, currentBreakpoint);
+    const flexShrink = getBreakpointValue(childConfig.layoutFlexShrink, currentBreakpoint);
+    const flexBasis = getBreakpointValue(childConfig.layoutFlexBasis, currentBreakpoint);
+    const alignSelf = getBreakpointValue(childConfig.layoutAlignSelf, currentBreakpoint);
+
+    if (flexGrow !== undefined) styles += `flex-grow: ${flexGrow};`;
+    if (flexShrink !== undefined) styles += `flex-shrink: ${flexShrink};`;
+    if (flexBasis !== undefined && flexBasis !== 'auto') styles += `flex-basis: ${flexBasis};`;
+    if (alignSelf !== undefined && alignSelf !== 'auto') styles += `align-self: ${alignSelf};`;
+
+    // Grid properties
+    const gridColumn = getBreakpointValue(childConfig.layoutGridColumn, currentBreakpoint);
+    const gridRow = getBreakpointValue(childConfig.layoutGridRow, currentBreakpoint);
+    const placeSelf = getBreakpointValue(childConfig.layoutPlaceSelf, currentBreakpoint);
+    const justifySelf = getBreakpointValue(childConfig.layoutJustifySelf, currentBreakpoint);
+
+    if (gridColumn !== undefined && gridColumn !== 'auto') styles += `grid-column: ${gridColumn};`;
+    if (gridRow !== undefined && gridRow !== 'auto') styles += `grid-row: ${gridRow};`;
+    if (placeSelf !== undefined && placeSelf !== 'auto') styles += `place-self: ${placeSelf};`;
+    if (justifySelf !== undefined && justifySelf !== 'stretch')
+      styles += `justify-self: ${justifySelf};`;
+
+    // Order (works in both flex and grid)
+    const order = getBreakpointValue(childConfig.layoutOrder, currentBreakpoint);
+    if (order !== undefined && order !== 0) styles += `order: ${order};`;
+
+    // Size constraints
+    const width = getBreakpointValue(childConfig.layoutWidth, currentBreakpoint);
+    const height = getBreakpointValue(childConfig.layoutHeight, currentBreakpoint);
+    const minWidth = getBreakpointValue(childConfig.layoutMinWidth, currentBreakpoint);
+    const maxWidth = getBreakpointValue(childConfig.layoutMaxWidth, currentBreakpoint);
+    const minHeight = getBreakpointValue(childConfig.layoutMinHeight, currentBreakpoint);
+    const maxHeight = getBreakpointValue(childConfig.layoutMaxHeight, currentBreakpoint);
+
+    if (width !== undefined && width !== 'auto') styles += `width: ${width};`;
+    if (height !== undefined && height !== 'auto') styles += `height: ${height};`;
+    if (minWidth !== undefined && minWidth !== 'auto') styles += `min-width: ${minWidth};`;
+    if (maxWidth !== undefined && maxWidth !== 'none') styles += `max-width: ${maxWidth};`;
+    if (minHeight !== undefined && minHeight !== 'auto') styles += `min-height: ${minHeight};`;
+    if (maxHeight !== undefined && maxHeight !== 'none') styles += `max-height: ${maxHeight};`;
+
+    return styles;
+  }
+
   // Declare reactive variables
   let styleString: string;
   let heroHeight: string;
@@ -485,7 +534,13 @@
       {#if component.config.children && component.config.children.length > 0}
         {#each component.config.children as child}
           <div class="column">
-            <svelte:self widget={child} {currentBreakpoint} />
+            <svelte:self
+              component={child}
+              {currentBreakpoint}
+              {colorTheme}
+              {onUpdate}
+              {isEditable}
+            />
           </div>
         {/each}
       {:else}
@@ -834,13 +889,27 @@
           on:childClick={handleChildClick}
         >
           <svelte:fragment slot="child" let:child>
-            <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
+            <div class="container-child-wrapper" style={getChildLayoutStyles(child.config)}>
+              <svelte:self
+                component={child}
+                {currentBreakpoint}
+                {colorTheme}
+                {onUpdate}
+                {isEditable}
+              />
+            </div>
           </svelte:fragment>
         </ContainerDropZone>
       {:else if component.config.children && component.config.children.length > 0}
         {#each component.config.children as child}
-          <div class="container-child">
-            <svelte:self widget={child} {currentBreakpoint} {colorTheme} {onUpdate} {isEditable} />
+          <div class="container-child" style={getChildLayoutStyles(child.config)}>
+            <svelte:self
+              component={child}
+              {currentBreakpoint}
+              {colorTheme}
+              {onUpdate}
+              {isEditable}
+            />
           </div>
         {/each}
       {:else}
@@ -912,6 +981,12 @@
     /* No display property - inherits block/inline behavior naturally */
     /* This allows the wrapper to be a proper flex/grid item */
     position: relative; /* Ensures element is rendered */
+  }
+
+  /* Container child wrapper in edit mode - same behavior as container-child */
+  .container-child-wrapper {
+    position: relative;
+    /* flex/grid properties are applied inline via getChildLayoutStyles() */
   }
 
   /* Text Widget */

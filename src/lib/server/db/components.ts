@@ -33,7 +33,8 @@ export async function getComponents(db: D1Database, siteId: string): Promise<Com
       ...component,
       config:
         typeof component.config === 'string' ? JSON.parse(component.config) : component.config,
-      is_global: Boolean(component.is_global)
+      is_global: Boolean(component.is_global),
+      is_primitive: Boolean(component.is_primitive)
     })) as Component[];
 
     return components;
@@ -63,7 +64,8 @@ export async function getComponentsByType(
       ...component,
       config:
         typeof component.config === 'string' ? JSON.parse(component.config) : component.config,
-      is_global: Boolean(component.is_global)
+      is_global: Boolean(component.is_global),
+      is_primitive: Boolean(component.is_primitive)
     })) as Component[];
 
     return components;
@@ -94,7 +96,8 @@ export async function getComponent(
     return {
       ...result,
       config: typeof result.config === 'string' ? JSON.parse(result.config) : result.config,
-      is_global: Boolean(result.is_global)
+      is_global: Boolean(result.is_global),
+      is_primitive: Boolean(result.is_primitive)
     } as Component;
   } catch (error) {
     console.error('Failed to get component:', error);
@@ -114,6 +117,7 @@ export async function createComponent(
     type: string;
     config?: Record<string, unknown>;
     is_global?: boolean;
+    is_primitive?: boolean;
     widgets?: Array<{
       type: string;
       config: Record<string, unknown>;
@@ -124,8 +128,8 @@ export async function createComponent(
   try {
     const result = await db
       .prepare(
-        `INSERT INTO components (site_id, name, description, type, config, is_global)
-         VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO components (site_id, name, description, type, config, is_global, is_primitive)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          RETURNING *`
       )
       .bind(
@@ -134,7 +138,8 @@ export async function createComponent(
         data.description || null,
         data.type,
         JSON.stringify(data.config || {}),
-        data.is_global ? 1 : 0
+        data.is_global ? 1 : 0,
+        data.is_primitive ? 1 : 0
       )
       .first();
 
@@ -145,7 +150,8 @@ export async function createComponent(
     const component = {
       ...result,
       config: typeof result.config === 'string' ? JSON.parse(result.config) : result.config,
-      is_global: Boolean(result.is_global)
+      is_global: Boolean(result.is_global),
+      is_primitive: Boolean(result.is_primitive)
     } as Component;
 
     // If children were provided, save them
@@ -235,7 +241,8 @@ export async function updateComponent(
     return {
       ...result,
       config: typeof result.config === 'string' ? JSON.parse(result.config) : result.config,
-      is_global: Boolean(result.is_global)
+      is_global: Boolean(result.is_global),
+      is_primitive: Boolean(result.is_primitive)
     } as Component;
   } catch (error) {
     console.error('Failed to update component:', error);
