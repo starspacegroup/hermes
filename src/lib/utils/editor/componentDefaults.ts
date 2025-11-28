@@ -196,6 +196,11 @@ export function getDefaultConfig(type: ComponentType): ComponentConfig {
         footerTextColor: 'theme:textSecondary'
       };
 
+    case 'composite':
+      return {
+        children: []
+      };
+
     case 'yield':
       return {};
 
@@ -224,6 +229,7 @@ export function getComponentLabel(type: ComponentType): string {
     yield: 'Page Content (Yield)',
     container: 'Container',
     flex: 'Flex Box',
+    composite: 'Composite',
     component_ref: 'Component Reference'
   };
   return labels[type] || type;

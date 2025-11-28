@@ -23,6 +23,7 @@ export type ComponentType =
   | 'yield' // Special component type for layouts - renders page content
   | 'container' // Container with padding and background
   | 'flex' // Flexible layout container (flex or grid)
+  | 'composite' // Multi-part component composition
   | 'component_ref'; // Reference to a saved component (renders component's composition)
 
 /**

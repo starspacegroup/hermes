@@ -105,6 +105,13 @@
       description: 'Display multiple products',
       category: 'Commerce',
       icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'
+    },
+    {
+      type: 'navbar',
+      label: 'Navigation Bar',
+      description: 'Site navigation with logo and links',
+      category: 'Layout',
+      icon: 'M3 5h18M3 12h18M3 19h18'
     }
   ];
 

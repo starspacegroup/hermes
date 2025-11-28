@@ -45,8 +45,8 @@ export const actions: Actions = {
         return fail(400, { error: 'Invalid component ID' });
       }
 
-      const inUse = await isComponentInUse(db, componentId);
-      if (inUse) {
+      const usageCheck = await isComponentInUse(db, componentId);
+      if (usageCheck.inUse) {
         return fail(400, { error: 'Cannot delete component that is in use' });
       }
 

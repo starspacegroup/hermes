@@ -17,7 +17,7 @@
   > = {
     layout: {
       label: 'Layout',
-      types: ['navbar', 'container', 'flex', 'hero', 'columns', 'spacer', 'divider'],
+      types: ['navbar', 'composite', 'container', 'flex', 'hero', 'columns', 'spacer', 'divider'],
       icon: '⬛',
       color: '#6366f1'
     },
@@ -56,6 +56,7 @@
   const widgetTypeLabels: Record<string, string> = {
     // Layout
     navbar: 'Navigation Bar',
+    composite: 'Composite',
     container: 'Container',
     flex: 'Flex Box',
     hero: 'Hero Section',
@@ -220,12 +221,16 @@
               <form
                 method="POST"
                 action="?/delete"
-                use:enhance={() => {
+                use:enhance={({ cancel }) => {
                   if (!confirm(`Delete component "${component.name}"?`)) {
-                    return () => {};
+                    cancel();
+                    return;
                   }
                   isDeleting = true;
-                  return async ({ update }) => {
+                  return async ({ result, update }) => {
+                    if (result.type === 'failure') {
+                      alert(result.data?.error || 'Failed to delete component');
+                    }
                     await update();
                     isDeleting = false;
                   };

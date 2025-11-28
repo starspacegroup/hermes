@@ -408,6 +408,9 @@
         // Child widgets
         children: []
       },
+      composite: {
+        children: []
+      },
       component_ref: {
         componentId: null // Will be set when adding from component library
       }
