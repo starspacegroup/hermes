@@ -868,6 +868,21 @@
         <span>Flexible layout</span>
       </div>
     </div>
+  {:else if widget.type === 'component_ref'}
+    {#await import('./ComponentRefRenderer.svelte')}
+      <div class="component-ref-loading">Loading component...</div>
+    {:then { default: ComponentRefRenderer }}
+      <ComponentRefRenderer
+        componentId={widget.config.componentId}
+        {currentBreakpoint}
+        {colorTheme}
+        {isEditable}
+      />
+    {:catch error}
+      <div class="component-ref-error">
+        Failed to load component: {error.message}
+      </div>
+    {/await}
   {:else}
     <div class="unknown-widget">
       <span>Unknown widget type: {widget.type}</span>
@@ -1483,5 +1498,19 @@
   .layout-placeholder span {
     font-size: 0.875rem;
     font-style: italic;
+  }
+
+  .component-ref-loading,
+  .component-ref-error {
+    padding: 1rem;
+    text-align: center;
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 4px;
+    background: var(--color-bg-secondary);
+  }
+
+  .component-ref-error {
+    color: var(--color-error);
+    border-color: var(--color-error);
   }
 </style>

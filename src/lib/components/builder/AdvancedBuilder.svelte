@@ -573,6 +573,7 @@
       {colorTheme}
       {userCurrentThemeId}
       {colorThemes}
+      {components}
       on:selectWidget={(e) => handleSelectWidget(e.detail)}
       on:updateWidget={(e) => handleUpdateWidget(e.detail)}
       on:batchUpdateWidgets={(e) => handleBatchUpdateWidgets(e.detail)}
@@ -592,6 +593,7 @@
         {currentBreakpoint}
         {colorTheme}
         {entityLabel}
+        {components}
         on:selectWidget={(e) => handleSelectWidget(e.detail)}
         on:updateWidget={(e) => handleUpdateWidget(e.detail)}
         on:updatePageProperties={(e) => handleUpdatePageProperties(e.detail)}

@@ -60,7 +60,7 @@ ALTER TABLE pages ADD COLUMN layout_id INTEGER REFERENCES layouts(id) ON DELETE 
 
 CREATE INDEX IF NOT EXISTS idx_pages_layout ON pages(layout_id);
 
--- Insert default navbar component for each site
+-- Insert default navbar component for each site (marked as global/built-in)
 INSERT INTO components (site_id, name, description, type, config, is_global)
 SELECT 
   id,
@@ -77,10 +77,10 @@ SELECT
     ),
     'style', json_object('background', '#ffffff', 'text', '#000000')
   ),
-  0
+  1
 FROM sites;
 
--- Insert default footer component for each site
+-- Insert default footer component for each site (marked as global/built-in)
 INSERT INTO components (site_id, name, description, type, config, is_global)
 SELECT 
   id,
@@ -94,7 +94,7 @@ SELECT
       json_object('text', 'Terms of Service', 'url', '/terms')
     )
   ),
-  0
+  1
 FROM sites;
 
 -- Insert default layout for each site

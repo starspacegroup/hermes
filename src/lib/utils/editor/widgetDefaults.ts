@@ -223,7 +223,29 @@ export function getWidgetLabel(type: WidgetType): string {
     footer: 'Footer',
     yield: 'Page Content (Yield)',
     container: 'Container',
-    flex: 'Flex Box'
+    flex: 'Flex Box',
+    component_ref: 'Component Reference'
   };
   return labels[type] || type;
+}
+
+/**
+ * Get the display label for a widget, resolving component names for component_ref widgets.
+ * @param widget - The widget to get the label for
+ * @param components - Optional list of components to look up component names
+ * @returns The display label for the widget
+ */
+export function getWidgetDisplayLabel(
+  widget: { type: WidgetType; config?: { componentId?: number } },
+  components?: { id: number; name: string }[]
+): string {
+  // For component_ref widgets, try to resolve the component name
+  if (widget.type === 'component_ref' && widget.config?.componentId && components) {
+    const component = components.find((c) => c.id === widget.config?.componentId);
+    if (component) {
+      return component.name;
+    }
+  }
+
+  return getWidgetLabel(widget.type);
 }

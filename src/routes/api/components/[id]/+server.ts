@@ -1,6 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { updateComponent, deleteComponent } from '$lib/server/db/components';
+import {
+  updateComponent,
+  deleteComponent,
+  saveComponentWithWidgets
+} from '$lib/server/db/components';
 
 /**
  * PUT /api/components/[id]
@@ -30,8 +34,27 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
       type?: string;
       config?: Record<string, unknown>;
       is_global?: boolean;
+      widgets?: Array<{
+        id: string;
+        type: string;
+        position: number;
+        config: Record<string, unknown>;
+        parent_id?: string;
+      }>;
     };
 
+    // If widgets are provided, use the saveComponentWithWidgets function
+    if (data.widgets) {
+      const componentWithWidgets = await saveComponentWithWidgets(db, siteId, componentId, {
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        widgets: data.widgets
+      });
+      return json({ success: true, component: componentWithWidgets });
+    }
+
+    // Otherwise, just update the component metadata
     const component = await updateComponent(db, siteId, componentId, data);
 
     return json({ success: true, component });

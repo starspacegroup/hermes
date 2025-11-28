@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDefaultConfig, getWidgetLabel } from './widgetDefaults';
+import { getDefaultConfig, getWidgetLabel, getWidgetDisplayLabel } from './widgetDefaults';
 import type { WidgetType } from '$lib/types/pages';
 
 describe('Widget Defaults', () => {
@@ -162,6 +162,65 @@ describe('Widget Defaults', () => {
     it('should return widget type for unknown widget', () => {
       const unknownType = 'unknown' as WidgetType;
       expect(getWidgetLabel(unknownType)).toBe('unknown');
+    });
+  });
+
+  describe('getWidgetDisplayLabel', () => {
+    it('should return widget label for regular widgets', () => {
+      const widget = { type: 'hero' as WidgetType };
+      expect(getWidgetDisplayLabel(widget)).toBe('Hero Section');
+    });
+
+    it('should return widget label for text widget', () => {
+      const widget = { type: 'text' as WidgetType };
+      expect(getWidgetDisplayLabel(widget)).toBe('Text Content');
+    });
+
+    it('should return "Component Reference" for component_ref without components list', () => {
+      const widget = { type: 'component_ref' as WidgetType, config: { componentId: 1 } };
+      expect(getWidgetDisplayLabel(widget)).toBe('Component Reference');
+    });
+
+    it('should return "Component Reference" for component_ref with empty components list', () => {
+      const widget = { type: 'component_ref' as WidgetType, config: { componentId: 1 } };
+      expect(getWidgetDisplayLabel(widget, [])).toBe('Component Reference');
+    });
+
+    it('should return component name for component_ref with matching component', () => {
+      const widget = { type: 'component_ref' as WidgetType, config: { componentId: 5 } };
+      const components = [
+        { id: 1, name: 'Navigation Bar' },
+        { id: 5, name: 'Hero Banner' },
+        { id: 10, name: 'Footer' }
+      ];
+      expect(getWidgetDisplayLabel(widget, components)).toBe('Hero Banner');
+    });
+
+    it('should return "Component Reference" for component_ref with no matching component', () => {
+      const widget = { type: 'component_ref' as WidgetType, config: { componentId: 99 } };
+      const components = [
+        { id: 1, name: 'Navigation Bar' },
+        { id: 5, name: 'Hero Banner' }
+      ];
+      expect(getWidgetDisplayLabel(widget, components)).toBe('Component Reference');
+    });
+
+    it('should return "Component Reference" for component_ref without componentId', () => {
+      const widget = { type: 'component_ref' as WidgetType, config: {} };
+      const components = [{ id: 1, name: 'Navigation Bar' }];
+      expect(getWidgetDisplayLabel(widget, components)).toBe('Component Reference');
+    });
+
+    it('should return "Component Reference" for component_ref without config', () => {
+      const widget = { type: 'component_ref' as WidgetType };
+      const components = [{ id: 1, name: 'Navigation Bar' }];
+      expect(getWidgetDisplayLabel(widget, components)).toBe('Component Reference');
+    });
+
+    it('should return widget label for regular widget even when components are provided', () => {
+      const widget = { type: 'navbar' as WidgetType };
+      const components = [{ id: 1, name: 'Navigation Bar' }];
+      expect(getWidgetDisplayLabel(widget, components)).toBe('Navigation Bar');
     });
   });
 });

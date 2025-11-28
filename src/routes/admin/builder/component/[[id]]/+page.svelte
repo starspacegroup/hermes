@@ -35,9 +35,17 @@
 
   async function handleSave(saveData: SaveData): Promise<void> {
     try {
-      // For components, we only save the first widget's config
-      const widget = saveData.widgets[0];
-      const config = widget?.config || {};
+      // Convert PageWidget[] to component widget format
+      const widgets = saveData.widgets.map((w, index) => ({
+        id: w.id,
+        type: w.type,
+        position: index,
+        config: w.config,
+        parent_id: undefined // TODO: Add parent_id support for nested widgets
+      }));
+
+      // Determine component type - use 'composite' if multiple widgets, otherwise use first widget type
+      const componentType = widgets.length > 1 ? 'composite' : widgets[0]?.type || 'text';
 
       if (data.isNewComponent) {
         // Create new component
@@ -46,9 +54,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: saveData.title,
-            type: widget?.type || 'text',
-            config: config,
-            description: ''
+            type: componentType,
+            config: {},
+            description: '',
+            widgets: widgets
           })
         });
 
@@ -70,8 +79,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: saveData.title,
-            type: widget?.type || data.component!.type,
-            config: config
+            type: componentType,
+            widgets: widgets
           })
         });
 

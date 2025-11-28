@@ -22,7 +22,8 @@ export type WidgetType =
   | 'footer'
   | 'yield' // Special widget type for layouts - renders page content
   | 'container' // Container with padding and background
-  | 'flex'; // Flexible layout container (flex or grid)
+  | 'flex' // Flexible layout container (flex or grid)
+  | 'component_ref'; // Reference to a component (renders component's widget composition)
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -99,11 +100,26 @@ export interface Component {
   site_id: string;
   name: string;
   description?: string;
-  type: string; // Widget type this component represents
-  config: Record<string, unknown>; // JSON configuration
+  type: string; // Widget type this component represents (kept for backward compatibility)
+  config: Record<string, unknown>; // JSON configuration (kept for backward compatibility)
   is_global: boolean; // If true, available to all sites (system component)
   created_at: string;
   updated_at: string;
+}
+
+export interface ComponentWidget {
+  id: string;
+  component_id: number;
+  type: WidgetType;
+  config: WidgetConfig;
+  position: number;
+  parent_id?: string; // Parent widget ID for nested widgets
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComponentWithWidgets extends Component {
+  widgets: ComponentWidget[];
 }
 
 export interface PageWidget {
@@ -463,8 +479,8 @@ export interface WidgetConfig {
   secondaryCtaFontSize?: string;
   secondaryCtaFontWeight?: string;
 
-  // NavBar widget (references a component)
-  componentId?: number; // Reference to a component
+  // Component reference widget (component_ref type)
+  componentId?: number; // Reference to a component - renders its widget composition
   logo?: {
     text?: string;
     image?: string;

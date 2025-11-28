@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
-import { getComponents } from '$lib/server/db/components';
+import { getComponents, getComponentWithWidgets } from '$lib/server/db/components';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -30,43 +30,41 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     };
   }
 
-  // Load existing component
-  const componentResult = await db
-    .prepare('SELECT * FROM components WHERE id = ? AND site_id = ?')
-    .bind(params.id, siteId)
-    .first();
+  // Load existing component with widgets
+  const componentWithWidgets = await getComponentWithWidgets(db, siteId, parseInt(params.id));
 
-  if (!componentResult) {
+  if (!componentWithWidgets) {
     throw error(404, 'Component not found');
   }
 
-  const component = {
-    id: componentResult.id as number,
-    site_id: componentResult.site_id as string,
-    name: componentResult.name as string,
-    description: componentResult.description as string | undefined,
-    type: componentResult.type as string,
-    config:
-      typeof componentResult.config === 'string'
-        ? JSON.parse(componentResult.config as string)
-        : componentResult.config,
-    is_global: !!componentResult.is_global,
-    created_at: componentResult.created_at as string,
-    updated_at: componentResult.updated_at as string
-  };
+  const component = componentWithWidgets;
 
-  // Components store their config as a single widget configuration
-  // Convert it to the PageWidget format expected by AdvancedBuilder
-  const widgets = [
-    {
+  // Convert ComponentWidget[] to PageWidget[] format expected by AdvancedBuilder
+  const widgets = componentWithWidgets.widgets.map((w) => ({
+    id: w.id,
+    page_id: String(component.id), // Use component ID as page_id for builder
+    type: w.type,
+    position: w.position,
+    config: w.config,
+    created_at: new Date(w.created_at).getTime(),
+    updated_at: new Date(w.updated_at).getTime(),
+    parent_id: w.parent_id
+  }));
+
+  // If no widgets exist yet, check if component has old-style config
+  // Convert single config to single widget for backward compatibility
+  if (widgets.length === 0 && component.config && Object.keys(component.config).length > 0) {
+    widgets.push({
       id: `component-${component.id}`,
-      type: component.type,
+      page_id: String(component.id),
+      type: component.type as never,
       position: 0,
       config: component.config,
-      created_at: component.created_at,
-      updated_at: component.updated_at
-    }
-  ];
+      created_at: new Date(component.created_at).getTime(),
+      updated_at: new Date(component.updated_at).getTime(),
+      parent_id: undefined
+    });
+  }
 
   // TODO: Implement revision system for components similar to pages
   const revisions: never[] = [];

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { ChevronDown, X } from 'lucide-svelte';
-  import type { PageWidget, ColorTheme } from '$lib/types/pages';
+  import type { PageWidget, ColorTheme, Component } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
   import WidgetPropertiesPanel from '$lib/components/admin/WidgetPropertiesPanel.svelte';
   import ThemeColorInput from '$lib/components/admin/ThemeColorInput.svelte';
@@ -10,6 +10,7 @@
   import TailwindFlexEditor from './TailwindFlexEditor.svelte';
   import TailwindGridEditor from './TailwindGridEditor.svelte';
   import FlexChildPropertiesEditor from './FlexChildPropertiesEditor.svelte';
+  import { getWidgetDisplayLabel } from '$lib/utils/editor/widgetDefaults';
 
   export let widgets: PageWidget[] = [];
   export let selectedWidget: PageWidget | null = null;
@@ -19,6 +20,7 @@
   export let currentBreakpoint: 'mobile' | 'tablet' | 'desktop';
   export let colorTheme: ColorTheme = 'default';
   export let entityLabel = 'Page';
+  export let components: Component[] = [];
 
   // Track which component is expanded (null = none, 'page' = page, widget.id = specific widget)
   let expandedComponentId: string | 'page' | null = selectedWidget?.id || 'page';
@@ -266,10 +268,7 @@
           />
           <div class="component-info">
             <span class="component-label">
-              {widgetItem.type
-                .split('_')
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' ')}
+              {getWidgetDisplayLabel(widgetItem, components)}
             </span>
             {#if widgetItem.config?.anchorName}
               <span class="component-id">{widgetItem.config.anchorName}</span>

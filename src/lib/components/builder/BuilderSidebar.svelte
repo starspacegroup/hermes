@@ -150,9 +150,9 @@
         return;
       }
 
-      // Use the component's type and config
-      widgetType = component.type as WidgetType;
-      widgetConfig = { ...component.config };
+      // Create a component_ref widget that references this component
+      widgetType = 'component_ref';
+      widgetConfig = { componentId: component.id };
     } else {
       // Built-in widget type
       widgetType = type as WidgetType;
@@ -413,6 +413,9 @@
         gridAlignContent: { desktop: 'start', tablet: 'start', mobile: 'start' },
         // Child widgets
         children: []
+      },
+      component_ref: {
+        componentId: null // Will be set when adding from component library
       }
     };
     return defaults[type] || {};

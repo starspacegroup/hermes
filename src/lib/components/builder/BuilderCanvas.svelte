@@ -1,10 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { Copy, Trash2, MoveUp, MoveDown, RotateCcw } from 'lucide-svelte';
-  import type { PageWidget, WidgetConfig, ColorThemeDefinition } from '$lib/types/pages';
+  import type { PageWidget, WidgetConfig, ColorThemeDefinition, Component } from '$lib/types/pages';
   import WidgetRenderer from '$lib/components/admin/WidgetRenderer.svelte';
   import { stableSortWidgets } from '$lib/utils/widgetPositions';
   import { getThemeColors, generateThemeStyles } from '$lib/utils/editor/colorThemes';
+  import { getWidgetDisplayLabel } from '$lib/utils/editor/widgetDefaults';
 
   type BuilderMode = 'page' | 'layout' | 'component';
 
@@ -16,6 +17,7 @@
   export let colorTheme: string;
   export let userCurrentThemeId: string;
   export let colorThemes: ColorThemeDefinition[] = [];
+  export let components: Component[] = [];
 
   const dispatch = createEventDispatcher();
 
@@ -185,7 +187,7 @@
         >
           {#if selectedWidget?.id === widget.id || hoveredWidget?.id === widget.id}
             <div class="widget-controls">
-              <div class="widget-label">{widget.type}</div>
+              <div class="widget-label">{getWidgetDisplayLabel(widget, components)}</div>
               <div class="widget-actions">
                 <button
                   class="btn-control"
