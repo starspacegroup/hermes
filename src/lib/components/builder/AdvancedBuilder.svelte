@@ -60,6 +60,9 @@
   let selectedWidget: PageWidget | null = null;
   let hoveredWidget: PageWidget | null = null;
 
+  // Canvas component reference for scrolling
+  let canvasComponent: BuilderCanvas;
+
   // Page properties (custom styles for the entire page)
   let pageProperties = {
     backgroundColor: 'theme:background',
@@ -183,6 +186,11 @@
   function handleAddWidget(widget: PageWidget) {
     widgets = [...widgets, widget];
     addToHistory();
+
+    // Scroll to the newly added widget
+    if (canvasComponent) {
+      canvasComponent.scrollToWidget(widget.id);
+    }
   }
 
   function handleUpdateWidget(updatedWidget: PageWidget) {
@@ -565,6 +573,7 @@
     {/if}
 
     <BuilderCanvas
+      bind:this={canvasComponent}
       {mode}
       {widgets}
       {selectedWidget}

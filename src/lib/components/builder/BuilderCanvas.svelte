@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import { Copy, Trash2, MoveUp, MoveDown, RotateCcw } from 'lucide-svelte';
   import type { PageWidget, WidgetConfig, ColorThemeDefinition, Component } from '$lib/types/pages';
   import WidgetRenderer from '$lib/components/admin/WidgetRenderer.svelte';
@@ -8,6 +8,28 @@
   import { getWidgetDisplayLabel } from '$lib/utils/editor/widgetDefaults';
 
   type BuilderMode = 'page' | 'layout' | 'component';
+
+  // Canvas element reference for scrolling
+  let canvasElement: HTMLDivElement;
+
+  /**
+   * Scrolls the canvas to make the specified widget visible
+   * @param widgetId - The ID of the widget to scroll to
+   */
+  export async function scrollToWidget(widgetId: string): Promise<void> {
+    // Wait for the DOM to update
+    await tick();
+
+    if (!canvasElement) return;
+
+    const widgetElement = canvasElement.querySelector(`[data-widget-id="${widgetId}"]`);
+    if (widgetElement) {
+      widgetElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }
 
   export let mode: BuilderMode = 'page';
   export let widgets: PageWidget[];
@@ -130,7 +152,12 @@
   }
 </script>
 
-<div class="builder-canvas" on:click={handleCanvasClick} role="presentation">
+<div
+  class="builder-canvas"
+  bind:this={canvasElement}
+  on:click={handleCanvasClick}
+  role="presentation"
+>
   <!-- Debug: Show current theme (only when previewing a different theme) -->
   {#if isPreviewingDifferentTheme}
     <div class="theme-debug-panel">
@@ -173,6 +200,7 @@
           class="widget-wrapper"
           class:selected={selectedWidget?.id === widget.id}
           class:hovered={hoveredWidget?.id === widget.id}
+          data-widget-id={widget.id}
           on:click={(e) => handleWidgetClick(widget, e)}
           on:mouseenter={() => handleWidgetMouseEnter(widget)}
           on:mouseleave={handleWidgetMouseLeave}
