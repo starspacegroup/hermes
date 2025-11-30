@@ -18,15 +18,14 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   try {
     const allComponents = await getComponents(db, siteId);
 
-    // Separate custom (site-specific), built-in (global), and primitive components
+    // Separate custom (site-specific) and built-in (global) components
+    // Primitives are now managed on their own page at /admin/primitives
     const customComponents = allComponents.filter((c) => !c.is_global && !c.is_primitive);
     const builtInComponents = allComponents.filter((c) => c.is_global && !c.is_primitive);
-    const primitiveComponents = allComponents.filter((c) => c.is_primitive);
 
     return {
       components: customComponents,
-      builtInComponents,
-      primitiveComponents
+      builtInComponents
     };
   } catch (err) {
     console.error('Failed to load components:', err);

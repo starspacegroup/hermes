@@ -506,14 +506,15 @@
           Orders
         </a>
 
-        <!-- Builder with submenu (Pages, Layouts, Components) -->
+        <!-- Builder with submenu (Pages, Layouts, Components, Primitives) -->
         <div class="menu-item-with-submenu">
           <button
             class="menu-item-button"
             class:active={currentPath.startsWith('/admin/pages') ||
               currentPath.startsWith('/admin/builder') ||
               currentPath.startsWith('/admin/layouts') ||
-              currentPath.startsWith('/admin/components')}
+              currentPath.startsWith('/admin/components') ||
+              currentPath.startsWith('/admin/primitives')}
             on:click={toggleSiteSubmenu}
           >
             <div class="menu-item-content">
@@ -622,6 +623,52 @@
                   ></path>
                 </svg>
                 Components
+              </a>
+
+              <a
+                href="/admin/primitives"
+                class:active={currentPath.startsWith('/admin/primitives')}
+                on:click={closeSidebar}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <rect
+                    x="3"
+                    y="3"
+                    width="7"
+                    height="7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <rect
+                    x="14"
+                    y="3"
+                    width="7"
+                    height="7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <rect
+                    x="14"
+                    y="14"
+                    width="7"
+                    height="7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                  <rect
+                    x="3"
+                    y="14"
+                    width="7"
+                    height="7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></rect>
+                </svg>
+                Primitives
               </a>
             </div>
           {/if}

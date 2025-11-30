@@ -26,7 +26,7 @@
   import type { ColorThemeDefinition, Layout } from '$lib/types/pages';
   import Avatar from '$lib/components/Avatar.svelte';
 
-  type BuilderMode = 'page' | 'layout' | 'component';
+  type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
   export let mode: BuilderMode = 'page';
   export let title: string;

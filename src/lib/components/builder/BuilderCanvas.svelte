@@ -12,7 +12,7 @@
   import { getThemeColors, generateThemeStyles } from '$lib/utils/editor/colorThemes';
   import { getComponentDisplayLabel } from '$lib/utils/editor/componentDefaults';
 
-  type BuilderMode = 'page' | 'layout' | 'component';
+  type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
   // Canvas element reference for scrolling
   let canvasElement: HTMLDivElement;
@@ -45,6 +45,7 @@
   export let userCurrentThemeId: string;
   export let colorThemes: ColorThemeDefinition[] = [];
   export let components: Component[] = [];
+  export let canDeleteComponents = true;
 
   const dispatch = createEventDispatcher();
 
@@ -222,33 +223,37 @@
             <div class="component-controls">
               <div class="component-label">{getComponentDisplayLabel(component, components)}</div>
               <div class="component-actions">
-                <button
-                  class="btn-control"
-                  on:click|stopPropagation={() => moveUp(component)}
-                  disabled={index === 0}
-                  aria-label="Move up"
-                  title="Move up"
-                >
-                  <MoveUp size={14} />
-                </button>
-                <button
-                  class="btn-control"
-                  on:click|stopPropagation={() => moveDown(component)}
-                  disabled={index === sortedComponents.length - 1}
-                  aria-label="Move down"
-                  title="Move down"
-                >
-                  <MoveDown size={14} />
-                </button>
-                <button
-                  class="btn-control"
-                  on:click|stopPropagation={() => dispatch('duplicateComponent', component)}
-                  aria-label="Duplicate"
-                  title="Duplicate"
-                >
-                  <Copy size={14} />
-                </button>
-                {#if !(mode === 'layout' && component.type === 'yield')}
+                {#if mode !== 'primitive'}
+                  <button
+                    class="btn-control"
+                    on:click|stopPropagation={() => moveUp(component)}
+                    disabled={index === 0}
+                    aria-label="Move up"
+                    title="Move up"
+                  >
+                    <MoveUp size={14} />
+                  </button>
+                  <button
+                    class="btn-control"
+                    on:click|stopPropagation={() => moveDown(component)}
+                    disabled={index === sortedComponents.length - 1}
+                    aria-label="Move down"
+                    title="Move down"
+                  >
+                    <MoveDown size={14} />
+                  </button>
+                {/if}
+                {#if canDeleteComponents}
+                  <button
+                    class="btn-control"
+                    on:click|stopPropagation={() => dispatch('duplicateComponent', component)}
+                    aria-label="Duplicate"
+                    title="Duplicate"
+                  >
+                    <Copy size={14} />
+                  </button>
+                {/if}
+                {#if canDeleteComponents && !(mode === 'layout' && component.type === 'yield')}
                   <button
                     class="btn-control btn-danger"
                     on:click|stopPropagation={() => dispatch('deleteComponent', component.id)}

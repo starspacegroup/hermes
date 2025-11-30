@@ -14,7 +14,7 @@
   } from 'lucide-svelte';
   import type { PageComponent, ComponentType, Component } from '$lib/types/pages';
 
-  type BuilderMode = 'page' | 'layout' | 'component';
+  type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
   export let mode: BuilderMode = 'page';
   export let pageComponents: PageComponent[];

@@ -6,7 +6,7 @@ import type { PageComponent } from '$lib/types/pages';
  * Tracks the current state of the advanced builder for AI awareness
  */
 
-export type BuilderMode = 'page' | 'layout' | 'component';
+export type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
 export interface BuilderContextState {
   mode: BuilderMode | null;

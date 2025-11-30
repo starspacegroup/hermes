@@ -20,7 +20,7 @@
   import { themeStore } from '$lib/stores/theme';
   import { builderContextStore } from '$lib/stores/builderContext';
 
-  type BuilderMode = 'page' | 'layout' | 'component';
+  type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
   interface SaveData {
     id?: string;
@@ -51,7 +51,19 @@
   export let onExit: () => void;
 
   // Entity labels based on mode
-  $: entityLabel = mode === 'page' ? 'Page' : mode === 'layout' ? 'Layout' : 'Component';
+  $: entityLabel =
+    mode === 'page'
+      ? 'Page'
+      : mode === 'layout'
+        ? 'Layout'
+        : mode === 'primitive'
+          ? 'Primitive'
+          : 'Component';
+
+  // Primitive mode restrictions
+  $: isPrimitiveMode = mode === 'primitive';
+  $: canAddComponents = !isPrimitiveMode; // Primitives have fixed structure
+  $: canDeleteComponents = !isPrimitiveMode; // Never delete widgets in primitive mode
   $: entityLabelLower = entityLabel.toLowerCase();
 
   // Core state
@@ -552,7 +564,7 @@
   />
 
   <div class="builder-content">
-    {#if showLeftSidebar}
+    {#if showLeftSidebar && canAddComponents}
       <BuilderSidebar
         {mode}
         {pageComponents}
@@ -588,6 +600,7 @@
       {userCurrentThemeId}
       {colorThemes}
       {components}
+      {canDeleteComponents}
       on:selectComponent={(e) => handleSelectComponent(e.detail)}
       on:updateComponent={(e) => handleUpdateComponent(e.detail)}
       on:batchUpdateComponents={(e) => handleBatchUpdateComponents(e.detail)}
