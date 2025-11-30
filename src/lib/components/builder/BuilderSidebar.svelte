@@ -37,16 +37,10 @@
 
   // Component library organized by category
   const componentLibrary = {
-    layout: [
+    containers: [
       { type: 'container', name: 'Container', icon: Box, description: 'Container with padding' },
       { type: 'flex', name: 'Flex Box', icon: Layout, description: 'Flexible layout container' },
       { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner section' },
-      {
-        type: 'columns',
-        name: 'Columns',
-        icon: Layout,
-        description: 'Multi-column layout'
-      },
       { type: 'spacer', name: 'Spacer', icon: Box, description: 'Vertical spacing' },
       { type: 'divider', name: 'Divider', icon: Box, description: 'Horizontal divider' }
     ],
@@ -74,7 +68,7 @@
 
   const categories = [
     { id: 'all', name: 'All', icon: Box },
-    { id: 'layout', name: 'Layout', icon: Layout },
+    { id: 'containers', name: 'Containers', icon: Layout },
     { id: 'content', name: 'Content', icon: Type },
     { id: 'media', name: 'Media', icon: Image },
     { id: 'commerce', name: 'Commerce', icon: ShoppingCart },

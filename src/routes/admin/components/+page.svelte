@@ -15,9 +15,9 @@
     string,
     { label: string; types: string[]; icon: string; color: string }
   > = {
-    layout: {
-      label: 'Layout',
-      types: ['navbar', 'composite', 'container', 'flex', 'hero', 'columns', 'spacer', 'divider'],
+    containers: {
+      label: 'Main',
+      types: ['navbar', 'composite', 'container', 'flex', 'spacer', 'divider'],
       icon: '⬛',
       color: '#6366f1'
     },
@@ -41,7 +41,7 @@
     },
     marketing: {
       label: 'Marketing',
-      types: ['features', 'pricing', 'cta'],
+      types: ['hero', 'features', 'pricing', 'cta'],
       icon: '📣',
       color: '#f59e0b'
     },
@@ -54,15 +54,16 @@
   };
 
   const widgetTypeLabels: Record<string, string> = {
-    // Layout
+    // Containers
     navbar: 'Navigation Bar',
     composite: 'Composite',
     container: 'Container',
     flex: 'Flex Box',
     hero: 'Hero Section',
-    columns: 'Columns',
     spacer: 'Spacer',
     divider: 'Divider',
+    // Primitives
+    columns: 'Columns',
     // Content
     heading: 'Heading',
     text: 'Text',
@@ -99,6 +100,17 @@
     return 'other';
   }
 
+  // Get category based on component name (for special cases like Hero Section)
+  function getCategoryForComponent(component: Component): string {
+    // Special handling for composite components based on their name
+    const nameLower = component.name.toLowerCase();
+    if (nameLower.includes('hero')) {
+      return 'marketing';
+    }
+    // Default to type-based categorization
+    return getCategoryForType(component.type);
+  }
+
   function getCategoryInfo(type: string): { icon: string; color: string } {
     const category = getCategoryForType(type);
     return widgetCategories[category] || { icon: '📦', color: '#64748b' };
@@ -113,7 +125,7 @@
     grouped['other'] = [];
 
     for (const component of components) {
-      const category = getCategoryForType(component.type);
+      const category = getCategoryForComponent(component);
       if (!grouped[category]) {
         grouped[category] = [];
       }

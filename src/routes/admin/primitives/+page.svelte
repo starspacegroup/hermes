@@ -11,9 +11,9 @@
     string,
     { label: string; types: string[]; icon: string; color: string }
   > = {
-    layout: {
-      label: 'Layout',
-      types: ['navbar', 'composite', 'container', 'flex', 'hero', 'columns', 'spacer', 'divider'],
+    containers: {
+      label: 'Containers',
+      types: ['navbar', 'composite', 'container', 'flex', 'hero', 'spacer', 'divider'],
       icon: '⬛',
       color: '#6366f1'
     },
@@ -50,15 +50,16 @@
   };
 
   const widgetTypeLabels: Record<string, string> = {
-    // Layout
+    // Containers
     navbar: 'Navigation Bar',
     composite: 'Composite',
     container: 'Container',
     flex: 'Flex Box',
     hero: 'Hero Section',
-    columns: 'Columns',
     spacer: 'Spacer',
     divider: 'Divider',
+    // Primitives
+    columns: 'Columns',
     // Content
     heading: 'Heading',
     text: 'Text',
