@@ -53,44 +53,6 @@
     }
   };
 
-  const widgetTypeLabels: Record<string, string> = {
-    // Containers
-    navbar: 'Navigation Bar',
-    composite: 'Composite',
-    container: 'Container',
-    flex: 'Flex Box',
-    hero: 'Hero Section',
-    spacer: 'Spacer',
-    divider: 'Divider',
-    // Primitives
-    columns: 'Columns',
-    // Content
-    heading: 'Heading',
-    text: 'Text',
-    button: 'Button',
-    // Media
-    image: 'Image',
-    video: 'Video',
-    // Commerce
-    single_product: 'Product',
-    product_list: 'Product Grid',
-    products: 'Products',
-    // Marketing
-    features: 'Features',
-    pricing: 'Pricing',
-    cta: 'Call to Action',
-    // Structure
-    footer: 'Footer',
-    yield: 'Content Area',
-    // Legacy
-    html: 'HTML',
-    component_ref: 'Component Reference'
-  };
-
-  function getWidgetTypeLabel(type: string): string {
-    return widgetTypeLabels[type] || type;
-  }
-
   function getCategoryForType(type: string): string {
     for (const [category, info] of Object.entries(widgetCategories)) {
       if (info.types.includes(type)) {
@@ -109,11 +71,6 @@
     }
     // Default to type-based categorization
     return getCategoryForType(component.type);
-  }
-
-  function getCategoryInfo(type: string): { icon: string; color: string } {
-    const category = getCategoryForType(type);
-    return widgetCategories[category] || { icon: '📦', color: '#64748b' };
   }
 
   // Group built-in components by category
@@ -182,7 +139,6 @@
                   <p class="component-description">{component.description}</p>
                 {/if}
               </div>
-              <span class="widget-type-badge">{getWidgetTypeLabel(component.type)}</span>
             </div>
 
             <div class="component-actions">
@@ -301,11 +257,6 @@
                         <p class="component-description">{component.description}</p>
                       {/if}
                     </div>
-                    <span
-                      class="widget-type-badge builtin-badge"
-                      style="background: {getCategoryInfo(component.type).color}"
-                      >{getWidgetTypeLabel(component.type)}</span
-                    >
                   </div>
 
                   <div class="component-actions">
@@ -483,10 +434,6 @@
     border-color: var(--color-border-primary);
   }
 
-  .builtin-badge {
-    background: var(--color-text-secondary);
-  }
-
   .btn {
     display: inline-flex;
     align-items: center;
@@ -597,16 +544,6 @@
     margin: 0.5rem 0 0 0;
     font-size: 0.875rem;
     color: var(--color-text-secondary);
-  }
-
-  .widget-type-badge {
-    background: var(--color-primary);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    white-space: nowrap;
   }
 
   .component-actions {

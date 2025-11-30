@@ -5,95 +5,6 @@
   export let data: PageData;
 
   let isResetting = false;
-
-  // Categories matching the builder sidebar
-  const widgetCategories: Record<
-    string,
-    { label: string; types: string[]; icon: string; color: string }
-  > = {
-    containers: {
-      label: 'Containers',
-      types: ['navbar', 'composite', 'container', 'flex', 'hero', 'spacer', 'divider'],
-      icon: '⬛',
-      color: '#6366f1'
-    },
-    content: {
-      label: 'Content',
-      types: ['heading', 'text', 'button'],
-      icon: '📝',
-      color: '#8b5cf6'
-    },
-    media: {
-      label: 'Media',
-      types: ['image'],
-      icon: '🖼️',
-      color: '#ec4899'
-    },
-    commerce: {
-      label: 'Commerce',
-      types: ['single_product', 'product_list'],
-      icon: '🛒',
-      color: '#14b8a6'
-    },
-    marketing: {
-      label: 'Marketing',
-      types: ['features', 'pricing', 'cta'],
-      icon: '📣',
-      color: '#f59e0b'
-    },
-    structure: {
-      label: 'Structure',
-      types: ['footer', 'yield'],
-      icon: '🏗️',
-      color: '#64748b'
-    }
-  };
-
-  const widgetTypeLabels: Record<string, string> = {
-    // Containers
-    navbar: 'Navigation Bar',
-    composite: 'Composite',
-    container: 'Container',
-    flex: 'Flex Box',
-    hero: 'Hero Section',
-    spacer: 'Spacer',
-    divider: 'Divider',
-    // Primitives
-    columns: 'Columns',
-    // Content
-    heading: 'Heading',
-    text: 'Text',
-    button: 'Button',
-    // Media
-    image: 'Image',
-    video: 'Video',
-    // Commerce
-    single_product: 'Product',
-    product_list: 'Product Grid',
-    products: 'Products',
-    // Marketing
-    features: 'Features',
-    pricing: 'Pricing',
-    cta: 'Call to Action',
-    // Structure
-    footer: 'Footer',
-    yield: 'Content Slot',
-    // Legacy
-    html: 'Custom HTML'
-  };
-
-  function getWidgetTypeLabel(type: string): string {
-    return widgetTypeLabels[type] || type;
-  }
-
-  function getCategoryInfo(widgetType: string): { label: string; icon: string; color: string } {
-    for (const [, category] of Object.entries(widgetCategories)) {
-      if (category.types.includes(widgetType)) {
-        return category;
-      }
-    }
-    return { label: 'Other', icon: '❓', color: '#6b7280' };
-  }
 </script>
 
 <svelte:head>
@@ -123,11 +34,6 @@
                   <p class="component-description">{component.description}</p>
                 {/if}
               </div>
-              <span
-                class="widget-type-badge"
-                style="background: {getCategoryInfo(component.type).color}"
-                >{getWidgetTypeLabel(component.type)}</span
-              >
             </div>
 
             <div class="component-actions">
@@ -288,16 +194,6 @@
     margin: 0.5rem 0 0 0;
     font-size: 0.875rem;
     color: var(--color-text-secondary);
-  }
-
-  .widget-type-badge {
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    white-space: nowrap;
   }
 
   .component-actions {
