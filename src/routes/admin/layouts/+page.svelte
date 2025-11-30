@@ -129,8 +129,7 @@
 <style>
   .layouts-page {
     padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100%;
   }
 
   .page-header {

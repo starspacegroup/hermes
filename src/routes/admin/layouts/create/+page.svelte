@@ -98,8 +98,7 @@
 <style>
   .create-layout-page {
     padding: 2rem;
-    max-width: 800px;
-    margin: 0 auto;
+    width: 100%;
   }
 
   .page-header {
