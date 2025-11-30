@@ -1,8 +1,23 @@
 <script lang="ts">
-  import type { RevisionNode } from '$lib/types/revisions';
   import { calculateTreeLayout, calculateConnections } from '$lib/utils/revisionGraphLayout';
 
-  export let revisions: RevisionNode<unknown>[] = [];
+  // Accept any revision node type that has the common fields
+  interface RevisionNodeLike {
+    id: string;
+    revision_hash: string;
+    created_at: number;
+    is_current?: boolean;
+    is_published?: boolean;
+    message?: string;
+    notes?: string;
+    user_id?: string;
+    created_by?: string;
+    children: RevisionNodeLike[];
+    depth: number;
+    branch: number;
+  }
+
+  export let revisions: RevisionNodeLike[] = [];
   export let currentRevisionId: string | null = null;
   export let onSelectRevision: (revisionId: string) => void = () => {};
 

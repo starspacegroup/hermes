@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   const db = getDB(platform);
   const siteId = locals.siteId;
 
-  const pages = await pagesDb.getAllPages(db, siteId);
+  const pages = await pagesDb.getAllPagesWithRevisionInfo(db, siteId);
 
   return {
     pages

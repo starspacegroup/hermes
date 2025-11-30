@@ -4,7 +4,10 @@ import {
   getRevisionById,
   createRevision,
   publishRevision,
-  getPublishedRevision
+  getPublishedRevision,
+  getMostRecentDraftRevision,
+  buildRevisionTree,
+  getHeadRevisions
 } from './revisions';
 import type { D1Database } from '@cloudflare/workers-types';
 import type { PageRevision, PageWidget } from '$lib/types/pages';
@@ -70,7 +73,7 @@ describe('Revisions Database Functions', () => {
       expect(mockStatement.bind).toHaveBeenCalledWith(siteId, pageId);
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe(revisionId);
-      expect(result[0].widgets).toEqual([mockWidget]);
+      expect(result[0].components).toEqual([mockWidget]);
     });
 
     it('should parse widgets snapshot into array', async () => {
@@ -83,8 +86,8 @@ describe('Revisions Database Functions', () => {
 
       const result = await getPageRevisions(mockDb, siteId, pageId);
 
-      expect(result[0].widgets).toBeInstanceOf(Array);
-      expect(result[0].widgets[0].id).toBe('widget-1');
+      expect(result[0].components).toBeInstanceOf(Array);
+      expect(result[0].components[0].id).toBe('widget-1');
     });
 
     it('should return empty array when no revisions exist', async () => {
@@ -129,7 +132,7 @@ describe('Revisions Database Functions', () => {
       expect(mockStatement.bind).toHaveBeenCalledWith(siteId, pageId, revisionId);
       expect(result).not.toBeNull();
       expect(result!.id).toBe(revisionId);
-      expect(result!.widgets).toEqual([mockWidget]);
+      expect(result!.components).toEqual([mockWidget]);
     });
 
     it('should return null when revision not found', async () => {
@@ -152,7 +155,7 @@ describe('Revisions Database Functions', () => {
       slug: 'new-revision',
       status: 'draft' as const,
       colorTheme: 'dark',
-      widgets: [mockWidget],
+      components: [mockWidget],
       notes: 'Test revision',
       created_by: 'user-1'
     };
@@ -184,7 +187,7 @@ describe('Revisions Database Functions', () => {
       expect(result.title).toBe(createData.title);
       expect(result.revision_hash).toBeDefined();
       expect(result.revision_hash.length).toBe(8);
-      expect(result.widgets).toEqual(createData.widgets);
+      expect(result.components).toEqual(createData.components);
     });
 
     it('should generate unique revision hash', async () => {
@@ -279,7 +282,7 @@ describe('Revisions Database Functions', () => {
         title: 'Minimal',
         slug: 'minimal',
         status: 'draft' as const,
-        widgets: []
+        components: []
       };
 
       const result = await createRevision(mockDb, siteId, pageId, minimalData);
@@ -403,7 +406,7 @@ describe('Revisions Database Functions', () => {
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('is_published = 1'));
       expect(result).not.toBeNull();
       expect(result!.is_published).toBe(1);
-      expect(result!.widgets).toEqual([mockWidget]);
+      expect(result!.components).toEqual([mockWidget]);
     });
 
     it('should return null when no published revision exists', async () => {
@@ -417,6 +420,294 @@ describe('Revisions Database Functions', () => {
       const result = await getPublishedRevision(mockDb, siteId, pageId);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getMostRecentDraftRevision', () => {
+    it('should retrieve the most recent draft revision', async () => {
+      const draftRevision = { ...mockRevisionData, status: 'draft' };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(draftRevision)
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getMostRecentDraftRevision(mockDb, siteId, pageId);
+
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining("status = 'draft'"));
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('draft');
+      expect(result!.components).toEqual([mockWidget]);
+    });
+
+    it('should return null when no draft revision exists', async () => {
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(null)
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getMostRecentDraftRevision(mockDb, siteId, pageId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('buildRevisionTree', () => {
+    it('should return empty array when no revisions exist', async () => {
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should build tree with single root revision', async () => {
+      const singleRevision = {
+        ...mockRevisionData,
+        parent_revision_id: null
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [singleRevision] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(revisionId);
+      expect(result[0].depth).toBe(0);
+      expect(result[0].branch).toBe(0);
+      expect(result[0].children).toEqual([]);
+    });
+
+    it('should build parent-child relationships', async () => {
+      const parentRevision = {
+        ...mockRevisionData,
+        id: 'parent-1',
+        parent_revision_id: null,
+        created_at: 1000
+      };
+
+      const childRevision = {
+        ...mockRevisionData,
+        id: 'child-1',
+        parent_revision_id: 'parent-1',
+        created_at: 2000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [parentRevision, childRevision] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(2);
+      const parent = result.find((r) => r.id === 'parent-1');
+      const child = result.find((r) => r.id === 'child-1');
+      expect(parent!.depth).toBe(0);
+      expect(child!.depth).toBe(1);
+    });
+
+    it('should handle orphaned revisions by linking them as a chain', async () => {
+      const root = {
+        ...mockRevisionData,
+        id: 'root',
+        parent_revision_id: null,
+        created_at: 1000
+      };
+
+      const orphan1 = {
+        ...mockRevisionData,
+        id: 'orphan-1',
+        parent_revision_id: null,
+        created_at: 2000
+      };
+
+      const orphan2 = {
+        ...mockRevisionData,
+        id: 'orphan-2',
+        parent_revision_id: null,
+        created_at: 3000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [root, orphan1, orphan2] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(3);
+      // All nodes should be processed
+      expect(result.every((r) => r.depth !== undefined)).toBe(true);
+    });
+
+    it('should handle revisions with missing parent (orphans)', async () => {
+      const revision = {
+        ...mockRevisionData,
+        parent_revision_id: 'nonexistent-parent',
+        created_at: 1000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [revision] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should create branches for multiple children', async () => {
+      const parent = {
+        ...mockRevisionData,
+        id: 'parent',
+        parent_revision_id: null,
+        created_at: 1000
+      };
+
+      const child1 = {
+        ...mockRevisionData,
+        id: 'child-1',
+        parent_revision_id: 'parent',
+        created_at: 2000
+      };
+
+      const child2 = {
+        ...mockRevisionData,
+        id: 'child-2',
+        parent_revision_id: 'parent',
+        created_at: 3000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [parent, child1, child2] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await buildRevisionTree(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(3);
+      const parentNode = result.find((r) => r.id === 'parent');
+      const child1Node = result.find((r) => r.id === 'child-1');
+      const child2Node = result.find((r) => r.id === 'child-2');
+      expect(parentNode!.branch).toBe(0);
+      expect(child1Node!.branch).toBe(0); // First child stays on same branch
+      expect(child2Node!.branch).toBe(1); // Second child gets new branch
+    });
+  });
+
+  describe('getHeadRevisions', () => {
+    it('should return head revisions (those without children)', async () => {
+      const parent = {
+        ...mockRevisionData,
+        id: 'parent',
+        parent_revision_id: null,
+        created_at: 1000
+      };
+
+      const child = {
+        ...mockRevisionData,
+        id: 'child',
+        parent_revision_id: 'parent',
+        created_at: 2000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [parent, child] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getHeadRevisions(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('child');
+    });
+
+    it('should return all leaves in a branched tree', async () => {
+      const root = {
+        ...mockRevisionData,
+        id: 'root',
+        parent_revision_id: null,
+        created_at: 1000
+      };
+
+      const branch1Head = {
+        ...mockRevisionData,
+        id: 'branch1-head',
+        parent_revision_id: 'root',
+        created_at: 2000
+      };
+
+      const branch2Head = {
+        ...mockRevisionData,
+        id: 'branch2-head',
+        parent_revision_id: 'root',
+        created_at: 3000
+      };
+
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [root, branch1Head, branch2Head] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getHeadRevisions(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(2);
+      expect(result.map((r) => r.id).sort()).toEqual(['branch1-head', 'branch2-head']);
+    });
+
+    it('should return empty array when no revisions exist', async () => {
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getHeadRevisions(mockDb, siteId, pageId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return single revision when only root exists', async () => {
+      const mockStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [mockRevisionData] })
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+
+      const result = await getHeadRevisions(mockDb, siteId, pageId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(revisionId);
     });
   });
 });
