@@ -59,12 +59,13 @@
     } else {
       isAIChatSubmenuOpen = false;
     }
-    // Auto-expand Builder submenu if on pages, layouts, or components page
+    // Auto-expand Builder submenu if on pages, layouts, components, or primitives page
     if (
       currentPath.startsWith('/admin/pages') ||
       currentPath.startsWith('/admin/builder') ||
       currentPath.startsWith('/admin/layouts') ||
-      currentPath.startsWith('/admin/components')
+      currentPath.startsWith('/admin/components') ||
+      currentPath.startsWith('/admin/primitives')
     ) {
       isSiteSubmenuOpen = true;
     } else {

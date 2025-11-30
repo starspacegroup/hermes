@@ -8,10 +8,10 @@
   // Determine what buttons to show
   $: hasPublished = !!row.published_at;
   $: hasDraft = !!row.draft_at;
-  // Show preview if there's a draft and either:
-  // 1. No published version (unpublished page), OR
-  // 2. Draft is newer than published version
-  $: showPreview = hasDraft && (!row.published_at || row.has_unpublished_changes);
+  // Show preview if:
+  // 1. There's a draft with unpublished changes, OR
+  // 2. No published version exists (always allow previewing unpublished pages)
+  $: showPreview = (hasDraft && row.has_unpublished_changes) || !hasPublished;
 
   async function handleDelete(): Promise<void> {
     if (!confirm('Are you sure you want to delete this page?')) {
