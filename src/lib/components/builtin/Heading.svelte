@@ -1,14 +1,23 @@
 <script lang="ts">
   import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
   import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
   export let colorTheme: ColorTheme = 'default-light';
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
-  $: heading = config.heading || 'Heading';
+  $: rawHeading = config.heading || 'Heading';
+  $: userContext = createUserContext(user);
+  $: heading = siteContext
+    ? substituteTemplate(rawHeading, { site: siteContext, user: userContext })
+    : rawHeading;
   $: level = config.level || 2;
   $: alignment = config.alignment || 'left';
   $: textColor = resolveThemeColor(config.textColor, colorTheme, 'inherit', true);
+  $: link = config.link || '';
 </script>
 
 <div
@@ -17,17 +26,29 @@
   style="text-align: {alignment}; color: {textColor};"
 >
   {#if level === 1}
-    <h1>{heading}</h1>
+    <h1>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h1>
   {:else if level === 2}
-    <h2>{heading}</h2>
+    <h2>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h2>
   {:else if level === 3}
-    <h3>{heading}</h3>
+    <h3>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h3>
   {:else if level === 4}
-    <h4>{heading}</h4>
+    <h4>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h4>
   {:else if level === 5}
-    <h5>{heading}</h5>
+    <h5>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h5>
   {:else}
-    <h6>{heading}</h6>
+    <h6>
+      {#if link}<a href={link}>{heading}</a>{:else}{heading}{/if}
+    </h6>
   {/if}
 </div>
 
@@ -69,6 +90,15 @@
 
   h6 {
     font-size: 1rem;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
   }
 
   @media (max-width: 768px) {

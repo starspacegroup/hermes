@@ -576,14 +576,6 @@ Done!
       expect(config.padding).toEqual({ desktop: 32, tablet: 24, mobile: 16 });
     });
 
-    it('should create flex widget with default config', () => {
-      const widget = createDefaultWidget('flex', 0, 'page-1');
-      const config = widget.config as Record<string, unknown>;
-
-      expect(widget.type).toBe('flex');
-      expect(config.direction).toEqual({ desktop: 'row', tablet: 'row', mobile: 'column' });
-    });
-
     it('should create single_product widget with default config', () => {
       const widget = createDefaultWidget('single_product', 0, 'page-1');
 

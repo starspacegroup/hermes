@@ -10,9 +10,15 @@
     Box,
     ShoppingCart,
     ChevronDown,
+    ChevronDownSquare,
     Package
   } from 'lucide-svelte';
   import type { PageComponent, ComponentType, Component } from '$lib/types/pages';
+
+  // Extended Component type that may include children_count from server
+  interface ComponentWithCount extends Component {
+    children_count?: number;
+  }
 
   type BuilderMode = 'page' | 'layout' | 'component' | 'primitive';
 
@@ -20,7 +26,7 @@
   export let pageComponents: PageComponent[];
   export let title: string;
   export let slug: string;
-  export let components: Component[] = [];
+  export let components: ComponentWithCount[] = [];
   // Current component ID (for component mode) - used to prevent adding a component to itself
   export let currentComponentId: number | null = null;
 
@@ -38,18 +44,33 @@
   // Component library organized by category
   const componentLibrary = {
     containers: [
-      { type: 'container', name: 'Container', icon: Box, description: 'Container with padding' },
-      { type: 'flex', name: 'Flex Box', icon: Layout, description: 'Flexible layout container' },
-      { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner section' },
+      {
+        type: 'container',
+        name: 'Container',
+        icon: Box,
+        description: 'Flexible container for grouping elements'
+      },
+      { type: 'columns', name: 'Columns', icon: Layout, description: 'Multi-column layout' },
       { type: 'spacer', name: 'Spacer', icon: Box, description: 'Vertical spacing' },
-      { type: 'divider', name: 'Divider', icon: Box, description: 'Horizontal divider' }
+      { type: 'divider', name: 'Divider', icon: Box, description: 'Horizontal divider line' }
     ],
     content: [
-      { type: 'heading', name: 'Heading', icon: Type, description: 'Text heading' },
+      { type: 'heading', name: 'Heading', icon: Type, description: 'Text heading (H1-H6)' },
       { type: 'text', name: 'Text', icon: Type, description: 'Paragraph text' },
-      { type: 'button', name: 'Button', icon: Box, description: 'Call-to-action button' }
+      { type: 'button', name: 'Button', icon: Box, description: 'Call-to-action button' },
+      { type: 'image', name: 'Image', icon: Image, description: 'Single image' },
+      {
+        type: 'dropdown',
+        name: 'Dropdown',
+        icon: ChevronDownSquare,
+        description: 'Select dropdown field'
+      }
     ],
-    media: [{ type: 'image', name: 'Image', icon: Image, description: 'Single image' }],
+    sections: [
+      { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner with CTA' },
+      { type: 'features', name: 'Features', icon: Layout, description: 'Feature grid showcase' },
+      { type: 'cta', name: 'Call to Action', icon: Layout, description: 'CTA banner section' }
+    ],
     commerce: [
       {
         type: 'single_product',
@@ -68,15 +89,43 @@
 
   const categories = [
     { id: 'all', name: 'All', icon: Box },
-    { id: 'containers', name: 'Containers', icon: Layout },
+    { id: 'containers', name: 'Layout', icon: Layout },
     { id: 'content', name: 'Content', icon: Type },
-    { id: 'media', name: 'Media', icon: Image },
+    { id: 'sections', name: 'Sections', icon: Layout },
     { id: 'commerce', name: 'Commerce', icon: ShoppingCart },
     { id: 'custom', name: 'Custom', icon: Package }
   ];
 
-  // Filter out the current component being edited to prevent circular references
-  $: availableComponents = components.filter((c) => c.id !== currentComponentId);
+  // Built-in component types that shouldn't appear in the custom components list
+  const builtInTypes = new Set([
+    'container',
+    'columns',
+    'spacer',
+    'divider', // containers
+    'heading',
+    'text',
+    'button',
+    'image',
+    'dropdown', // content
+    'hero',
+    'features',
+    'cta', // sections
+    'single_product',
+    'product_list' // commerce
+  ]);
+
+  // Filter out components that shouldn't appear in the custom components list:
+  // 1. Current component being edited (prevent circular references)
+  // 2. Empty custom components (those with no children)
+  // 3. Global primitive components (they're already in the built-in library)
+  // 4. Components with built-in types (container, hero, etc.) - but NOT navbar/footer which are editable
+  $: availableComponents = components.filter(
+    (c) =>
+      c.id !== currentComponentId &&
+      (c.children_count === undefined || c.children_count > 0) &&
+      !c.is_primitive &&
+      !builtInTypes.has(c.type)
+  );
 
   // Reactive filtered components based on search and category
   $: filteredComponents = (() => {
@@ -281,6 +330,15 @@
         textColor: 'var(--color-text-primary)'
       },
       navbar: {
+        // Container properties (Container architecture)
+        containerPadding: {
+          desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+          tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+          mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+        },
+        containerMaxWidth: '100%',
+        containerBackground: '#ffffff',
+        containerBorderRadius: 0,
         // Logo configuration
         logo: { text: 'Store', url: '/', image: '', imageHeight: 40 },
         logoPosition: 'left',
@@ -304,7 +362,7 @@
           { text: 'Profile', url: '/profile', icon: '👤' },
           { text: 'Settings', url: '/settings', icon: '⚙️', dividerBefore: true }
         ],
-        // Styling
+        // Styling (backward compatibility)
         navbarBackground: '#ffffff',
         navbarTextColor: '#000000',
         navbarHoverColor: 'var(--color-primary)',
@@ -312,11 +370,6 @@
         navbarShadow: false,
         sticky: true,
         navbarHeight: 0,
-        navbarPadding: {
-          desktop: { top: 16, right: 24, bottom: 16, left: 24 },
-          tablet: { top: 12, right: 20, bottom: 12, left: 20 },
-          mobile: { top: 12, right: 16, bottom: 12, left: 16 }
-        },
         // Dropdown styling
         dropdownBackground: '#ffffff',
         dropdownTextColor: '#000000',
@@ -355,59 +408,20 @@
         containerWrap: 'wrap',
         children: []
       },
-      flex: {
-        // Flex properties (mobile-first defaults)
-        flexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
-        flexWrap: { desktop: 'wrap', tablet: 'wrap', mobile: 'nowrap' },
-        flexJustifyContent: { desktop: 'flex-start', tablet: 'flex-start', mobile: 'flex-start' },
-        flexAlignItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
-        flexAlignContent: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
-        flexGap: { desktop: 16, tablet: 12, mobile: 8 },
-        flexGapX: { desktop: 16, tablet: 12, mobile: 8 },
-        flexGapY: { desktop: 16, tablet: 12, mobile: 8 },
-        flexPadding: {
-          desktop: { top: 16, right: 16, bottom: 16, left: 16 },
-          tablet: { top: 12, right: 12, bottom: 12, left: 12 },
-          mobile: { top: 8, right: 8, bottom: 8, left: 8 }
-        },
-        flexMargin: {
-          desktop: { top: 0, right: 0, bottom: 0, left: 0 },
-          tablet: { top: 0, right: 0, bottom: 0, left: 0 },
-          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
-        },
-        flexBackground: 'transparent',
-        flexBorderRadius: 0,
-        flexBorder: {
-          width: 0,
-          style: 'solid',
-          color: 'transparent',
-          radius: 0
-        },
-        flexWidth: { desktop: '100%', tablet: '100%', mobile: '100%' },
-        flexHeight: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        flexMinHeight: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        flexMaxWidth: { desktop: 'none', tablet: 'none', mobile: 'none' },
-        childFlexGrow: { desktop: 0, tablet: 0, mobile: 0 },
-        childFlexShrink: { desktop: 1, tablet: 1, mobile: 1 },
-        childFlexBasis: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        childAlignSelf: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        // Grid properties (mobile-first defaults)
-        useGrid: false,
-        gridColumns: { desktop: 3, tablet: 2, mobile: 1 },
-        gridRows: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        gridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
-        gridAutoColumns: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        gridAutoRows: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-        gridColumnGap: { desktop: 16, tablet: 12, mobile: 8 },
-        gridRowGap: { desktop: 16, tablet: 12, mobile: 8 },
-        gridJustifyItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
-        gridAlignItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
-        gridJustifyContent: { desktop: 'start', tablet: 'start', mobile: 'start' },
-        gridAlignContent: { desktop: 'start', tablet: 'start', mobile: 'start' },
-        // Child widgets
+      composite: {
         children: []
       },
-      composite: {
+      dropdown: {
+        triggerLabel: 'Menu',
+        triggerIcon: '',
+        triggerVariant: 'text',
+        showChevron: true,
+        menuWidth: '200px',
+        menuAlign: 'left',
+        menuBackground: 'var(--color-bg-primary)',
+        menuBorderRadius: 8,
+        menuShadow: true,
+        menuPadding: { top: 8, right: 8, bottom: 8, left: 8 },
         children: []
       },
       component_ref: {

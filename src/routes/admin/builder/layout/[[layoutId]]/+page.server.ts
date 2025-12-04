@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
-import { getComponents } from '$lib/server/db/components';
+import { getComponentsWithChildrenCount } from '$lib/server/db/components';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -14,8 +14,8 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   // Load color themes for the site
   const colorThemes = await getAllColorThemes(db, siteId);
 
-  // Load custom components for the site
-  const components = await getComponents(db, siteId);
+  // Load custom components with children count for sidebar filtering
+  const components = await getComponentsWithChildrenCount(db, siteId);
 
   // If no layoutId, return empty state for new layout creation with default Yield widget
   if (!params.layoutId) {
@@ -36,6 +36,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       colorThemes,
       customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
+      currentUser: locals.currentUser
+        ? {
+            id: locals.currentUser.id,
+            name: locals.currentUser.name,
+            email: locals.currentUser.email,
+            role: locals.currentUser.role
+          }
+        : null,
       isNewLayout: true
     };
   }
@@ -90,6 +98,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     colorThemes,
     customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
+    currentUser: locals.currentUser
+      ? {
+          id: locals.currentUser.id,
+          name: locals.currentUser.name,
+          email: locals.currentUser.email,
+          role: locals.currentUser.role
+        }
+      : null,
     isNewLayout: false
   };
 };

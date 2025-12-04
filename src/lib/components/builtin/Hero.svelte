@@ -1,19 +1,28 @@
 <script lang="ts">
   import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
   import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
   export let colorTheme: ColorTheme = 'default-light';
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
-  $: title = config.title || 'Hero Title';
-  $: subtitle = config.subtitle || '';
-  $: ctaText = config.ctaText || '';
+  // Helper to substitute templates if site context is available
+  $: userContext = createUserContext(user);
+  const sub = (text: string): string =>
+    siteContext ? substituteTemplate(text, { site: siteContext, user: userContext }) : text;
+
+  $: title = sub(config.title || 'Hero Title');
+  $: subtitle = sub(config.subtitle || '');
+  $: ctaText = sub(config.ctaText || '');
   $: ctaLink = config.ctaLink || '#';
   $: ctaBackgroundColor = resolveThemeColor(config.ctaBackgroundColor, colorTheme, '#ffffff', true);
   $: ctaTextColor = resolveThemeColor(config.ctaTextColor, colorTheme, '#3b82f6', true);
   $: ctaFontSize = config.ctaFontSize || '16px';
   $: ctaFontWeight = config.ctaFontWeight || '600';
-  $: secondaryCtaText = config.secondaryCtaText || '';
+  $: secondaryCtaText = sub(config.secondaryCtaText || '');
   $: secondaryCtaLink = config.secondaryCtaLink || '#';
   $: secondaryCtaBackgroundColor = resolveThemeColor(
     config.secondaryCtaBackgroundColor,

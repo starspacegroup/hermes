@@ -40,11 +40,37 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       throw error(400, 'Name and type are required');
     }
 
+    // For navbar and footer components, sync the primary child's config to the component
+    // This ensures the frontend layout rendering works correctly
+    let configToUse = data.config || {};
+    if (data.children && data.children.length > 0) {
+      const sortedChildren = [...data.children].sort((a, b) => a.position - b.position);
+      const primaryChild = sortedChildren[0];
+
+      // If the primary child is a navbar or footer, use its config for the component
+      if (primaryChild.type === 'navbar' || primaryChild.type === 'footer') {
+        configToUse = primaryChild.config;
+      }
+      // If the component type is navbar/footer, we need to sync config for frontend rendering
+      // First try to find a navbar/footer widget, otherwise use the primary child's config
+      else if (data.type === 'navbar' || data.type === 'footer') {
+        const navbarOrFooter = sortedChildren.find(
+          (c) => c.type === 'navbar' || c.type === 'footer'
+        );
+        if (navbarOrFooter) {
+          configToUse = navbarOrFooter.config;
+        } else {
+          // Fallback: use the primary child's config for navbar/footer components
+          configToUse = primaryChild.config;
+        }
+      }
+    }
+
     const component = await createComponent(db, siteId, {
       name: data.name,
       description: data.description,
       type: data.type,
-      config: data.config || {},
+      config: configToUse,
       is_global: data.is_global
     });
 

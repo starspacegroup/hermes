@@ -4,6 +4,7 @@
   import MediaBrowser from './MediaBrowser.svelte';
   import MediaUpload from './MediaUpload.svelte';
   import ThemeColorInput from './ThemeColorInput.svelte';
+  import ButtonIconPicker from './ButtonIconPicker.svelte';
   import VisualStyleEditor from '../builder/VisualStyleEditor.svelte';
   import TailwindContainerEditor from '../builder/TailwindContainerEditor.svelte';
   import ChildLayoutEditor from '../builder/ChildLayoutEditor.svelte';
@@ -464,6 +465,16 @@
       >
         Layout
       </button>
+    {:else if component.type === 'container'}
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === 'responsive'}
+        on:click={() => (activeTab = 'responsive')}
+        title="Container layout settings (flex/grid)"
+      >
+        Layout
+      </button>
     {/if}
     <button
       type="button"
@@ -473,7 +484,7 @@
     >
       Style
     </button>
-    {#if !parentDisplayMode}
+    {#if !parentDisplayMode && component.type !== 'container'}
       <button
         type="button"
         class="tab"
@@ -554,6 +565,17 @@
                   <option value={5}>H5</option>
                   <option value={6}>H6 (Smallest)</option>
                 </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Link (Optional)</span>
+                <input
+                  type="text"
+                  bind:value={config.link}
+                  on:input={handleUpdate}
+                  placeholder="https://example.com or /page-slug"
+                />
               </label>
             </div>
           </div>
@@ -769,6 +791,138 @@
                 <span>Open in new tab</span>
               </label>
             </div>
+          </div>
+          <div class="section">
+            <h4>Button Icon</h4>
+            <div class="form-group">
+              <span class="field-label">Icon (appears left of text)</span>
+              <ButtonIconPicker
+                value={config.icon || ''}
+                on:change={(e) => {
+                  config.icon = e.detail || undefined;
+                  handleImmediateUpdate();
+                }}
+              />
+              <p class="field-hint">Search from 1500+ Lucide icons or browse by category.</p>
+            </div>
+          </div>
+        {:else if component.type === 'dropdown'}
+          <div class="section">
+            <h4>Trigger Settings</h4>
+            <div class="form-group">
+              <label>
+                <span>Trigger Label</span>
+                <input
+                  type="text"
+                  bind:value={config.triggerLabel}
+                  on:input={handleUpdate}
+                  placeholder="Menu"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Trigger Icon</span>
+                <select bind:value={config.triggerIcon} on:change={handleImmediateUpdate}>
+                  <option value="">None</option>
+                  <option value="user">User</option>
+                  <option value="☰">Menu (☰)</option>
+                  <option value="⚙️">Settings (⚙️)</option>
+                  <option value="▼">Arrow (▼)</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Trigger Style</span>
+                <select bind:value={config.triggerVariant} on:change={handleImmediateUpdate}>
+                  <option value="text">Text</option>
+                  <option value="button">Button</option>
+                  <option value="icon">Icon Only</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.showChevron}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show chevron arrow</span>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Menu Settings</h4>
+            <div class="form-group">
+              <label>
+                <span>Menu Width</span>
+                <input
+                  type="text"
+                  bind:value={config.menuWidth}
+                  on:input={handleUpdate}
+                  placeholder="200px"
+                />
+              </label>
+              <p class="field-hint">Use px, rem, or 'auto'</p>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Menu Alignment</span>
+                <select bind:value={config.menuAlign} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Menu Background</span>
+                <input
+                  type="text"
+                  bind:value={config.menuBackground}
+                  on:input={handleUpdate}
+                  placeholder="var(--color-bg-primary)"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Border Radius</span>
+                <input
+                  type="number"
+                  bind:value={config.menuBorderRadius}
+                  on:input={handleUpdate}
+                  min="0"
+                  max="50"
+                  placeholder="8"
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.menuShadow}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Show drop shadow</span>
+              </label>
+            </div>
+          </div>
+          <div class="section">
+            <h4>Menu Items</h4>
+            <p class="field-hint">
+              Drag components into the dropdown menu in the canvas to add menu items. Use buttons
+              for links, text for labels, and dividers for separators.
+            </p>
+            {#if config.children && config.children.length > 0}
+              <p class="children-count">{config.children.length} item(s) in menu</p>
+            {:else}
+              <p class="children-empty">No items yet. Drag components into the menu area.</p>
+            {/if}
           </div>
         {:else if component.type === 'divider'}
           <p class="tab-info">All divider settings are in the Style tab.</p>
@@ -1194,7 +1348,7 @@
                     config.logo.text = e.currentTarget.value;
                     handleUpdate();
                   }}
-                  placeholder="Store Name"
+                  placeholder="Site Title"
                 />
               </label>
             </div>
@@ -2090,6 +2244,8 @@
             {config}
             {currentBreakpoint}
             {colorTheme}
+            showTabNavigation={false}
+            activeTabOverride="style"
             on:update={(e) => {
               config = e.detail;
               handleImmediateUpdate();
@@ -2549,6 +2705,18 @@
                 Adjust navbar padding for {currentBreakpoint} devices.
               </p>
             </div>
+          {:else if component.type === 'container'}
+            <TailwindContainerEditor
+              {config}
+              {currentBreakpoint}
+              {colorTheme}
+              showTabNavigation={false}
+              activeTabOverride="layout"
+              on:update={(e) => {
+                config = e.detail;
+                handleImmediateUpdate();
+              }}
+            />
           {:else}
             <p class="tab-info">This widget doesn't have responsive settings.</p>
           {/if}
@@ -2564,6 +2732,82 @@
         </div>
 
         <VisualStyleEditor {config} {currentBreakpoint} on:update={handleVisualStyleUpdate} />
+
+        <div class="section visibility-section">
+          <h4>Visibility Controls</h4>
+          <p class="section-description">
+            Control who can see this component based on authentication status or user roles.
+          </p>
+
+          <div class="form-group">
+            <label>
+              <span>Show Component</span>
+              <select bind:value={config.visibilityRule} on:change={handleImmediateUpdate}>
+                <option value="always">Always (Everyone)</option>
+                <option value="authenticated">Logged In Users Only</option>
+                <option value="unauthenticated">Logged Out Users Only</option>
+                <option value="role">Specific Roles Only</option>
+              </select>
+            </label>
+            <small class="help-text">
+              Choose when this component should be visible to visitors.
+            </small>
+          </div>
+
+          {#if config.visibilityRule === 'role'}
+            <div class="form-group">
+              <label>
+                <span>Required Roles</span>
+                <input
+                  type="text"
+                  value={config.requiredRoles?.join(', ') ?? ''}
+                  on:input={(e) => {
+                    const target = e.target;
+                    if (target instanceof HTMLInputElement) {
+                      const rolesString = target.value;
+                      config.requiredRoles = rolesString
+                        .split(',')
+                        .map((r) => r.trim())
+                        .filter((r) => r.length > 0);
+                      handleUpdate();
+                    }
+                  }}
+                  placeholder="admin, editor, moderator"
+                />
+              </label>
+              <small class="help-text">
+                Comma-separated list of role names. User must have at least one of these roles to
+                see this component.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Hide From Roles (Optional)</span>
+                <input
+                  type="text"
+                  value={config.hideFromRoles?.join(', ') ?? ''}
+                  on:input={(e) => {
+                    const target = e.target;
+                    if (target instanceof HTMLInputElement) {
+                      const rolesString = target.value;
+                      config.hideFromRoles = rolesString
+                        .split(',')
+                        .map((r) => r.trim())
+                        .filter((r) => r.length > 0);
+                      handleUpdate();
+                    }
+                  }}
+                  placeholder="banned, restricted"
+                />
+              </label>
+              <small class="help-text">
+                Users with any of these roles will NOT see this component, even if they have a
+                required role.
+              </small>
+            </div>
+          {/if}
+        </div>
       </div>
     {/if}
   </div>
@@ -2602,6 +2846,48 @@
             {colorTheme}
             onUpdate={createChildUpdateHandler(index)}
             parentDisplayMode={containerDisplayMode}
+          />
+        </div>
+      </div>
+    {/each}
+  </div>
+{/if}
+
+<!-- Child widget properties panels for dropdown menu items -->
+{#if component.type === 'dropdown' && config.children && config.children.length > 0}
+  <div class="child-properties-container">
+    <div class="child-properties-header">
+      <h4>Menu Items</h4>
+      <span class="child-count">{config.children.length} item(s)</span>
+    </div>
+    {#each config.children as child, index (child.id)}
+      <div class="child-properties-panel" id="child-panel-{child.id}">
+        <div class="child-panel-header">
+          <div class="child-panel-title">
+            <span class="child-panel-number">#{index + 1}</span>
+            <span class="child-panel-type">{child.type}</span>
+            {#if child.config?.label}
+              <span class="child-panel-name">- {child.config.label}</span>
+            {:else if child.config?.text}
+              <span class="child-panel-name">
+                - {child.config.text.substring(0, 30)}{child.config.text.length > 30 ? '...' : ''}
+              </span>
+            {:else if child.config?.heading}
+              <span class="child-panel-name">
+                - {child.config.heading.substring(0, 30)}{child.config.heading.length > 30
+                  ? '...'
+                  : ''}
+              </span>
+            {/if}
+          </div>
+        </div>
+        <div class="child-panel-content">
+          <svelte:self
+            component={child}
+            {currentBreakpoint}
+            {colorTheme}
+            onUpdate={createChildUpdateHandler(index)}
+            parentDisplayMode="flex"
           />
         </div>
       </div>
@@ -2744,6 +3030,14 @@
     font-size: 0.75rem;
     color: var(--color-text-secondary);
     font-style: italic;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
   }
 
   .media-preview {
@@ -3230,6 +3524,23 @@
     border-radius: 8px;
   }
 
+  .section + .section {
+    margin-top: 1rem;
+  }
+
+  .section-description {
+    margin: 0 0 1rem 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  .visibility-section {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--color-border-secondary);
+    padding-top: 1.5rem;
+  }
+
   .section h4 {
     margin: 0 0 1rem 0;
     font-size: 0.9375rem;
@@ -3470,5 +3781,45 @@
 
   .child-panel-content :global(.panel-tabs) {
     background: var(--color-bg-secondary);
+  }
+
+  /* Child properties header for dropdown/container */
+  .child-properties-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-tertiary);
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .child-properties-header h4 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .child-count {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  /* Dropdown menu children indicators */
+  .children-count {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .children-empty {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin: 0;
   }
 </style>

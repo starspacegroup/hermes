@@ -6,6 +6,11 @@
   export let config: WidgetConfig;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: string = 'default';
+  // When true, shows internal tab navigation (Layout/Style tabs)
+  // When false, shows only the content for the activeTabOverride
+  export let showTabNavigation: boolean = true;
+  // Override which tab content to show (useful when hiding internal tab navigation)
+  export let activeTabOverride: 'layout' | 'style' | null = null;
 
   const dispatch = createEventDispatcher<{ update: WidgetConfig }>();
 
@@ -123,6 +128,9 @@
   }
 
   let activeTab: 'layout' | 'style' = 'layout';
+
+  // Use override if provided, otherwise use internal tab state
+  $: effectiveTab = activeTabOverride ?? activeTab;
 </script>
 
 <div class="tailwind-container-editor">
@@ -132,27 +140,29 @@
     <span class="badge-value">{currentBreakpoint}</span>
   </div>
 
-  <!-- Tab Navigation -->
-  <div class="tabs">
-    <button
-      type="button"
-      class="tab"
-      class:active={activeTab === 'layout'}
-      on:click={() => (activeTab = 'layout')}
-    >
-      Layout
-    </button>
-    <button
-      type="button"
-      class="tab"
-      class:active={activeTab === 'style'}
-      on:click={() => (activeTab = 'style')}
-    >
-      Style
-    </button>
-  </div>
+  {#if showTabNavigation}
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === 'layout'}
+        on:click={() => (activeTab = 'layout')}
+      >
+        Layout
+      </button>
+      <button
+        type="button"
+        class="tab"
+        class:active={activeTab === 'style'}
+        on:click={() => (activeTab = 'style')}
+      >
+        Style
+      </button>
+    </div>
+  {/if}
 
-  {#if activeTab === 'layout'}
+  {#if effectiveTab === 'layout'}
     <!-- Display Mode Toggle -->
     <div class="section">
       <h4>Display Type</h4>
@@ -457,7 +467,7 @@
         <small>Space between children (px)</small>
       </div>
     </div>
-  {:else if activeTab === 'style'}
+  {:else if effectiveTab === 'style'}
     <!-- Spacing Section -->
     <div class="section">
       <h4>Padding</h4>
@@ -717,10 +727,10 @@
     align-items: center;
     gap: 6px;
     padding: 12px;
-    border: 2px solid var(--color-border-secondary, #e2e8f0);
+    border: 2px solid var(--color-border-primary, #cbd5e1);
     border-radius: 8px;
-    background: var(--color-bg-primary, white);
-    color: var(--color-text-secondary, #64748b);
+    background: var(--color-bg-secondary, #f8fafc);
+    color: var(--color-text-primary, #1e293b);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -734,8 +744,13 @@
 
   .toggle-btn.active {
     border-color: var(--color-primary, #3b82f6);
-    background: var(--color-primary-light, #eff6ff);
-    color: var(--color-primary, #3b82f6);
+    background: #334155;
+    color: white;
+  }
+
+  .toggle-btn.active svg {
+    opacity: 1;
+    stroke: white;
   }
 
   .toggle-btn svg {
@@ -779,12 +794,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--color-border-secondary, #e2e8f0);
+    border: 2px solid var(--color-border-primary, #cbd5e1);
     border-radius: 6px;
-    background: var(--color-bg-primary, white);
+    background: var(--color-bg-secondary, #f8fafc);
     font-size: 20px;
     font-weight: bold;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-primary, #1e293b);
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -796,19 +811,19 @@
 
   .icon-btn.active {
     border-color: var(--color-primary, #3b82f6);
-    background: var(--color-primary, #3b82f6);
+    background: #334155;
     color: white;
   }
 
   .text-btn {
     flex: 1;
     padding: 8px 12px;
-    border: 2px solid var(--color-border-secondary, #e2e8f0);
+    border: 2px solid var(--color-border-primary, #cbd5e1);
     border-radius: 6px;
-    background: var(--color-bg-primary, white);
+    background: var(--color-bg-secondary, #f8fafc);
     font-size: 12px;
     font-weight: 600;
-    color: var(--color-text-secondary, #64748b);
+    color: var(--color-text-primary, #1e293b);
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
@@ -821,7 +836,7 @@
 
   .text-btn.active {
     border-color: var(--color-primary, #3b82f6);
-    background: var(--color-primary, #3b82f6);
+    background: #334155;
     color: white;
   }
 

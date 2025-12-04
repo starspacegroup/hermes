@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { invalidateAll } from '$app/navigation';
+  import { page as pageStore } from '$app/stores';
   import type { PageData } from './$types';
   import AdvancedBuilder from '$lib/components/builder/AdvancedBuilder.svelte';
   import { toastStore } from '$lib/stores/toast';
@@ -126,6 +127,8 @@
   colorThemes={data.colorThemes}
   components={data.customComponents}
   userName={data.userName}
+  user={data.currentUser}
+  siteContext={$pageStore.data.siteContext}
   onSave={handleSave}
   onPublish={handlePublish}
   onExit={handleExit}

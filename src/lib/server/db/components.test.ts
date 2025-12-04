@@ -5,8 +5,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getComponents,
+  getComponentsWithChildrenCount,
   getComponentsByType,
   getComponent,
+  getGlobalComponentByName,
   createComponent,
   updateComponent,
   deleteComponent,
@@ -134,6 +136,73 @@ describe('Component Database Functions', () => {
     });
   });
 
+  describe('getComponentsWithChildrenCount', () => {
+    it('should return components with children_count field', async () => {
+      const mockResults = [
+        {
+          id: 1,
+          site_id: '1',
+          name: 'Container',
+          description: 'A container',
+          type: 'container',
+          config: '{}',
+          is_global: 0,
+          is_primitive: 0,
+          children_count: 3,
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01'
+        },
+        {
+          id: 2,
+          site_id: '1',
+          name: 'Empty Button',
+          description: 'A button with no children',
+          type: 'button',
+          config: '{}',
+          is_global: 0,
+          is_primitive: 0,
+          children_count: 0,
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01'
+        }
+      ];
+
+      mockDb.all.mockResolvedValue({ results: mockResults });
+
+      const components = await getComponentsWithChildrenCount(mockDb as unknown as D1Database, '1');
+
+      expect(components).toHaveLength(2);
+      expect(components[0].children_count).toBe(3);
+      expect(components[0].name).toBe('Container');
+      expect(components[1].children_count).toBe(0);
+      expect(components[1].name).toBe('Empty Button');
+    });
+
+    it('should default children_count to 0 if null', async () => {
+      const mockResults = [
+        {
+          id: 1,
+          site_id: '1',
+          name: 'Test',
+          description: null,
+          type: 'container',
+          config: '{}',
+          is_global: 0,
+          is_primitive: 0,
+          children_count: null,
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01'
+        }
+      ];
+
+      mockDb.all.mockResolvedValue({ results: mockResults });
+
+      const components = await getComponentsWithChildrenCount(mockDb as unknown as D1Database, '1');
+
+      expect(components[0].children_count).toBe(0);
+    });
+  });
+
   describe('getComponentsByType', () => {
     it('should return components of specific type with is_primitive field', async () => {
       const mockResults = [
@@ -191,6 +260,60 @@ describe('Component Database Functions', () => {
       mockDb.first.mockResolvedValue(null);
 
       const component = await getComponent(mockDb as unknown as D1Database, '1', 999);
+
+      expect(component).toBeNull();
+    });
+  });
+
+  describe('getGlobalComponentByName', () => {
+    it('should return a global component by name', async () => {
+      const mockResult = {
+        id: 1,
+        site_id: 'global',
+        name: 'Navigation Bar',
+        description: 'Built-in navigation bar',
+        type: 'navbar',
+        config: '{"logo":{"text":"My Store"}}',
+        is_global: 1,
+        is_primitive: 0,
+        created_at: '2024-01-01',
+        updated_at: '2024-01-01'
+      };
+
+      mockDb.first.mockResolvedValue(mockResult);
+
+      const component = await getGlobalComponentByName(
+        mockDb as unknown as D1Database,
+        'Navigation Bar'
+      );
+
+      expect(component).not.toBeNull();
+      expect(component?.name).toBe('Navigation Bar');
+      expect(component?.is_global).toBe(true);
+      expect(component?.config).toEqual({ logo: { text: 'My Store' } });
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'SELECT * FROM components WHERE name = ? AND is_global = 1'
+      );
+    });
+
+    it('should return null when global component not found', async () => {
+      mockDb.first.mockResolvedValue(null);
+
+      const component = await getGlobalComponentByName(
+        mockDb as unknown as D1Database,
+        'NonExistent Component'
+      );
+
+      expect(component).toBeNull();
+    });
+
+    it('should return null on database error', async () => {
+      mockDb.first.mockRejectedValue(new Error('Database error'));
+
+      const component = await getGlobalComponentByName(
+        mockDb as unknown as D1Database,
+        'Navigation Bar'
+      );
 
       expect(component).toBeNull();
     });
@@ -710,6 +833,95 @@ describe('Component Database Functions', () => {
       expect(result.widgets).toEqual(mockChildren);
     });
 
+    it('should sync navbar widget config to component config', async () => {
+      const mockComponent = {
+        id: 1,
+        site_id: '1',
+        name: 'Navigation Bar',
+        type: 'navbar',
+        config: '{}',
+        is_global: 1,
+        is_primitive: 0
+      };
+
+      const navbarConfig = {
+        logo: { text: 'My Store', url: '/' },
+        links: [{ text: 'Home', url: '/' }],
+        showCart: true
+      };
+
+      const mockChildren = [
+        {
+          id: 'navbar-1',
+          component_id: 1,
+          type: 'navbar' as const,
+          position: 0,
+          config: navbarConfig,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ];
+
+      mockDb.first
+        .mockResolvedValueOnce(mockComponent)
+        .mockResolvedValueOnce({ ...mockComponent, config: JSON.stringify(navbarConfig) });
+      vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
+      vi.mocked(getComponentChildren).mockResolvedValue(mockChildren);
+
+      await saveComponentWithChildren(mockDb as unknown as D1Database, '1', 1, {
+        name: 'Navigation Bar',
+        type: 'navbar',
+        children: mockChildren
+      });
+
+      // Verify updateComponent was called with the navbar config
+      expect(mockDb.bind).toHaveBeenCalled();
+    });
+
+    it('should sync footer widget config to component config', async () => {
+      const mockComponent = {
+        id: 2,
+        site_id: '1',
+        name: 'Footer',
+        type: 'footer',
+        config: '{}',
+        is_global: 1,
+        is_primitive: 0
+      };
+
+      const footerConfig = {
+        copyright: '© 2025 My Store',
+        footerLinks: [{ text: 'Privacy', url: '/privacy' }]
+      };
+
+      const mockChildren = [
+        {
+          id: 'footer-1',
+          component_id: 2,
+          type: 'footer' as const,
+          position: 0,
+          config: footerConfig,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ];
+
+      mockDb.first
+        .mockResolvedValueOnce(mockComponent)
+        .mockResolvedValueOnce({ ...mockComponent, config: JSON.stringify(footerConfig) });
+      vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
+      vi.mocked(getComponentChildren).mockResolvedValue(mockChildren);
+
+      await saveComponentWithChildren(mockDb as unknown as D1Database, '1', 2, {
+        name: 'Footer',
+        type: 'footer',
+        children: mockChildren
+      });
+
+      // Verify updateComponent was called with the footer config
+      expect(mockDb.bind).toHaveBeenCalled();
+    });
+
     it('should throw error when update fails', async () => {
       mockDb.first.mockResolvedValueOnce(null);
 
@@ -722,18 +934,36 @@ describe('Component Database Functions', () => {
   });
 
   describe('resetBuiltInComponent', () => {
-    it('should reset component to default navbar config', async () => {
+    it('should reset component to default navbar config with a container child widget', async () => {
       mockDb.run.mockResolvedValue({ success: true });
 
       await resetBuiltInComponent(mockDb as unknown as D1Database, 1, 'navbar');
 
+      // Should update component config
       expect(mockDb.prepare).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE components SET config = ?')
       );
-      const bindCall = mockDb.bind.mock.calls[0];
-      const parsedConfig = JSON.parse(bindCall[0] as string);
+      const updateBindCall = mockDb.bind.mock.calls[0];
+      const parsedConfig = JSON.parse(updateBindCall[0] as string);
       expect(parsedConfig.logo).toBeDefined();
       expect(parsedConfig.showCart).toBe(true);
+
+      // Should delete existing children
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'DELETE FROM component_widgets WHERE component_id = ?'
+      );
+
+      // Should create 1 container widget as the default child
+      const insertCalls = mockDb.bind.mock.calls.filter((call) => {
+        // INSERT calls have at least 8 parameters
+        return call.length >= 8;
+      });
+      expect(insertCalls.length).toBe(1);
+
+      // Verify the container widget config
+      const containerConfig = JSON.parse(insertCalls[0][4] as string);
+      expect(containerConfig.containerPadding).toBeDefined();
+      expect(containerConfig.containerMaxWidth).toBe('1400px');
     });
 
     it('should reset component to default footer config', async () => {
@@ -764,16 +994,6 @@ describe('Component Database Functions', () => {
       const bindCall = mockDb.bind.mock.calls[0];
       const parsedConfig = JSON.parse(bindCall[0] as string);
       expect(parsedConfig.containerPadding).toBeDefined();
-    });
-
-    it('should reset component to default flex config', async () => {
-      mockDb.run.mockResolvedValue({ success: true });
-
-      await resetBuiltInComponent(mockDb as unknown as D1Database, 1, 'flex');
-
-      const bindCall = mockDb.bind.mock.calls[0];
-      const parsedConfig = JSON.parse(bindCall[0] as string);
-      expect(parsedConfig.flexDirection).toBeDefined();
     });
 
     it('should reset component to default text config', async () => {

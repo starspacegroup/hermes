@@ -13,6 +13,7 @@
   import Features from '../lib/components/builtin/Features.svelte';
   import Pricing from '../lib/components/builtin/Pricing.svelte';
   import CTA from '../lib/components/builtin/CTA.svelte';
+  import Dropdown from '../lib/components/builtin/Dropdown.svelte';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import type { PageData } from './$types';
@@ -182,6 +183,8 @@
           <Pricing config={component.config} />
         {:else if component.type === 'cta'}
           <CTA config={component.config} {colorTheme} />
+        {:else if component.type === 'dropdown'}
+          <Dropdown config={component.config} />
         {/if}
       </div>
     {/each}

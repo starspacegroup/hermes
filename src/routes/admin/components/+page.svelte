@@ -17,7 +17,7 @@
   > = {
     containers: {
       label: 'Main',
-      types: ['navbar', 'composite', 'container', 'flex', 'spacer', 'divider'],
+      types: ['navbar', 'footer', 'composite', 'container', 'spacer', 'divider'],
       icon: '⬛',
       color: '#6366f1'
     },
@@ -47,7 +47,7 @@
     },
     structure: {
       label: 'Structure',
-      types: ['footer', 'yield'],
+      types: ['yield'],
       icon: '🏗️',
       color: '#64748b'
     }
@@ -73,7 +73,7 @@
     return getCategoryForType(component.type);
   }
 
-  // Group built-in components by category
+  // Group built-in components by category and sort by type order
   function groupByCategory(components: Component[]): Record<string, Component[]> {
     const grouped: Record<string, Component[]> = {};
     for (const category of Object.keys(widgetCategories)) {
@@ -87,6 +87,19 @@
         grouped[category] = [];
       }
       grouped[category].push(component);
+    }
+
+    // Sort each category's components by their type order in widgetCategories
+    for (const [category, categoryComponents] of Object.entries(grouped)) {
+      const typeOrder = widgetCategories[category]?.types || [];
+      grouped[category] = categoryComponents.sort((a, b) => {
+        const aIndex = typeOrder.indexOf(a.type);
+        const bIndex = typeOrder.indexOf(b.type);
+        // If type not found in order, put at end
+        const aOrder = aIndex === -1 ? Infinity : aIndex;
+        const bOrder = bIndex === -1 ? Infinity : bIndex;
+        return aOrder - bOrder;
+      });
     }
 
     return grouped;

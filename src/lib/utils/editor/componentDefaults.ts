@@ -145,29 +145,6 @@ export function getDefaultConfig(type: ComponentType): ComponentConfig {
         children: []
       };
 
-    case 'flex':
-      return {
-        flexDirection: {
-          desktop: 'row' as const,
-          tablet: 'row' as const,
-          mobile: 'column' as const
-        },
-        flexWrap: { desktop: 'wrap' as const },
-        flexJustifyContent: { desktop: 'flex-start' as const },
-        flexAlignItems: { desktop: 'stretch' as const },
-        flexGap: { desktop: 16, tablet: 12, mobile: 8 },
-        flexPadding: {
-          desktop: { top: 16, right: 16, bottom: 16, left: 16 },
-          tablet: { top: 12, right: 12, bottom: 12, left: 12 },
-          mobile: { top: 8, right: 8, bottom: 8, left: 8 }
-        },
-        flexBackground: 'transparent',
-        flexBorderRadius: 0,
-        useGrid: false,
-        gridColumns: { desktop: 3, tablet: 2, mobile: 1 },
-        children: []
-      };
-
     case 'navbar':
       return {
         logo: { text: 'Store', url: '/' },
@@ -201,6 +178,21 @@ export function getDefaultConfig(type: ComponentType): ComponentConfig {
         children: []
       };
 
+    case 'dropdown':
+      return {
+        triggerLabel: 'Menu',
+        triggerIcon: '',
+        triggerVariant: 'text',
+        showChevron: true,
+        menuWidth: '200px',
+        menuAlign: 'left',
+        menuBackground: 'var(--color-bg-primary)',
+        menuBorderRadius: 8,
+        menuShadow: true,
+        menuPadding: { top: 8, right: 8, bottom: 8, left: 8 },
+        children: []
+      };
+
     case 'yield':
       return {};
 
@@ -216,6 +208,7 @@ export function getComponentLabel(type: ComponentType): string {
     image: 'Image',
     hero: 'Hero Section',
     button: 'Button',
+    dropdown: 'Dropdown',
     spacer: 'Spacer',
     divider: 'Divider',
     columns: 'Columns',
@@ -228,7 +221,6 @@ export function getComponentLabel(type: ComponentType): string {
     footer: 'Footer',
     yield: 'Page Content (Yield)',
     container: 'Container',
-    flex: 'Flex Box',
     composite: 'Composite',
     component_ref: 'Component Reference'
   };

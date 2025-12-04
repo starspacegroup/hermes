@@ -76,6 +76,7 @@
 
   function handleDrop(event: DragEvent): void {
     event.preventDefault();
+    event.stopPropagation(); // Prevent parent containers from also handling this drop
     if (!event.dataTransfer) return;
 
     isDragOver = false;

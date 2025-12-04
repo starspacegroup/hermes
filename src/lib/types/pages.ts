@@ -11,6 +11,7 @@ export type ComponentType =
   | 'image'
   | 'hero'
   | 'button'
+  | 'dropdown'
   | 'spacer'
   | 'columns'
   | 'heading'
@@ -22,7 +23,6 @@ export type ComponentType =
   | 'footer'
   | 'yield' // Special component type for layouts - renders page content
   | 'container' // Container with padding and background
-  | 'flex' // Flexible layout container (flex or grid)
   | 'composite' // Multi-part component composition
   | 'component_ref'; // Reference to a saved component (renders component's composition)
 
@@ -333,6 +333,11 @@ export interface ComponentConfig {
   styles?: ResponsiveStyles;
   themeOverrides?: Partial<ThemeColors>; // Component-specific theme color overrides
 
+  // Visibility controls - show/hide based on auth state and user roles
+  visibilityRule?: 'always' | 'authenticated' | 'unauthenticated' | 'role'; // When to show this component
+  requiredRoles?: string[]; // Role names required to see this component (when visibilityRule is 'role')
+  hideFromRoles?: string[]; // Role names that should NOT see this component
+
   // Advanced styling properties (responsive)
   boxShadow?: ResponsiveValue<ShadowConfig | ShadowConfig[]>; // Support multiple shadows
   textShadow?: ResponsiveValue<ShadowConfig>;
@@ -457,6 +462,33 @@ export interface ComponentConfig {
   fullWidth?: ResponsiveValue<boolean>;
   icon?: string;
   openInNewTab?: boolean;
+
+  // Dropdown menu component (container-type with children)
+  triggerLabel?: string;
+  triggerIcon?: string;
+  triggerVariant?: 'text' | 'button' | 'icon';
+  showChevron?: boolean;
+  menuWidth?: string | number;
+  menuAlign?: 'left' | 'center' | 'right';
+  menuBackground?: string;
+  menuBorderRadius?: number;
+  menuShadow?: boolean;
+  menuPadding?: SpacingConfig;
+
+  // Legacy dropdown form field (deprecated - use triggerLabel, etc.)
+  placeholder?: string;
+  options?: Array<{
+    value: string;
+    label: string;
+    icon?: string;
+    disabled?: boolean;
+    group?: string;
+  }>;
+  defaultValue?: string;
+  required?: boolean;
+  searchable?: boolean;
+  description?: string;
+  name?: string; // Form field name
 
   // Spacer component
   space?: ResponsiveValue<number>;

@@ -11,8 +11,9 @@ import {
   needsPositionNormalization
 } from '$lib/utils/componentPositions';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
-import { getLayouts, getDefaultLayout } from '$lib/server/db/layouts';
-import { getComponents } from '$lib/server/db/components';
+import { getLayouts, getDefaultLayout, getLayoutComponents } from '$lib/server/db/layouts';
+import { getComponentsWithChildrenCount } from '$lib/server/db/components';
+import type { LayoutWidget } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -29,20 +30,35 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const layouts = await getLayouts(db, siteId);
   const defaultLayout = await getDefaultLayout(db, siteId);
 
-  // Load custom components for the site
-  const components = await getComponents(db, siteId);
+  // Load custom components with children count for sidebar filtering
+  const components = await getComponentsWithChildrenCount(db, siteId);
 
   // If no pageId, return empty state for new page creation
   if (!params.pageId) {
+    // Load layout components for the default layout if available
+    let layoutComponents: LayoutWidget[] = [];
+    if (defaultLayout) {
+      layoutComponents = await getLayoutComponents(db, defaultLayout.id);
+    }
+
     return {
       page: null,
       pageComponents: [],
+      layoutComponents,
       revisions: [],
       colorThemes,
       layouts,
       defaultLayoutId: defaultLayout?.id || null,
       customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
+      currentUser: locals.currentUser
+        ? {
+            id: locals.currentUser.id,
+            name: locals.currentUser.name,
+            email: locals.currentUser.email,
+            role: locals.currentUser.role
+          }
+        : null,
       isNewPage: true
     };
   }
@@ -51,6 +67,13 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const page = await getPageById(db, siteId, params.pageId);
   if (!page) {
     throw error(404, 'Page not found');
+  }
+
+  // Load layout components for the page's layout (or default layout)
+  let layoutComponents: LayoutWidget[] = [];
+  const pageLayoutId = page.layout_id || defaultLayout?.id;
+  if (pageLayoutId) {
+    layoutComponents = await getLayoutComponents(db, pageLayoutId);
   }
 
   const revisions = await buildRevisionTree(db, siteId, params.pageId);
@@ -109,6 +132,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   return {
     page,
     pageComponents: pageComponents,
+    layoutComponents,
     revisions,
     currentRevisionId,
     currentRevisionIsPublished,
@@ -117,6 +141,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     defaultLayoutId: defaultLayout?.id || null,
     customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
+    currentUser: locals.currentUser
+      ? {
+          id: locals.currentUser.id,
+          name: locals.currentUser.name,
+          email: locals.currentUser.email,
+          role: locals.currentUser.role
+        }
+      : null,
     isNewPage: false
   };
 };

@@ -5,12 +5,15 @@
    */
   import { onMount } from 'svelte';
   import type { PageComponent, Breakpoint, ColorTheme, ChildComponent } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
   import ComponentRenderer from './ComponentRenderer.svelte';
 
   export let componentId: number | undefined;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let isEditable = false;
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
   let childComponents: PageComponent[] = [];
   let isLoading = true;
@@ -62,7 +65,8 @@
   </div>
 {:else if childComponents.length === 0}
   <div class="component-ref-empty">
-    <span>Component has no children</span>
+    <span>📦 This component is empty</span>
+    <p class="hint">Edit this component in Admin → Components to add widgets</p>
   </div>
 {:else}
   <div class="component-ref-container">
@@ -72,6 +76,8 @@
         {currentBreakpoint}
         {colorTheme}
         {isEditable}
+        {siteContext}
+        {user}
         onUpdate={undefined}
       />
     {/each}
@@ -118,6 +124,12 @@
 
   .component-ref-empty {
     color: var(--color-text-secondary, #6b7280);
+  }
+
+  .component-ref-empty .hint {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-tertiary, #9ca3af);
   }
 
   .component-ref-container {

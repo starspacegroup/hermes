@@ -1,15 +1,24 @@
 <script lang="ts">
   import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
   import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
   export let colorTheme: ColorTheme = 'default-light';
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
-  $: title = config.title || 'Ready to Get Started?';
-  $: subtitle = config.subtitle || '';
-  $: primaryCtaText = config.primaryCtaText || 'Get Started';
+  // Helper to substitute templates if site context is available
+  $: userContext = createUserContext(user);
+  const sub = (text: string): string =>
+    siteContext ? substituteTemplate(text, { site: siteContext, user: userContext }) : text;
+
+  $: title = sub(config.title || 'Ready to Get Started?');
+  $: subtitle = sub(config.subtitle || '');
+  $: primaryCtaText = sub(config.primaryCtaText || 'Get Started');
   $: primaryCtaLink = config.primaryCtaLink || '#';
-  $: secondaryCtaText = config.secondaryCtaText || '';
+  $: secondaryCtaText = sub(config.secondaryCtaText || '');
   $: secondaryCtaLink = config.secondaryCtaLink || '#';
   $: backgroundColor = resolveThemeColor(config.backgroundColor, colorTheme, '', true);
 </script>

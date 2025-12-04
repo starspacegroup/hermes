@@ -1,23 +1,15 @@
 <script lang="ts">
-  import TextComponent from '$lib/components/builtin/Text.svelte';
-  import ImageComponent from '$lib/components/builtin/Image.svelte';
-  import SingleProductComponent from '$lib/components/builtin/SingleProduct.svelte';
-  import ProductListComponent from '$lib/components/builtin/ProductList.svelte';
-  import HeroComponent from '$lib/components/builtin/Hero.svelte';
-  import ButtonComponent from '$lib/components/builtin/Button.svelte';
-  import SpacerComponent from '$lib/components/builtin/Spacer.svelte';
-  import DividerComponent from '$lib/components/builtin/Divider.svelte';
-  import ColumnsComponent from '$lib/components/builtin/Columns.svelte';
-  import HeadingComponent from '$lib/components/builtin/Heading.svelte';
-  import FeaturesComponent from '$lib/components/builtin/Features.svelte';
-  import PricingComponent from '$lib/components/builtin/Pricing.svelte';
-  import CTAComponent from '$lib/components/builtin/CTA.svelte';
+  import PageWithLayout from '$lib/components/PageWithLayout.svelte';
   import { browser } from '$app/environment';
+  import { page as pageStore } from '$app/stores';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
-  const { page, components, isPreview, isAdmin } = data;
+  const { page, components, layoutComponents, isPreview, isAdmin } = data;
+
+  // Get the site context from the parent layout data for template substitution
+  $: siteContext = $pageStore.data.siteContext;
 
   // Get the current applied theme (light or dark) from the document
   const getCurrentTheme = (): 'light' | 'dark' => {
@@ -67,43 +59,14 @@
   </div>
 {/if}
 
-<div class="custom-page">
-  <h1>{page.title}</h1>
-
-  <div class="page-content">
-    {#each components as component}
-      <div class="component-container" data-component-type={component.type}>
-        {#if component.type === 'text'}
-          <TextComponent config={component.config} />
-        {:else if component.type === 'image'}
-          <ImageComponent config={component.config} />
-        {:else if component.type === 'single_product'}
-          <SingleProductComponent config={component.config} />
-        {:else if component.type === 'product_list'}
-          <ProductListComponent config={component.config} />
-        {:else if component.type === 'hero'}
-          <HeroComponent config={component.config} {colorTheme} />
-        {:else if component.type === 'button'}
-          <ButtonComponent config={component.config} />
-        {:else if component.type === 'spacer'}
-          <SpacerComponent config={component.config} />
-        {:else if component.type === 'divider'}
-          <DividerComponent config={component.config} {colorTheme} />
-        {:else if component.type === 'columns'}
-          <ColumnsComponent config={component.config} />
-        {:else if component.type === 'heading'}
-          <HeadingComponent config={component.config} {colorTheme} />
-        {:else if component.type === 'features'}
-          <FeaturesComponent config={component.config} {colorTheme} />
-        {:else if component.type === 'pricing'}
-          <PricingComponent config={component.config} />
-        {:else if component.type === 'cta'}
-          <CTAComponent config={component.config} {colorTheme} />
-        {/if}
-      </div>
-    {/each}
-  </div>
-</div>
+<PageWithLayout
+  {layoutComponents}
+  pageComponents={components}
+  pageTitle={page.title}
+  {colorTheme}
+  {siteContext}
+  user={data.currentUser}
+/>
 
 <style>
   .preview-banner {
@@ -154,40 +117,5 @@
 
   .edit-link svg {
     flex-shrink: 0;
-  }
-
-  .custom-page {
-    width: 100%;
-    min-height: 100vh;
-    margin: 0 auto;
-    padding: 2rem;
-    background: var(--theme-background);
-  }
-
-  h1 {
-    color: var(--color-text-primary);
-    font-size: 2.5rem;
-    margin: 0 0 2rem 0;
-    transition: color var(--transition-normal);
-  }
-
-  .page-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .component-container {
-    width: 100%;
-  }
-
-  @media (max-width: 768px) {
-    .custom-page {
-      padding: 1rem;
-    }
-
-    h1 {
-      font-size: 2rem;
-    }
   }
 </style>

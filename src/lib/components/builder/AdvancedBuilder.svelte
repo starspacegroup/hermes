@@ -4,12 +4,14 @@
   import type {
     Page,
     PageComponent,
+    LayoutComponent,
     RevisionNode,
     ParsedPageRevision,
     ColorThemeDefinition,
     Layout,
     Component
   } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
   import BuilderToolbar from './BuilderToolbar.svelte';
   import BuilderCanvas from './BuilderCanvas.svelte';
   import BuilderSidebar from './BuilderSidebar.svelte';
@@ -33,6 +35,7 @@
   export let mode: BuilderMode = 'page';
   export let page: Page | null;
   export let initialComponents: PageComponent[] = [];
+  export let layoutComponents: LayoutComponent[] = []; // Layout components to show grayed out in page mode
   export let revisions: RevisionNode[] = [];
   export let currentRevisionId: string | null = null;
   export let currentRevisionIsPublished = false;
@@ -42,6 +45,10 @@
   export let components: Component[] = [];
   // Current component ID (for component mode) - used to prevent adding a component to itself
   export let currentComponentId: number | null = null;
+  // Site context for template variable substitution in preview
+  export let siteContext: SiteContext | undefined = undefined;
+  // User context for template variable substitution in preview
+  export let user: UserInfo | null | undefined = undefined;
 
   // Track if we're currently viewing a published revision (can change after saves)
   let isViewingPublishedRevision = currentRevisionIsPublished;
@@ -323,7 +330,11 @@
   }
 
   async function handlePublishClick() {
-    await handleSaveClick();
+    // For new pages (no id), skip the draft save and go straight to publish
+    // The onPublish handler will create the page directly as published
+    if (page?.id) {
+      await handleSaveClick();
+    }
     await onPublish({
       id: page?.id,
       title,
@@ -333,6 +344,14 @@
     });
     // After publishing, we're now viewing a published revision
     isViewingPublishedRevision = true;
+    // Update lastSavedState to reflect the published content
+    lastSavedState = {
+      title,
+      slug,
+      components: JSON.parse(JSON.stringify(pageComponents))
+    };
+    hasUnsavedChanges = false;
+    lastSavedAt = new Date();
   }
 
   function handleUpdateLayout(newLayoutId: number) {
@@ -593,6 +612,7 @@
       bind:this={canvasComponent}
       {mode}
       {pageComponents}
+      {layoutComponents}
       {selectedComponent}
       {hoveredComponent}
       {currentBreakpoint}
@@ -601,6 +621,8 @@
       {colorThemes}
       {components}
       {canDeleteComponents}
+      {siteContext}
+      {user}
       on:selectComponent={(e) => handleSelectComponent(e.detail)}
       on:updateComponent={(e) => handleUpdateComponent(e.detail)}
       on:batchUpdateComponents={(e) => handleBatchUpdateComponents(e.detail)}

@@ -20,6 +20,13 @@ export type ComponentWithWidgetsAlias = ComponentWithWidgets;
 export type ComponentWithChildren = ComponentWithWidgets;
 
 /**
+ * Component with children count for sidebar display
+ */
+export interface ComponentWithChildrenCount extends Component {
+  children_count: number;
+}
+
+/**
  * Get all components for a site (including global components)
  */
 export async function getComponents(db: D1Database, siteId: string): Promise<Component[]> {
@@ -40,6 +47,42 @@ export async function getComponents(db: D1Database, siteId: string): Promise<Com
     return components;
   } catch (error) {
     console.error('Failed to get components:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all components for a site with children count
+ * Useful for filtering out empty components in the builder sidebar
+ */
+export async function getComponentsWithChildrenCount(
+  db: D1Database,
+  siteId: string
+): Promise<ComponentWithChildrenCount[]> {
+  try {
+    const result = await db
+      .prepare(
+        `SELECT c.*, 
+          (SELECT COUNT(*) FROM component_widgets cw WHERE cw.component_id = c.id) as children_count
+         FROM components c 
+         WHERE c.site_id = ? OR c.is_global = 1 
+         ORDER BY c.name ASC`
+      )
+      .bind(siteId)
+      .all();
+
+    const components = (result.results || []).map((component) => ({
+      ...component,
+      config:
+        typeof component.config === 'string' ? JSON.parse(component.config) : component.config,
+      is_global: Boolean(component.is_global),
+      is_primitive: Boolean(component.is_primitive),
+      children_count: Number(component.children_count) || 0
+    })) as ComponentWithChildrenCount[];
+
+    return components;
+  } catch (error) {
+    console.error('Failed to get components with children count:', error);
     throw error;
   }
 }
@@ -72,6 +115,36 @@ export async function getComponentsByType(
   } catch (error) {
     console.error('Failed to get components by type:', error);
     throw error;
+  }
+}
+
+/**
+ * Get a global component by name (e.g., "Navigation Bar", "Footer")
+ * Used for loading built-in components for layouts
+ */
+export async function getGlobalComponentByName(
+  db: D1Database,
+  name: string
+): Promise<Component | null> {
+  try {
+    const result = await db
+      .prepare('SELECT * FROM components WHERE name = ? AND is_global = 1')
+      .bind(name)
+      .first();
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      ...result,
+      config: typeof result.config === 'string' ? JSON.parse(result.config) : result.config,
+      is_global: Boolean(result.is_global),
+      is_primitive: Boolean(result.is_primitive)
+    } as Component;
+  } catch (error) {
+    console.error('Failed to get global component by name:', error);
+    return null;
   }
 }
 
@@ -347,6 +420,10 @@ export const getComponentWithWidgets = getComponentWithChildren;
 
 /**
  * Save a component with its child composition
+ *
+ * For navbar/footer components, we also sync the primary widget's config to the
+ * component's config field. This ensures backward compatibility with the frontend
+ * layout rendering which reads from component.config directly.
  */
 export async function saveComponentWithChildren(
   db: D1Database,
@@ -366,11 +443,41 @@ export async function saveComponentWithChildren(
   }
 ): Promise<ComponentWithChildren> {
   try {
-    // Update component metadata
+    // For navbar and footer components, sync the primary child's config to the component
+    // This ensures the frontend layout rendering works correctly
+    let configToSync: Record<string, unknown> | undefined;
+
+    if (data.children.length > 0) {
+      // Sort children by position to get the first one
+      const sortedChildren = [...data.children].sort((a, b) => a.position - b.position);
+      const primaryChild = sortedChildren[0];
+
+      // If the primary child is a navbar or footer, use its config for the component
+      if (primaryChild.type === 'navbar' || primaryChild.type === 'footer') {
+        configToSync = primaryChild.config;
+      }
+      // If the component type is navbar/footer, we need to sync config for frontend rendering
+      // First try to find a navbar/footer widget, otherwise use the primary child's config
+      else if (data.type === 'navbar' || data.type === 'footer') {
+        const navbarOrFooter = sortedChildren.find(
+          (c) => c.type === 'navbar' || c.type === 'footer'
+        );
+        if (navbarOrFooter) {
+          configToSync = navbarOrFooter.config;
+        } else {
+          // Fallback: use the primary child's config for navbar/footer components
+          // This ensures something is rendered even if wrong widget types are used
+          configToSync = primaryChild.config;
+        }
+      }
+    }
+
+    // Update component metadata (and config if we found a navbar/footer widget)
     const component = await updateComponent(db, siteId, componentId, {
       name: data.name,
       description: data.description,
-      type: data.type
+      type: data.type,
+      config: configToSync
     });
 
     // Save children
@@ -394,6 +501,55 @@ export async function saveComponentWithChildren(
  * @deprecated Use saveComponentWithChildren instead
  */
 export const saveComponentWithWidgets = saveComponentWithChildren;
+
+/**
+ * Generate a unique ID for widget children
+ */
+function generateWidgetId(): string {
+  return `widget-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Get the default children (widget structure) for a navbar component
+ * Returns a single Container primitive as the default child for editing in the builder.
+ * The NavBar component (NavBar.svelte) is self-contained and renders its own layout
+ * from the component config (logo, links, actions).
+ */
+function getDefaultNavbarChildren(): Array<{
+  id: string;
+  type: string;
+  position: number;
+  config: Record<string, unknown>;
+  parent_id?: string;
+}> {
+  const containerId = generateWidgetId();
+
+  return [
+    {
+      id: containerId,
+      type: 'container',
+      position: 0,
+      config: {
+        containerPadding: {
+          desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+          tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+          mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+        },
+        containerMargin: {
+          desktop: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+          tablet: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+        },
+        containerBackground: 'transparent',
+        containerBorderRadius: 0,
+        containerMaxWidth: '1400px',
+        containerJustifyContent: 'space-between',
+        children: []
+      },
+      parent_id: undefined
+    }
+  ];
+}
 
 /**
  * Reset a built-in component to its original default configuration
@@ -420,6 +576,31 @@ export async function resetBuiltInComponent(
       .prepare('DELETE FROM component_widgets WHERE component_id = ?')
       .bind(componentId)
       .run();
+
+    // For navbar components, create the default nested container structure
+    if (componentType === 'navbar') {
+      const defaultChildren = getDefaultNavbarChildren();
+      const now = new Date().toISOString();
+
+      for (const child of defaultChildren) {
+        await db
+          .prepare(
+            `INSERT INTO component_widgets (id, component_id, type, position, config, parent_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            child.id,
+            componentId,
+            child.type,
+            child.position,
+            JSON.stringify(child.config),
+            child.parent_id || null,
+            now,
+            now
+          )
+          .run();
+      }
+    }
   } catch (error) {
     console.error('Failed to reset built-in component:', error);
     throw error;
@@ -432,8 +613,19 @@ export async function resetBuiltInComponent(
 function getDefaultComponentConfig(type: string): Record<string, unknown> {
   const defaults: Record<string, Record<string, unknown>> = {
     navbar: {
+      // Container properties (Container architecture)
+      containerPadding: {
+        desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+        tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+        mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+      },
+      containerMaxWidth: '100%',
+      containerBackground: '#ffffff',
+      containerBorderRadius: 0,
+      // Logo configuration
       logo: { text: 'Store', url: '/', image: '', imageHeight: 40 },
       logoPosition: 'left',
+      // Navigation links
       links: [
         { text: 'Home', url: '/' },
         { text: 'Products', url: '/products' },
@@ -441,16 +633,19 @@ function getDefaultComponentConfig(type: string): Record<string, unknown> {
         { text: 'Contact', url: '/contact' }
       ],
       linksPosition: 'center',
+      // Action buttons
       showSearch: false,
       showCart: true,
       showAuth: true,
       showThemeToggle: true,
       showAccountMenu: true,
       actionsPosition: 'right',
+      // Account menu items
       accountMenuItems: [
         { text: 'Profile', url: '/profile', icon: '👤' },
         { text: 'Settings', url: '/settings', icon: '⚙️', dividerBefore: true }
       ],
+      // Styling (backward compatibility)
       navbarBackground: '#ffffff',
       navbarTextColor: '#000000',
       navbarHoverColor: 'var(--color-primary)',
@@ -458,14 +653,11 @@ function getDefaultComponentConfig(type: string): Record<string, unknown> {
       navbarShadow: false,
       sticky: true,
       navbarHeight: 0,
-      navbarPadding: {
-        desktop: { top: 16, right: 24, bottom: 16, left: 24 },
-        tablet: { top: 12, right: 20, bottom: 12, left: 20 },
-        mobile: { top: 12, right: 16, bottom: 12, left: 16 }
-      },
+      // Dropdown styling
       dropdownBackground: '#ffffff',
       dropdownTextColor: '#000000',
       dropdownHoverBackground: '#f3f4f6',
+      // Mobile
       mobileBreakpoint: 768
     },
     footer: {
@@ -492,15 +684,6 @@ function getDefaultComponentConfig(type: string): Record<string, unknown> {
       containerBackground: 'transparent',
       containerBorderRadius: 0,
       containerMaxWidth: '1200px',
-      children: []
-    },
-    flex: {
-      flexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
-      flexWrap: { desktop: 'wrap', tablet: 'wrap', mobile: 'nowrap' },
-      flexJustifyContent: { desktop: 'flex-start', tablet: 'flex-start', mobile: 'flex-start' },
-      flexAlignItems: { desktop: 'stretch', tablet: 'stretch', mobile: 'stretch' },
-      flexGap: { desktop: 16, tablet: 12, mobile: 8 },
-      flexBackground: 'transparent',
       children: []
     },
     hero: {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { invalidateAll } from '$app/navigation';
+  import { page as pageStore } from '$app/stores';
   import type { PageData } from './$types';
   import AdvancedBuilder from '$lib/components/builder/AdvancedBuilder.svelte';
   import { toastStore } from '$lib/stores/toast';
@@ -44,8 +45,19 @@
         parent_id: undefined // TODO: Add parent_id support for nested components
       }));
 
-      // Determine component type - use 'composite' if multiple children, otherwise use first child type
-      const componentType = children.length > 1 ? 'composite' : children[0]?.type || 'text';
+      // Determine component type
+      // For navbar/footer components, preserve the original type to ensure proper rendering
+      // For other components, use 'composite' if multiple children, otherwise first child type
+      let componentType: string;
+      if (
+        data.component &&
+        (data.component.type === 'navbar' || data.component.type === 'footer')
+      ) {
+        // Preserve navbar/footer type to ensure frontend can render correctly
+        componentType = data.component.type;
+      } else {
+        componentType = children.length > 1 ? 'composite' : children[0]?.type || 'text';
+      }
 
       if (data.isNewComponent) {
         // Create new component
@@ -140,6 +152,8 @@
   components={data.customComponents}
   currentComponentId={data.component?.id || null}
   userName={data.userName}
+  user={data.currentUser}
+  siteContext={$pageStore.data.siteContext}
   onSave={handleSave}
   onPublish={handlePublish}
   onExit={handleExit}

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getAllColorThemes } from '$lib/server/db/color-themes';
-import { getComponents, getComponentWithWidgets } from '$lib/server/db/components';
+import { getComponentsWithChildrenCount, getComponentWithWidgets } from '$lib/server/db/components';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const siteId = locals.siteId;
@@ -14,8 +14,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   // Load color themes for the site
   const colorThemes = await getAllColorThemes(db, siteId);
 
-  // Load custom components for the site (to show in widget library)
-  const components = await getComponents(db, siteId);
+  // Load custom components with children count for the site (to show in widget library)
+  // This helps filter out empty components in the sidebar
+  const components = await getComponentsWithChildrenCount(db, siteId);
 
   // If no id, return empty state for new component creation
   if (!params.id) {
@@ -26,6 +27,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       colorThemes,
       customComponents: components,
       userName: locals.currentUser?.name || locals.currentUser?.email,
+      currentUser: locals.currentUser
+        ? {
+            id: locals.currentUser.id,
+            name: locals.currentUser.name,
+            email: locals.currentUser.email,
+            role: locals.currentUser.role
+          }
+        : null,
       isNewComponent: true
     };
   }
@@ -78,6 +87,14 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
     colorThemes,
     customComponents: components,
     userName: locals.currentUser?.name || locals.currentUser?.email,
+    currentUser: locals.currentUser
+      ? {
+          id: locals.currentUser.id,
+          name: locals.currentUser.name,
+          email: locals.currentUser.email,
+          role: locals.currentUser.role
+        }
+      : null,
     isNewComponent: false
   };
 };

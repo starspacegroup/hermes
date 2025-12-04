@@ -1,12 +1,21 @@
 <script lang="ts">
   import type { WidgetConfig, ColorTheme } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
   import { resolveThemeColor } from '$lib/utils/editor/colorThemes';
 
   export let config: WidgetConfig;
   export let colorTheme: ColorTheme = 'default-light';
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
-  $: title = config.title || 'Features';
-  $: subtitle = config.subtitle || '';
+  // Helper to substitute templates if site context is available
+  $: userContext = createUserContext(user);
+  const sub = (text: string): string =>
+    siteContext ? substituteTemplate(text, { site: siteContext, user: userContext }) : text;
+
+  $: title = sub(config.title || 'Features');
+  $: subtitle = sub(config.subtitle || '');
   $: allFeatures = config.features || [];
   $: cardBackground = resolveThemeColor(
     config.cardBackground,

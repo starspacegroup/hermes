@@ -18,10 +18,13 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   try {
     const allComponents = await getComponents(db, siteId);
 
+    // Filter out deprecated 'flex' type components
+    const validComponents = allComponents.filter((c) => c.type !== 'flex');
+
     // Separate custom (site-specific) and built-in (global) components
     // Primitives are now managed on their own page at /admin/primitives
-    const customComponents = allComponents.filter((c) => !c.is_global && !c.is_primitive);
-    const builtInComponents = allComponents.filter((c) => c.is_global && !c.is_primitive);
+    const customComponents = validComponents.filter((c) => !c.is_global && !c.is_primitive);
+    const builtInComponents = validComponents.filter((c) => c.is_global && !c.is_primitive);
 
     return {
       components: customComponents,

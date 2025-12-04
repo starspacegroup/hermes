@@ -3,8 +3,43 @@
    * FooterWidget - Footer component
    */
   import type { WidgetConfig } from '$lib/types/pages';
+  import {
+    substituteTemplate,
+    createUserContext,
+    type SiteContext,
+    type UserInfo
+  } from '$lib/utils/templateSubstitution';
 
   export let config: WidgetConfig = {};
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | undefined = undefined;
+
+  // Create user context for template substitution
+  $: userContext = createUserContext(user);
+
+  // Fallback site context for template substitution
+  const fallbackSite: SiteContext = {
+    name: '',
+    tagline: '',
+    description: '',
+    email: '',
+    supportEmail: '',
+    phone: '',
+    currency: ''
+  };
+
+  // Reactive template variables that update when user or siteContext changes
+  $: templateVars = {
+    site: siteContext || fallbackSite,
+    user: userContext
+  };
+
+  // Helper function to substitute templates in text
+  // Takes templateVars as a parameter to ensure Svelte tracks the reactive dependency
+  function sub(text: string, vars: typeof templateVars): string {
+    if (!text) return text;
+    return substituteTemplate(text, vars);
+  }
 
   $: copyright = config.copyright || '© 2025 Store Name. All rights reserved.';
   $: footerLinks = config.footerLinks || [];
@@ -39,7 +74,7 @@
               target={link.openInNewTab ? '_blank' : '_self'}
               rel={link.openInNewTab ? 'noopener noreferrer' : undefined}
             >
-              {link.text}
+              {sub(link.text, templateVars)}
             </a>
           {/each}
         </div>
@@ -73,7 +108,7 @@
 
     <!-- Copyright -->
     <div class="footer-copyright" style="color: {textColor};">
-      {copyright}
+      {sub(copyright, templateVars)}
     </div>
   </div>
 </footer>

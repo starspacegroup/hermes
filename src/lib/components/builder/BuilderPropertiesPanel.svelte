@@ -7,8 +7,6 @@
   import ThemeColorInput from '$lib/components/admin/ThemeColorInput.svelte';
   import MediaBrowser from '$lib/components/admin/MediaBrowser.svelte';
   import MediaUpload from '$lib/components/admin/MediaUpload.svelte';
-  import TailwindFlexEditor from './TailwindFlexEditor.svelte';
-  import TailwindGridEditor from './TailwindGridEditor.svelte';
   import FlexChildPropertiesEditor from './FlexChildPropertiesEditor.svelte';
   import { getComponentDisplayLabel } from '$lib/utils/editor/componentDefaults';
 
@@ -285,64 +283,22 @@
             </div>
           </div>
           <div class="component-properties">
-            {#if componentItem.type === 'flex'}
-              <div class="flex-editor-tabs">
-                <div class="editor-tab-header">
-                  <h4>Flex/Grid Layout Editor</h4>
-                  <label class="grid-toggle">
-                    <input
-                      type="checkbox"
-                      checked={componentItem.config?.useGrid || false}
-                      on:change={(e) => {
-                        const updatedComponent = {
-                          ...componentItem,
-                          config: { ...componentItem.config, useGrid: e.currentTarget.checked }
-                        };
-                        dispatch('updateComponent', updatedComponent);
-                      }}
-                    />
-                    <span>Use Grid</span>
-                  </label>
-                </div>
-
-                {#if componentItem.config?.useGrid}
-                  <TailwindGridEditor
-                    config={componentItem.config}
-                    {currentBreakpoint}
-                    on:update={(e) => {
-                      const updatedComponent = { ...componentItem, config: e.detail };
-                      dispatch('updateComponent', updatedComponent);
-                    }}
-                  />
-                {:else}
-                  <TailwindFlexEditor
-                    config={componentItem.config}
-                    {currentBreakpoint}
-                    on:update={(e) => {
-                      const updatedComponent = { ...componentItem, config: e.detail };
-                      dispatch('updateComponent', updatedComponent);
-                    }}
-                  />
-                {/if}
-              </div>
-            {:else}
-              <ComponentPropertiesPanel
-                component={componentItem}
-                {currentBreakpoint}
-                onUpdate={(config) => {
-                  const updatedComponent = { ...componentItem, config };
-                  dispatch('updateComponent', updatedComponent);
-                }}
-              />
-            {/if}
+            <ComponentPropertiesPanel
+              component={componentItem}
+              {currentBreakpoint}
+              onUpdate={(config) => {
+                const updatedComponent = { ...componentItem, config };
+                dispatch('updateComponent', updatedComponent);
+              }}
+            />
 
             <!-- Show child properties editor if component has a flex/grid parent -->
             {#if componentItem.config?.children}
               <!-- This is a parent flex/grid container - children can have child props -->
               <div class="child-props-section">
                 <p class="info-hint">
-                  💡 Children of this {componentItem.config?.useGrid ? 'grid' : 'flex'} container can
-                  have individual positioning properties. Select a child component to edit its properties.
+                  💡 Children of this container can have individual positioning properties. Select a
+                  child component to edit its properties.
                 </p>
               </div>
             {/if}
@@ -712,40 +668,6 @@
   .modal-close-btn:hover {
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-  }
-
-  .flex-editor-tabs {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .editor-tab-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: var(--color-bg-secondary);
-    border-bottom: 1px solid var(--color-border-secondary);
-  }
-
-  .editor-tab-header h4 {
-    margin: 0;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .grid-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-  }
-
-  .grid-toggle input[type='checkbox'] {
-    cursor: pointer;
   }
 
   .child-props-section {

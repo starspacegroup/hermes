@@ -254,11 +254,6 @@ export function createDefaultWidget(
       padding: { desktop: 32, tablet: 24, mobile: 16 },
       backgroundColor: 'transparent',
       children: []
-    },
-    flex: {
-      direction: { desktop: 'row', tablet: 'row', mobile: 'column' },
-      gap: { desktop: 16, tablet: 12, mobile: 8 },
-      children: []
     }
   };
 

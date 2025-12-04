@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   try {
     const allComponents = await getComponents(db, siteId);
 
-    // Get only primitive components
-    const primitiveComponents = allComponents.filter((c) => c.is_primitive);
+    // Get only primitive components (excluding deprecated 'flex' type)
+    const primitiveComponents = allComponents.filter((c) => c.is_primitive && c.type !== 'flex');
 
     return {
       primitiveComponents

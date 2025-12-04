@@ -133,6 +133,15 @@ export async function createRevision(
     )
     .run();
 
+  // Update the page's draft_revision_id when creating a draft revision
+  // This is used by the admin pages list to show draft status
+  if (data.status === 'draft') {
+    await db
+      .prepare('UPDATE pages SET draft_revision_id = ? WHERE id = ?')
+      .bind(revisionId, pageId)
+      .run();
+  }
+
   return {
     id: revisionId,
     page_id: pageId,
@@ -193,12 +202,12 @@ export async function publishRevision(
       .prepare('UPDATE page_revisions SET is_published = 1, status = ? WHERE id = ?')
       .bind('published', newRevision.id),
 
-    // Update the page itself
+    // Update the page itself (including published_revision_id for admin page list)
     db
       .prepare(
         `
         UPDATE pages 
-        SET title = ?, slug = ?, status = ?, color_theme = ?, updated_at = ?
+        SET title = ?, slug = ?, status = ?, color_theme = ?, published_revision_id = ?, updated_at = ?
         WHERE id = ?
       `
       )
@@ -207,6 +216,7 @@ export async function publishRevision(
         newRevision.slug,
         'published',
         newRevision.color_theme || null,
+        newRevision.id,
         Math.floor(Date.now() / 1000),
         pageId
       )

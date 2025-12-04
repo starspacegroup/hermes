@@ -1,9 +1,17 @@
 <script lang="ts">
   import type { WidgetConfig } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
 
   export let config: WidgetConfig;
+  export let siteContext: SiteContext | undefined = undefined;
+  export let user: UserInfo | null | undefined = undefined;
 
-  $: text = config.text || '';
+  $: rawText = config.text || '';
+  $: userContext = createUserContext(user);
+  $: text = siteContext
+    ? substituteTemplate(rawText, { site: siteContext, user: userContext })
+    : rawText;
   $: alignment = config.alignment || 'left';
 </script>
 

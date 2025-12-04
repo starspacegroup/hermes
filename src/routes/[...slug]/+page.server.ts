@@ -2,8 +2,10 @@ import { error } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as pagesDb from '$lib/server/db/pages';
 import { getPublishedRevision } from '$lib/server/db/revisions';
+import { getLayout, getLayoutComponents, getDefaultLayout } from '$lib/server/db/layouts';
 import type { PageServerLoad } from './$types';
 import { logPageAction } from '$lib/server/activity-logger';
+import type { LayoutWidget } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({
   params,
@@ -42,6 +44,32 @@ export const load: PageServerLoad = async ({
     const publishedRevision = await getPublishedRevision(db, siteId, page.id);
     const components = publishedRevision?.components || [];
 
+    // Fetch the layout for this page (use page's layout_id or default layout)
+    let layout = null;
+    let layoutComponents: LayoutWidget[] = [];
+
+    console.log('[page.server.ts] Page layout_id:', page.layout_id, 'siteId:', siteId);
+
+    if (page.layout_id) {
+      layout = await getLayout(db, siteId, page.layout_id);
+      console.log('[page.server.ts] Loaded layout:', layout);
+    } else {
+      // Fall back to the site's default layout
+      layout = await getDefaultLayout(db, siteId);
+      console.log('[page.server.ts] Using default layout:', layout);
+    }
+
+    if (layout) {
+      layoutComponents = await getLayoutComponents(db, layout.id);
+      console.log(
+        '[page.server.ts] Layout components:',
+        layoutComponents.length,
+        layoutComponents.map((c) => c.type)
+      );
+    } else {
+      console.log('[page.server.ts] No layout found');
+    }
+
     // Log page view (only for published pages, not previews)
     if (!isPreview && page.status === 'published') {
       try {
@@ -64,9 +92,12 @@ export const load: PageServerLoad = async ({
     return {
       page,
       components,
+      layout,
+      layoutComponents,
       colorTheme: page.colorTheme || null,
       isPreview: isPreview && page.status === 'draft',
-      isAdmin: locals.isAdmin || false
+      isAdmin: locals.isAdmin || false,
+      currentUser: locals.currentUser || null
     };
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {

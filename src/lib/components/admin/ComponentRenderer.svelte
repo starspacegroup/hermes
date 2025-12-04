@@ -6,6 +6,8 @@
     ColorTheme,
     ComponentType
   } from '$lib/types/pages';
+  import type { SiteContext, UserInfo } from '$lib/utils/templateSubstitution';
+  import { substituteTemplate, createUserContext } from '$lib/utils/templateSubstitution';
   import {
     applyThemeColors,
     generateThemeStyles,
@@ -13,12 +15,20 @@
   } from '$lib/utils/editor/colorThemes';
   import { getDefaultConfig } from '$lib/utils/editor/componentDefaults';
   import ContainerDropZone from '$lib/components/builder/ContainerDropZone.svelte';
+  import IconDisplay from './IconDisplay.svelte';
 
   export let component: PageComponent;
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let onUpdate: ((config: ComponentConfig) => void) | undefined = undefined;
   export let isEditable = false; // Whether we're in edit mode (builder)
+  export let siteContext: SiteContext | undefined = undefined; // Site context for template substitution
+  export let user: UserInfo | null | undefined = undefined; // User context for template substitution
+
+  // Helper to substitute templates if site context is available
+  $: userContext = createUserContext(user);
+  const sub = (text: string): string =>
+    siteContext ? substituteTemplate(text, { site: siteContext, user: userContext }) : text;
 
   $: themeColors = applyThemeColors(colorTheme, component.config.themeOverrides);
 
@@ -30,12 +40,48 @@
   let isEditingTitle = false;
   let isEditingSubtitle = false;
 
+  // Track if a drag is happening over the dropdown
+  let isDropdownDragOver = false;
+  let dropdownDragCounter = 0; // Counter to handle nested drag events
+
   // Sync component config to contenteditable when NOT editing
+  // When not editing, show substituted (rendered) values
+  // When editing, show raw code (the original template)
   $: if (titleElement && !isEditingTitle) {
-    titleElement.textContent = component.config.title || 'Hero Title';
+    const rawTitle = component.config.title || 'Hero Title';
+    titleElement.textContent = sub(rawTitle);
   }
   $: if (subtitleElement && !isEditingSubtitle) {
-    subtitleElement.textContent = component.config.subtitle || 'Click to add subtitle';
+    const rawSubtitle = component.config.subtitle || 'Click to add subtitle';
+    subtitleElement.textContent = sub(rawSubtitle);
+  }
+
+  // Handle focus - show raw code
+  function handleTitleFocus() {
+    isEditingTitle = true;
+    if (titleElement) {
+      // Show the raw template code when focused
+      titleElement.textContent = component.config.title || 'Hero Title';
+    }
+  }
+
+  function handleSubtitleFocus() {
+    isEditingSubtitle = true;
+    if (subtitleElement) {
+      // Show the raw template code when focused
+      subtitleElement.textContent = component.config.subtitle || 'Click to add subtitle';
+    }
+  }
+
+  // Handle blur - show rendered value
+  function handleTitleBlur() {
+    isEditingTitle = false;
+    // The reactive statement will update the content to show the substituted value
+  }
+
+  function handleSubtitleBlur() {
+    isEditingSubtitle = false;
+    // The reactive statement will update the content to show the substituted value
   }
 
   function handleTitleInput() {
@@ -116,22 +162,46 @@
   function handleContainerDrop(
     event: CustomEvent<{ containerId: string; componentType: string; insertIndex: number }>
   ) {
-    const { componentType, insertIndex } = event.detail;
+    const { componentType: rawComponentType, insertIndex } = event.detail;
+
+    console.log('[ContainerDrop] Raw component type:', rawComponentType);
+
+    // Determine the actual component type and config
+    let actualType: ComponentType;
+    let componentConfig: ComponentConfig;
+
+    // Check if this is a custom component reference (format: "component:123")
+    if (rawComponentType.startsWith('component:')) {
+      const componentId = parseInt(rawComponentType.split(':')[1]);
+      actualType = 'component_ref';
+      componentConfig = { componentId };
+      console.log('[ContainerDrop] Custom component detected, creating component_ref');
+    } else {
+      actualType = rawComponentType as ComponentType;
+      componentConfig = getDefaultConfig(actualType);
+      console.log('[ContainerDrop] Built-in component, type:', actualType);
+    }
+
     const newChild: PageComponent = {
       id: `temp-${Date.now()}`,
-      type: componentType as ComponentType,
-      config: getDefaultConfig(componentType as ComponentType),
+      type: actualType,
+      config: componentConfig,
       position: insertIndex,
       page_id: component.page_id,
       created_at: Date.now(),
       updated_at: Date.now()
     };
 
+    console.log('[ContainerDrop] Created child:', newChild);
+
     const updatedChildren = [...(component.config.children || [])];
     updatedChildren.splice(insertIndex, 0, newChild);
 
     if (onUpdate) {
+      console.log('[ContainerDrop] Calling onUpdate with', updatedChildren.length, 'children');
       onUpdate({ ...component.config, children: updatedChildren });
+    } else {
+      console.warn('[ContainerDrop] No onUpdate callback available!');
     }
   }
 
@@ -157,6 +227,20 @@
     if (onUpdate) {
       onUpdate({ ...component.config, children: updatedChildren });
     }
+  }
+
+  // Create an onUpdate handler for a nested child component
+  // This ensures that updates to nested children are properly propagated up the tree
+  function createChildUpdateHandler(childId: string): (config: ComponentConfig) => void {
+    return (newChildConfig: ComponentConfig) => {
+      if (!onUpdate) return;
+
+      const updatedChildren = (component.config.children || []).map((child: PageComponent) =>
+        child.id === childId ? { ...child, config: newChildConfig } : child
+      );
+
+      onUpdate({ ...component.config, children: updatedChildren });
+    };
   }
 
   function getStyleString(comp: PageComponent): string {
@@ -295,9 +379,9 @@
     >
       {#if component.config.html}
         <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        {@html component.config.html}
+        {@html sub(component.config.html)}
       {:else}
-        <p>{component.config.text || 'Enter your text here'}</p>
+        <p>{sub(component.config.text || 'Enter your text here')}</p>
       {/if}
     </div>
   {:else if component.type === 'heading'}
@@ -309,17 +393,17 @@
     )}
     {@const headingStyle = `color: ${textColor}; text-align: ${component.config.alignment || 'left'};`}
     {#if component.config.level === 1}
-      <h1 style={headingStyle}>{component.config.heading || 'Heading'}</h1>
+      <h1 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h1>
     {:else if component.config.level === 2}
-      <h2 style={headingStyle}>{component.config.heading || 'Heading'}</h2>
+      <h2 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h2>
     {:else if component.config.level === 3}
-      <h3 style={headingStyle}>{component.config.heading || 'Heading'}</h3>
+      <h3 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h3>
     {:else if component.config.level === 4}
-      <h4 style={headingStyle}>{component.config.heading || 'Heading'}</h4>
+      <h4 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h4>
     {:else if component.config.level === 5}
-      <h5 style={headingStyle}>{component.config.heading || 'Heading'}</h5>
+      <h5 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h5>
     {:else}
-      <h6 style={headingStyle}>{component.config.heading || 'Heading'}</h6>
+      <h6 style={headingStyle}>{sub(component.config.heading || 'Heading')}</h6>
     {/if}
   {:else if component.type === 'image'}
     <div class="image-widget">
@@ -413,12 +497,8 @@
           bind:this={titleElement}
           contenteditable="true"
           on:input={handleTitleInput}
-          on:focus={() => {
-            isEditingTitle = true;
-          }}
-          on:blur={() => {
-            isEditingTitle = false;
-          }}
+          on:focus={handleTitleFocus}
+          on:blur={handleTitleBlur}
           on:keydown={(e) => {
             // Prevent default behaviors that might interfere with editing
             if (e.key === 'Enter') {
@@ -440,12 +520,8 @@
           bind:this={subtitleElement}
           contenteditable="true"
           on:input={handleSubtitleInput}
-          on:focus={() => {
-            isEditingSubtitle = true;
-          }}
-          on:blur={() => {
-            isEditingSubtitle = false;
-          }}
+          on:focus={handleSubtitleFocus}
+          on:blur={handleSubtitleBlur}
           on:keydown={(e) => {
             // Stop propagation to prevent window-level handlers from interfering
             e.stopPropagation();
@@ -471,7 +547,7 @@
                 "
                 on:click|preventDefault={() => {}}
               >
-                {component.config.ctaText}
+                {sub(component.config.ctaText)}
               </a>
             {/if}
             {#if component.config.secondaryCtaText}
@@ -487,7 +563,7 @@
                 "
                 on:click|preventDefault={() => {}}
               >
-                {component.config.secondaryCtaText}
+                {sub(component.config.secondaryCtaText)}
               </a>
             {/if}
           </div>
@@ -499,10 +575,159 @@
       <button
         class="btn btn-{component.config.variant || 'primary'} btn-{component.config.size ||
           'medium'}"
+        class:has-icon={component.config.icon}
         style="width: {buttonFullWidth ? '100%' : 'auto'}"
       >
-        {component.config.label || 'Button'}
+        {#if component.config.icon}
+          <span class="btn-icon">
+            <IconDisplay iconName={component.config.icon} size={18} />
+          </span>
+        {/if}
+        <span class="btn-label">{sub(component.config.label || 'Button')}</span>
       </button>
+    </div>
+  {:else if component.type === 'dropdown'}
+    {@const triggerLabel = component.config.triggerLabel || component.config.label || 'Menu'}
+    {@const triggerIcon = component.config.triggerIcon || ''}
+    {@const showChevron = component.config.showChevron !== false}
+    {@const triggerVariant = component.config.triggerVariant || 'text'}
+    {@const menuWidth = component.config.menuWidth || '200px'}
+    {@const menuAlign = component.config.menuAlign || 'left'}
+    {@const menuBackground = component.config.menuBackground || 'var(--color-bg-primary)'}
+    {@const menuBorderRadius = component.config.menuBorderRadius || 8}
+    {@const menuPadding = component.config.menuPadding || { top: 8, right: 8, bottom: 8, left: 8 }}
+    {@const dropdownChildren = component.config.children || []}
+    <div
+      class="dropdown-widget-container"
+      class:drag-over={isDropdownDragOver}
+      role="region"
+      aria-label="Dropdown component drop zone"
+      on:dragenter={(e) => {
+        e.preventDefault();
+        dropdownDragCounter++;
+        isDropdownDragOver = true;
+      }}
+      on:dragleave={() => {
+        dropdownDragCounter--;
+        if (dropdownDragCounter === 0) {
+          isDropdownDragOver = false;
+        }
+      }}
+      on:dragend={() => {
+        dropdownDragCounter = 0;
+        isDropdownDragOver = false;
+      }}
+      on:drop={() => {
+        dropdownDragCounter = 0;
+        isDropdownDragOver = false;
+      }}
+    >
+      <!-- Trigger preview -->
+      <div class="dropdown-trigger-preview variant-{triggerVariant}">
+        {#if triggerIcon}
+          <span class="trigger-icon">
+            {#if triggerIcon === 'user'}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                ><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle
+                  cx="12"
+                  cy="7"
+                  r="4"
+                /></svg
+              >
+            {:else}
+              {triggerIcon}
+            {/if}
+          </span>
+        {/if}
+        {#if triggerVariant !== 'icon'}
+          <span class="trigger-label">{sub(triggerLabel)}</span>
+        {/if}
+        {#if showChevron}
+          <span class="trigger-chevron">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg
+            >
+          </span>
+        {/if}
+      </div>
+      <!-- Menu container (only visible when dragging over) -->
+      {#if isDropdownDragOver}
+        <div
+          class="dropdown-menu-preview align-{menuAlign}"
+          class:drag-target={isDropdownDragOver}
+          style="
+            min-width: {typeof menuWidth === 'number' ? `${menuWidth}px` : menuWidth};
+            background: {menuBackground};
+            border-radius: {menuBorderRadius}px;
+            padding: {menuPadding.top}px {menuPadding.right}px {menuPadding.bottom}px {menuPadding.left}px;
+          "
+        >
+          {#if isEditable}
+            <ContainerDropZone
+              containerId={component.id}
+              children={dropdownChildren}
+              isActive={false}
+              allowedTypes={['button', 'text', 'heading', 'divider', 'image']}
+              displayMode="flex"
+              showLayoutHints={true}
+              containerStyles="flex-direction: column; gap: 4px;"
+              on:drop={handleContainerDrop}
+              on:reorder={handleContainerReorder}
+              on:childClick={handleChildClick}
+            >
+              <svelte:fragment slot="child" let:child>
+                <div class="dropdown-item-wrapper">
+                  <svelte:self
+                    component={child}
+                    {currentBreakpoint}
+                    {colorTheme}
+                    onUpdate={createChildUpdateHandler(child.id)}
+                    {isEditable}
+                    {siteContext}
+                    {user}
+                  />
+                </div>
+              </svelte:fragment>
+            </ContainerDropZone>
+          {:else if dropdownChildren.length > 0}
+            {#each dropdownChildren as child}
+              <div class="dropdown-item">
+                <svelte:self
+                  component={child}
+                  {currentBreakpoint}
+                  {colorTheme}
+                  onUpdate={createChildUpdateHandler(child.id)}
+                  {isEditable}
+                  {siteContext}
+                  {user}
+                />
+              </div>
+            {/each}
+          {:else}
+            <div class="dropdown-placeholder">
+              <p>📋 Drop menu items here</p>
+              <span>Buttons, links, text, dividers</span>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
   {:else if component.type === 'spacer'}
     <div class="spacer-widget" style="height: {spacerHeight}px" />
@@ -540,6 +765,8 @@
               {colorTheme}
               {onUpdate}
               {isEditable}
+              {siteContext}
+              {user}
             />
           </div>
         {/each}
@@ -617,9 +844,9 @@
       true
     )}
     <div class="features-preview">
-      <h3>{component.config.title || 'Features'}</h3>
+      <h3>{sub(component.config.title || 'Features')}</h3>
       {#if component.config.subtitle}
-        <p class="features-subtitle">{component.config.subtitle}</p>
+        <p class="features-subtitle">{sub(component.config.subtitle)}</p>
       {/if}
       {#if component.config.features && component.config.features.length > 0}
         <div
@@ -635,8 +862,8 @@
                 : 12}px;"
             >
               <div class="feature-icon">{feature.icon}</div>
-              <h4>{feature.title}</h4>
-              <p>{feature.description}</p>
+              <h4>{sub(feature.title)}</h4>
+              <p>{sub(feature.description)}</p>
             </div>
           {/each}
         </div>
@@ -648,15 +875,15 @@
     </div>
   {:else if component.type === 'pricing'}
     <div class="pricing-preview">
-      <h3>{component.config.title || 'Pricing'}</h3>
+      <h3>{sub(component.config.title || 'Pricing')}</h3>
       {#if component.config.tagline}
-        <p class="tagline">{component.config.tagline}</p>
+        <p class="tagline">{sub(component.config.tagline)}</p>
       {/if}
       <div class="pricing-grid">
         {#each (component.config.tiers || []).slice(0, 2) as tier}
           <div class="tier-card">
-            <span class="tier-range">{tier.range}</span>
-            <span class="tier-fee">{tier.fee}</span>
+            <span class="tier-range">{sub(tier.range)}</span>
+            <span class="tier-fee">{sub(tier.fee)}</span>
           </div>
         {/each}
       </div>
@@ -673,14 +900,14 @@
       style="background: {ctaBgColor ||
         `linear-gradient(135deg, ${themeColors.primary} 0%, ${themeColors.secondary} 100%)`};"
     >
-      <h3>{component.config.title || 'Call to Action'}</h3>
+      <h3>{sub(component.config.title || 'Call to Action')}</h3>
       {#if component.config.subtitle}
-        <p>{component.config.subtitle}</p>
+        <p>{sub(component.config.subtitle)}</p>
       {/if}
       <div class="cta-buttons">
-        <button class="btn-primary">{component.config.primaryCtaText || 'Get Started'}</button>
+        <button class="btn-primary">{sub(component.config.primaryCtaText || 'Get Started')}</button>
         {#if component.config.secondaryCtaText}
-          <button class="btn-secondary">{component.config.secondaryCtaText}</button>
+          <button class="btn-secondary">{sub(component.config.secondaryCtaText)}</button>
         {/if}
       </div>
     </div>
@@ -691,16 +918,16 @@
           {#if component.config.logo?.image}
             <img
               src={component.config.logo.image}
-              alt={component.config.logo.text || 'Logo'}
+              alt={sub(component.config.logo.text || 'Logo')}
               class="logo"
             />
           {:else}
-            <span class="logo-text">{component.config.logo?.text || 'Store'}</span>
+            <span class="logo-text">{sub(component.config.logo?.text || 'Store')}</span>
           {/if}
         </div>
         <div class="navbar-links">
           {#each component.config.links || [] as link}
-            <a href={link.url} class="nav-link">{link.text}</a>
+            <a href={link.url} class="nav-link">{sub(link.text)}</a>
           {/each}
         </div>
       </div>
@@ -711,12 +938,12 @@
         {#if component.config.footerLinks && component.config.footerLinks.length > 0}
           <div class="footer-links">
             {#each component.config.footerLinks as link}
-              <a href={link.url} class="footer-link">{link.text}</a>
+              <a href={link.url} class="footer-link">{sub(link.text)}</a>
             {/each}
           </div>
         {/if}
         <div class="footer-copyright">
-          {component.config.copyright || '© 2025 Store Name. All rights reserved.'}
+          {sub(component.config.copyright || '© 2025 Store Name. All rights reserved.')}
         </div>
       </div>
     </div>
@@ -894,8 +1121,10 @@
                 component={child}
                 {currentBreakpoint}
                 {colorTheme}
-                {onUpdate}
+                onUpdate={createChildUpdateHandler(child.id)}
                 {isEditable}
+                {siteContext}
+                {user}
               />
             </div>
           </svelte:fragment>
@@ -907,8 +1136,10 @@
               component={child}
               {currentBreakpoint}
               {colorTheme}
-              {onUpdate}
+              onUpdate={createChildUpdateHandler(child.id)}
               {isEditable}
+              {siteContext}
+              {user}
             />
           </div>
         {/each}
@@ -919,36 +1150,6 @@
         </div>
       {/if}
     </div>
-  {:else if component.type === 'flex'}
-    <div
-      class="flex-preview"
-      style="
-        display: {component.config.useGrid ? 'grid' : 'flex'};
-        {component.config.useGrid
-        ? `
-          grid-template-columns: repeat(${component.config.gridColumns?.desktop || 3}, 1fr);
-          ${component.config.gridRows ? `grid-template-rows: repeat(${component.config.gridRows.desktop}, 1fr);` : ''}
-          grid-auto-flow: ${component.config.gridAutoFlow || 'row'};
-        `
-        : `
-          flex-direction: ${component.config.flexDirection?.desktop || 'row'};
-          flex-wrap: ${component.config.flexWrap || 'wrap'};
-          justify-content: ${component.config.flexJustifyContent || 'flex-start'};
-          align-items: ${component.config.flexAlignItems || 'stretch'};
-        `}
-        gap: {component.config.flexGap?.desktop || 16}px;
-        padding: {component.config.flexPadding?.desktop?.top || 16}px {component.config.flexPadding
-        ?.desktop?.right || 16}px {component.config.flexPadding?.desktop?.bottom || 16}px {component
-        .config.flexPadding?.desktop?.left || 16}px;
-        background: {component.config.flexBackground || 'transparent'};
-        border-radius: {component.config.flexBorderRadius || 0}px;
-      "
-    >
-      <div class="layout-placeholder">
-        <p>{component.config.useGrid ? '⊞ Grid' : '⊟ Flex'}</p>
-        <span>Flexible layout</span>
-      </div>
-    </div>
   {:else if component.type === 'component_ref'}
     {#await import('./ComponentRefRenderer.svelte')}
       <div class="component-ref-loading">Loading component...</div>
@@ -958,6 +1159,8 @@
         {currentBreakpoint}
         {colorTheme}
         {isEditable}
+        {siteContext}
+        {user}
       />
     {:catch error}
       <div class="component-ref-error">
@@ -1131,10 +1334,25 @@
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
   }
 
   .btn:hover {
     opacity: 0.9;
+  }
+
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .btn-label {
+    line-height: 1;
   }
 
   .btn-small {
@@ -1554,8 +1772,7 @@
 
   /* Layout Widget Previews */
   .container-preview,
-  .row-preview,
-  .flex-preview {
+  .row-preview {
     width: 100%;
     box-sizing: border-box;
     min-height: 100px;
@@ -1599,5 +1816,134 @@
   .component-ref-error {
     color: var(--color-error);
     border-color: var(--color-error);
+  }
+
+  /* Dropdown Menu Widget */
+  .dropdown-widget-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .dropdown-widget-container.drag-over {
+    background: rgba(59, 130, 246, 0.05);
+    outline: 2px dashed var(--color-primary, #3b82f6);
+    outline-offset: 2px;
+  }
+
+  .dropdown-trigger-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    width: fit-content;
+  }
+
+  .dropdown-trigger-preview.variant-button {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .dropdown-trigger-preview.variant-icon {
+    padding: 0.5rem;
+    border-radius: 50%;
+  }
+
+  .dropdown-trigger-preview .trigger-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dropdown-trigger-preview .trigger-label {
+    font-weight: 500;
+  }
+
+  .dropdown-trigger-preview .trigger-chevron {
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+  }
+
+  .dropdown-menu-preview {
+    border: 1px solid var(--color-border-secondary);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    min-height: 60px;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .dropdown-menu-preview.drag-target {
+    border-color: var(--color-primary, #3b82f6);
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.2),
+      0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .dropdown-menu-preview.align-left {
+    align-self: flex-start;
+  }
+
+  .dropdown-menu-preview.align-right {
+    align-self: flex-end;
+  }
+
+  .dropdown-menu-preview.align-center {
+    align-self: center;
+  }
+
+  .dropdown-item-wrapper {
+    width: 100%;
+  }
+
+  .dropdown-item {
+    width: 100%;
+  }
+
+  .dropdown-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    border: 2px dashed var(--color-border-secondary);
+    border-radius: 4px;
+    background: var(--color-bg-tertiary);
+  }
+
+  .dropdown-placeholder p {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+  }
+
+  .dropdown-placeholder span {
+    font-size: 0.75rem;
+    font-style: italic;
   }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { invalidateAll } from '$app/navigation';
+  import { page as pageStore } from '$app/stores';
   import type { PageData } from './$types';
   import AdvancedBuilder from '$lib/components/builder/AdvancedBuilder.svelte';
   import { toastStore } from '$lib/stores/toast';
@@ -142,28 +143,48 @@
     layout_id?: number;
   }) {
     try {
-      if (!pageData.id) {
-        throw new Error('Cannot publish unsaved page');
-      }
+      let targetPageId = pageData.id;
 
-      // First, update the page's title and slug
-      const pageUpdateResponse = await fetch(`/api/pages/${pageData.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: pageData.title,
-          slug: pageData.slug,
-          status: 'published',
-          layout_id: pageData.layout_id
-        })
-      });
+      // For new pages, we need to create the page first
+      if (!targetPageId) {
+        // Create new page with published status
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: pageData.title,
+            slug: pageData.slug,
+            status: 'published',
+            layout_id: pageData.layout_id || data.defaultLayoutId
+          })
+        });
 
-      if (!pageUpdateResponse.ok) {
-        throw new Error('Failed to update page');
+        if (!response.ok) {
+          throw new Error('Failed to create page');
+        }
+
+        const newPage = (await response.json()) as { id: string };
+        targetPageId = newPage.id;
+      } else {
+        // First, update the page's title and slug
+        const pageUpdateResponse = await fetch(`/api/pages/${targetPageId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: pageData.title,
+            slug: pageData.slug,
+            status: 'published',
+            layout_id: pageData.layout_id
+          })
+        });
+
+        if (!pageUpdateResponse.ok) {
+          throw new Error('Failed to update page');
+        }
       }
 
       // Create a new published revision
-      const response = await fetch(`/api/pages/${pageData.id}/revisions`, {
+      const response = await fetch(`/api/pages/${targetPageId}/revisions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -183,7 +204,7 @@
 
       // Publish the revision
       const publishResponse = await fetch(
-        `/api/pages/${pageData.id}/revisions/${revision.id}/publish`,
+        `/api/pages/${targetPageId}/revisions/${revision.id}/publish`,
         { method: 'POST' }
       );
 
@@ -193,8 +214,13 @@
 
       toastStore.success('Page published successfully');
 
-      // Refetch the page data to show updated page
-      await invalidateAll();
+      // For new pages, redirect to the edit page; for existing, just refresh
+      if (!pageData.id) {
+        goto(`/admin/builder/${targetPageId}`);
+      } else {
+        // Refetch the page data to show updated page
+        await invalidateAll();
+      }
     } catch (error) {
       console.error('Publish error:', error);
       toastStore.error(error instanceof Error ? error.message : 'Failed to publish page');
@@ -213,6 +239,7 @@
 <AdvancedBuilder
   page={data.page}
   initialComponents={parsedComponents}
+  layoutComponents={data.layoutComponents}
   revisions={data.revisions}
   currentRevisionId={data.currentRevisionId}
   currentRevisionIsPublished={data.currentRevisionIsPublished}
@@ -221,6 +248,8 @@
   defaultLayoutId={data.defaultLayoutId}
   components={data.customComponents}
   userName={data.userName}
+  user={data.currentUser}
+  siteContext={$pageStore.data.siteContext}
   onSave={handleSave}
   onPublish={handlePublish}
   onExit={handleExit}

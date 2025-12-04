@@ -176,10 +176,16 @@ describe('Revisions Database Functions', () => {
         run: vi.fn().mockResolvedValue({})
       };
 
+      const mockUpdateStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
         .mockReturnValueOnce(mockHashesStatement)
-        .mockReturnValueOnce(mockInsertStatement);
+        .mockReturnValueOnce(mockInsertStatement)
+        .mockReturnValueOnce(mockUpdateStatement); // For draft_revision_id update
 
       const result = await createRevision(mockDb, siteId, pageId, createData);
 
@@ -206,10 +212,16 @@ describe('Revisions Database Functions', () => {
         run: vi.fn().mockResolvedValue({})
       };
 
+      const mockUpdateStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
       (mockDb.prepare as ReturnType<typeof vi.fn>)
         .mockReturnValueOnce(mockPageStatement)
         .mockReturnValueOnce(mockHashesStatement)
-        .mockReturnValueOnce(mockInsertStatement);
+        .mockReturnValueOnce(mockInsertStatement)
+        .mockReturnValueOnce(mockUpdateStatement); // For draft_revision_id update
 
       const result = await createRevision(mockDb, siteId, pageId, createData);
 
@@ -257,7 +269,43 @@ describe('Revisions Database Functions', () => {
       expect(result.is_published).toBe(true);
     });
 
-    it('should handle optional fields', async () => {
+    it('should update draft_revision_id on pages when creating draft', async () => {
+      const mockPageStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ id: pageId })
+      };
+
+      const mockHashesStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockInsertStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      const mockUpdateStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockPageStatement)
+        .mockReturnValueOnce(mockHashesStatement)
+        .mockReturnValueOnce(mockInsertStatement)
+        .mockReturnValueOnce(mockUpdateStatement);
+
+      const draftData = { ...createData, status: 'draft' as const };
+      await createRevision(mockDb, siteId, pageId, draftData);
+
+      // Verify the UPDATE was called to set draft_revision_id
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'UPDATE pages SET draft_revision_id = ? WHERE id = ?'
+      );
+    });
+
+    it('should not update draft_revision_id when creating published revision', async () => {
       const mockPageStatement = {
         bind: vi.fn().mockReturnThis(),
         first: vi.fn().mockResolvedValue({ id: pageId })
@@ -277,6 +325,41 @@ describe('Revisions Database Functions', () => {
         .mockReturnValueOnce(mockPageStatement)
         .mockReturnValueOnce(mockHashesStatement)
         .mockReturnValueOnce(mockInsertStatement);
+      // No fourth call for UPDATE because it's published
+
+      const publishedData = { ...createData, status: 'published' as const };
+      await createRevision(mockDb, siteId, pageId, publishedData);
+
+      // Should only have been called 3 times (page check, hashes check, insert)
+      expect(mockDb.prepare).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle optional fields', async () => {
+      const mockPageStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ id: pageId })
+      };
+
+      const mockHashesStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockInsertStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      const mockUpdateStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockPageStatement)
+        .mockReturnValueOnce(mockHashesStatement)
+        .mockReturnValueOnce(mockInsertStatement)
+        .mockReturnValueOnce(mockUpdateStatement); // For draft_revision_id update
 
       const minimalData = {
         title: 'Minimal',
@@ -387,6 +470,52 @@ describe('Revisions Database Functions', () => {
       await publishRevision(mockDb, siteId, pageId, revisionId);
 
       expect(mockDb.batch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should include published_revision_id in page update', async () => {
+      const mockGetRevisionStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(mockRevisionData)
+      };
+
+      const mockHashesStatement = {
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ results: [] })
+      };
+
+      const mockPageStatement = {
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ id: pageId })
+      };
+
+      const mockInsertStatement = {
+        bind: vi.fn().mockReturnThis(),
+        run: vi.fn().mockResolvedValue({})
+      };
+
+      const mockBatchStatement = {
+        bind: vi.fn().mockReturnThis()
+      };
+
+      (mockDb.prepare as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockGetRevisionStatement) // getRevisionById
+        .mockReturnValueOnce(mockGetRevisionStatement) // getPublishedRevision
+        .mockReturnValueOnce(mockPageStatement) // createRevision - check page exists
+        .mockReturnValueOnce(mockHashesStatement) // createRevision - get existing hashes
+        .mockReturnValueOnce(mockInsertStatement) // createRevision - insert
+        .mockReturnValue(mockBatchStatement); // All subsequent prepare calls for batch
+
+      (mockDb.batch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await publishRevision(mockDb, siteId, pageId, revisionId);
+
+      // Verify that a prepare call includes published_revision_id
+      const prepareCalls = (mockDb.prepare as ReturnType<typeof vi.fn>).mock.calls;
+      const pageUpdateCall = prepareCalls.find(
+        (call: string[]) =>
+          call[0] && call[0].includes('UPDATE pages') && call[0].includes('published_revision_id')
+      );
+      expect(pageUpdateCall).toBeDefined();
     });
   });
 
