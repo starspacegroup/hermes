@@ -115,7 +115,7 @@
   $: hoverColor = config.navbarHoverColor || 'var(--color-primary)';
   $: borderColor = config.navbarBorderColor || '#e5e7eb';
   $: navbarShadow = config.navbarShadow ?? false;
-  $: sticky = config.sticky ?? true;
+  $: sticky = config.sticky ?? false;
   $: navbarHeight = config.navbarHeight || 0;
 
   // Dropdown styling

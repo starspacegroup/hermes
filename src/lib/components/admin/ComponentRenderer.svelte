@@ -24,6 +24,8 @@
   export let isEditable = false; // Whether we're in edit mode (builder)
   export let siteContext: SiteContext | undefined = undefined; // Site context for template substitution
   export let user: UserInfo | null | undefined = undefined; // User context for template substitution
+  // Callback for when a child component is selected (for containers)
+  export let onSelectComponent: ((component: PageComponent) => void) | undefined = undefined;
 
   // Helper to substitute templates if site context is available
   $: userContext = createUserContext(user);
@@ -164,8 +166,6 @@
   ) {
     const { componentType: rawComponentType, insertIndex } = event.detail;
 
-    console.log('[ContainerDrop] Raw component type:', rawComponentType);
-
     // Determine the actual component type and config
     let actualType: ComponentType;
     let componentConfig: ComponentConfig;
@@ -175,11 +175,9 @@
       const componentId = parseInt(rawComponentType.split(':')[1]);
       actualType = 'component_ref';
       componentConfig = { componentId };
-      console.log('[ContainerDrop] Custom component detected, creating component_ref');
     } else {
       actualType = rawComponentType as ComponentType;
       componentConfig = getDefaultConfig(actualType);
-      console.log('[ContainerDrop] Built-in component, type:', actualType);
     }
 
     const newChild: PageComponent = {
@@ -192,28 +190,25 @@
       updated_at: Date.now()
     };
 
-    console.log('[ContainerDrop] Created child:', newChild);
-
     const updatedChildren = [...(component.config.children || [])];
     updatedChildren.splice(insertIndex, 0, newChild);
 
     if (onUpdate) {
-      console.log('[ContainerDrop] Calling onUpdate with', updatedChildren.length, 'children');
       onUpdate({ ...component.config, children: updatedChildren });
     } else {
       console.warn('[ContainerDrop] No onUpdate callback available!');
     }
   }
 
-  // Handle clicking on a child component to scroll to its properties panel
+  // Handle clicking on a child component to select it
   function handleChildClick(event: CustomEvent<{ childId: string }>) {
     const { childId } = event.detail;
-    const element = document.getElementById(`child-panel-${childId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Briefly highlight the panel
-      element.classList.add('highlight');
-      setTimeout(() => element.classList.remove('highlight'), 2000);
+    // Find the child component and trigger selection
+    const childComponent = (component.config.children || []).find(
+      (child: PageComponent) => child.id === childId
+    );
+    if (childComponent && onSelectComponent) {
+      onSelectComponent(childComponent);
     }
   }
 
@@ -278,6 +273,34 @@
     return styleStr;
   }
 
+  // Generate position styles from config.position
+  function getPositionStyleString(comp: PageComponent): string {
+    const positionConfig = comp.config.position;
+    if (!positionConfig) return '';
+
+    // Handle legacy format where position might be a string
+    if (typeof positionConfig === 'string') {
+      if (positionConfig === 'static') return '';
+      return `position: ${positionConfig};`;
+    }
+
+    // Get position values for current breakpoint, falling back to desktop
+    const position = positionConfig[currentBreakpoint] || positionConfig.desktop;
+    if (!position) return '';
+
+    const posType = position.type;
+    if (!posType || posType === 'static') return '';
+
+    const styles: string[] = [`position: ${posType}`];
+    if (position.top) styles.push(`top: ${position.top}`);
+    if (position.right) styles.push(`right: ${position.right}`);
+    if (position.bottom) styles.push(`bottom: ${position.bottom}`);
+    if (position.left) styles.push(`left: ${position.left}`);
+    if (position.zIndex !== undefined) styles.push(`z-index: ${position.zIndex}`);
+
+    return styles.join('; ') + ';';
+  }
+
   // Generate child layout styles for components inside containers
   function getChildLayoutStyles(childConfig: ComponentConfig): string {
     let styles = '';
@@ -329,6 +352,7 @@
 
   // Declare reactive variables
   let styleString: string;
+  let positionStyleString: string;
   let heroHeight: string;
   let buttonFullWidth: boolean;
   let spacerHeight: number;
@@ -348,6 +372,7 @@
     const _bp = currentBreakpoint;
 
     styleString = getStyleString(component);
+    positionStyleString = getPositionStyleString(component);
     heroHeight = getResponsiveValue(component.config.heroHeight || { desktop: '500px' });
     buttonFullWidth = getResponsiveValue(component.config.fullWidth || { desktop: false });
     spacerHeight = getResponsiveValue(component.config.space || { desktop: 40 });
@@ -368,7 +393,10 @@
   }
 </script>
 
-<div class="widget-renderer" style="{styleString} {generateThemeStyles(themeColors)}">
+<div
+  class="widget-renderer"
+  style="{positionStyleString} {styleString} {generateThemeStyles(themeColors)}"
+>
   {#if component.type === 'text'}
     <div
       class="text-widget"
@@ -702,6 +730,7 @@
                     {isEditable}
                     {siteContext}
                     {user}
+                    {onSelectComponent}
                   />
                 </div>
               </svelte:fragment>
@@ -717,6 +746,7 @@
                   {isEditable}
                   {siteContext}
                   {user}
+                  {onSelectComponent}
                 />
               </div>
             {/each}
@@ -767,6 +797,7 @@
               {isEditable}
               {siteContext}
               {user}
+              {onSelectComponent}
             />
           </div>
         {/each}
@@ -1125,6 +1156,7 @@
                 {isEditable}
                 {siteContext}
                 {user}
+                {onSelectComponent}
               />
             </div>
           </svelte:fragment>
@@ -1140,6 +1172,7 @@
               {isEditable}
               {siteContext}
               {user}
+              {onSelectComponent}
             />
           </div>
         {/each}

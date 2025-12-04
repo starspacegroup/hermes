@@ -124,7 +124,6 @@
       use:enhance={() => {
         isSubmitting = true;
         return async ({ result, update }) => {
-          console.log('Form submission result:', result);
           if (result.type === 'redirect') {
             // Let SvelteKit handle the redirect
             await update();

@@ -9,15 +9,6 @@
 
   export let data: PageData;
 
-  console.log('[Builder Page] Loaded data:', {
-    hasPage: !!data.page,
-    pageId: data.page?.id,
-    componentCount: data.pageComponents?.length || 0,
-    components: data.pageComponents,
-    revisionCount: data.revisions?.length || 0,
-    currentRevisionId: data.currentRevisionId
-  });
-
   // Components are already in the correct format (PageComponent[]) when coming from revisions
   // They only need parsing when coming from DB page_widgets table (which we no longer use here)
   const parsedComponents: PageComponent[] = data.pageComponents;
@@ -31,14 +22,6 @@
   }
 
   async function handleSave(pageData: SaveData) {
-    console.log('[Builder] handleSave called with:', {
-      id: pageData.id,
-      title: pageData.title,
-      slug: pageData.slug,
-      componentCount: pageData.components.length,
-      components: pageData.components
-    });
-
     try {
       if (data.isNewPage) {
         // Create new page (slug should already be unique from AdvancedBuilder)
@@ -58,8 +41,6 @@
         }
 
         const newPage = (await response.json()) as { id: string };
-
-        console.log('[Builder] Creating initial revision with components:', pageData.components);
 
         // Create initial revision with components
         const revisionResponse = await fetch(`/api/pages/${newPage.id}/revisions`, {
@@ -99,11 +80,6 @@
           throw new Error('Failed to update page');
         }
 
-        console.log('[Builder] Creating revision with components:', {
-          componentCount: pageData.components.length,
-          components: pageData.components
-        });
-
         // Then create a new revision with the updated content
         const response = await fetch(`/api/pages/${pageData.id}/revisions`, {
           method: 'POST',
@@ -121,8 +97,7 @@
           throw new Error('Failed to save revision');
         }
 
-        const savedRevision = await response.json();
-        console.log('[Builder] Revision saved:', savedRevision);
+        await response.json();
 
         toastStore.success('Page saved successfully');
 

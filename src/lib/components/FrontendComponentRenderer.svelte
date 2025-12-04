@@ -10,7 +10,7 @@
    *
    * Unlike the admin ComponentRenderer, this is read-only and optimized for public display.
    */
-  import type { WidgetConfig } from '$lib/types/pages';
+  import type { WidgetConfig, PositionConfig, ResponsiveValue } from '$lib/types/pages';
   import type { SiteContext } from '$lib/utils/templateSubstitution';
 
   // User type for visibility checking
@@ -55,6 +55,7 @@
   export let siteContext: SiteContext | undefined = undefined;
   export let onLogout: (() => void) | undefined = undefined;
   export let user: UserInfo | null | undefined = undefined; // Current user for visibility checks
+  export let position: ResponsiveValue<PositionConfig> | undefined = undefined; // Optional position override from layout
 
   /**
    * Check if the component should be visible based on visibility rules
@@ -139,6 +140,35 @@
   $: paddingDesktop = containerPadding.desktop || { top: 0, right: 0, bottom: 0, left: 0 };
   $: marginDesktop = containerMargin.desktop || { top: 0, right: 0, bottom: 0, left: 0 };
 
+  // Position styling - get values from position prop (override) or config.position (responsive)
+  // Handle legacy format where position might be a string instead of an object
+  $: effectivePosition = position || (typeof config.position === 'string' ? null : config.position);
+  $: legacyPositionType = typeof config.position === 'string' ? config.position : null;
+  $: positionDesktop = effectivePosition?.desktop || {};
+  $: positionType = positionDesktop.type || legacyPositionType || 'static';
+  $: positionTop = positionDesktop.top;
+  $: positionRight = positionDesktop.right;
+  $: positionBottom = positionDesktop.bottom;
+  $: positionLeft = positionDesktop.left;
+  $: positionZIndex = positionDesktop.zIndex;
+
+  // Build position style string
+  $: positionStyle = (() => {
+    const styles: string[] = [];
+    if (positionType && positionType !== 'static') {
+      styles.push(`position: ${positionType}`);
+      if (positionTop) styles.push(`top: ${positionTop}`);
+      if (positionRight) styles.push(`right: ${positionRight}`);
+      if (positionBottom) styles.push(`bottom: ${positionBottom}`);
+      if (positionLeft) styles.push(`left: ${positionLeft}`);
+      if (positionZIndex !== undefined) styles.push(`z-index: ${positionZIndex}`);
+    }
+    return styles.length > 0 ? styles.join('; ') + ';' : '';
+  })();
+
+  // Check if we need a position wrapper
+  $: needsPositionWrapper = positionType && positionType !== 'static';
+
   // Check if this is a container-type component
   $: isContainer = type === 'container' || type === 'row' || type === 'flex';
 
@@ -152,6 +182,7 @@
     <div
       class="frontend-container {type}-container"
       style="
+        {positionStyle}
         display: {containerDisplay};
         flex-direction: {containerFlexDirection};
         justify-content: {containerJustifyContent};
@@ -182,6 +213,7 @@
     <div
       class="frontend-container"
       style="
+        {positionStyle}
         display: {containerDisplay};
         flex-direction: {containerFlexDirection};
         justify-content: {containerJustifyContent};
@@ -211,38 +243,134 @@
     </div>
   {:else if type === 'navbar' && !usesContainerChildren}
     <!-- Built-in navbar (no custom children) -->
-    <NavBar {config} {onLogout} {siteContext} user={user ?? undefined} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <NavBar {config} {onLogout} {siteContext} user={user ?? undefined} />
+      </div>
+    {:else}
+      <NavBar {config} {onLogout} {siteContext} user={user ?? undefined} />
+    {/if}
   {:else if type === 'footer' && !usesContainerChildren}
     <!-- Built-in footer (no custom children) -->
-    <Footer {config} {siteContext} user={user ?? undefined} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <Footer {config} {siteContext} user={user ?? undefined} />
+      </div>
+    {:else}
+      <Footer {config} {siteContext} user={user ?? undefined} />
+    {/if}
   {:else if type === 'text'}
-    <TextComponent {config} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <TextComponent {config} {siteContext} {user} />
+      </div>
+    {:else}
+      <TextComponent {config} {siteContext} {user} />
+    {/if}
   {:else if type === 'image'}
-    <ImageComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <ImageComponent {config} />
+      </div>
+    {:else}
+      <ImageComponent {config} />
+    {/if}
   {:else if type === 'single_product'}
-    <SingleProductComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <SingleProductComponent {config} />
+      </div>
+    {:else}
+      <SingleProductComponent {config} />
+    {/if}
   {:else if type === 'product_list'}
-    <ProductListComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <ProductListComponent {config} />
+      </div>
+    {:else}
+      <ProductListComponent {config} />
+    {/if}
   {:else if type === 'hero'}
-    <HeroComponent {config} {colorTheme} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <HeroComponent {config} {colorTheme} {siteContext} {user} />
+      </div>
+    {:else}
+      <HeroComponent {config} {colorTheme} {siteContext} {user} />
+    {/if}
   {:else if type === 'button'}
-    <ButtonComponent {config} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <ButtonComponent {config} {siteContext} {user} />
+      </div>
+    {:else}
+      <ButtonComponent {config} {siteContext} {user} />
+    {/if}
   {:else if type === 'spacer'}
-    <SpacerComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <SpacerComponent {config} />
+      </div>
+    {:else}
+      <SpacerComponent {config} />
+    {/if}
   {:else if type === 'divider'}
-    <DividerComponent {config} {colorTheme} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <DividerComponent {config} {colorTheme} />
+      </div>
+    {:else}
+      <DividerComponent {config} {colorTheme} />
+    {/if}
   {:else if type === 'columns'}
-    <ColumnsComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <ColumnsComponent {config} />
+      </div>
+    {:else}
+      <ColumnsComponent {config} />
+    {/if}
   {:else if type === 'heading'}
-    <HeadingComponent {config} {colorTheme} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <HeadingComponent {config} {colorTheme} {siteContext} {user} />
+      </div>
+    {:else}
+      <HeadingComponent {config} {colorTheme} {siteContext} {user} />
+    {/if}
   {:else if type === 'features'}
-    <FeaturesComponent {config} {colorTheme} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <FeaturesComponent {config} {colorTheme} {siteContext} {user} />
+      </div>
+    {:else}
+      <FeaturesComponent {config} {colorTheme} {siteContext} {user} />
+    {/if}
   {:else if type === 'pricing'}
-    <PricingComponent {config} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <PricingComponent {config} />
+      </div>
+    {:else}
+      <PricingComponent {config} />
+    {/if}
   {:else if type === 'cta'}
-    <CTAComponent {config} {colorTheme} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <CTAComponent {config} {colorTheme} {siteContext} {user} />
+      </div>
+    {:else}
+      <CTAComponent {config} {colorTheme} {siteContext} {user} />
+    {/if}
   {:else if type === 'dropdown'}
-    <DropdownComponent {config} {siteContext} {user} />
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <DropdownComponent {config} {siteContext} {user} />
+      </div>
+    {:else}
+      <DropdownComponent {config} {siteContext} {user} />
+    {/if}
   {:else}
     <!-- Unknown component type - render as placeholder -->
     <div class="unknown-component">
@@ -257,10 +385,9 @@
     box-sizing: border-box;
   }
 
-  .navbar-container {
-    position: sticky;
-    top: 0;
-    z-index: 100;
+  .position-wrapper {
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .unknown-component {

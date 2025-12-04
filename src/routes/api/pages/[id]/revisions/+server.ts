@@ -45,22 +45,9 @@ export const POST: RequestHandler = async ({ params, request, platform, locals }
   try {
     const data = (await request.json()) as CreateRevisionData;
 
-    console.log('[API] POST /api/pages/[id]/revisions - Received data:', {
-      title: data.title,
-      slug: data.slug,
-      status: data.status,
-      componentCount: data.components?.length || 0,
-      components: data.components
-    });
-
     const revision = await revisionsDb.createRevision(db, siteId, pageId, {
       ...data,
       created_by: userId
-    });
-
-    console.log('[API] Revision created:', {
-      id: revision.id,
-      componentCount: revision.components.length
     });
 
     // Get page name for logging

@@ -45,17 +45,6 @@
   $: renderableLayoutComponents = sortedLayoutComponents.filter(
     (c) => c.type !== 'component_ref' && c.type !== 'navbar' && c.type !== 'footer'
   );
-
-  // Debug logging
-  $: if (typeof window !== 'undefined') {
-    console.log('[PageWithLayout] Received:', {
-      layoutComponentsCount: layoutComponents.length,
-      layoutComponentTypes: layoutComponents.map((c) => c.type),
-      renderableCount: renderableLayoutComponents.length,
-      renderableTypes: renderableLayoutComponents.map((c) => c.type),
-      pageComponentsCount: pageComponents.length
-    });
-  }
 </script>
 
 <div class="page-with-layout">

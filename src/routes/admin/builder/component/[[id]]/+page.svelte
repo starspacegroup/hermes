@@ -9,13 +9,6 @@
 
   export let data: PageData;
 
-  console.log('[Component Builder] Loaded data:', {
-    hasComponent: !!data.component,
-    componentId: data.component?.id,
-    widgetCount: data.widgets?.length || 0,
-    widgets: data.widgets
-  });
-
   // Convert component widgets to PageComponent format expected by AdvancedBuilder
   const parsedComponents: PageComponent[] = data.widgets.map((w) => ({
     id: w.id,

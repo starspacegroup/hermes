@@ -1,11 +1,16 @@
 <script lang="ts">
-  import type { PageComponent, ComponentConfig, Breakpoint, ColorTheme } from '$lib/types/pages';
+  import type {
+    PageComponent,
+    ComponentConfig,
+    Breakpoint,
+    ColorTheme,
+    PositionConfig
+  } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
   import MediaBrowser from './MediaBrowser.svelte';
   import MediaUpload from './MediaUpload.svelte';
   import ThemeColorInput from './ThemeColorInput.svelte';
   import ButtonIconPicker from './ButtonIconPicker.svelte';
-  import VisualStyleEditor from '../builder/VisualStyleEditor.svelte';
   import TailwindContainerEditor from '../builder/TailwindContainerEditor.svelte';
   import ChildLayoutEditor from '../builder/ChildLayoutEditor.svelte';
   import { GripVertical, Trash2 } from 'lucide-svelte';
@@ -146,6 +151,39 @@
     };
   }
 
+  // Helper function to ensure position object exists for current breakpoint
+  function ensurePositionBreakpoint(): NonNullable<
+    NonNullable<typeof config.position>[typeof currentBreakpoint]
+  > {
+    // Handle legacy data where position might be a string instead of an object
+    if (!config.position || typeof config.position === 'string') {
+      config.position = { desktop: {} };
+    }
+    if (!config.position[currentBreakpoint]) config.position[currentBreakpoint] = {};
+    return config.position[currentBreakpoint]!;
+  }
+
+  // Helper function to set position type (to avoid inline type assertions in template)
+  function setPositionType(value: string): void {
+    const pos = ensurePositionBreakpoint();
+    pos.type = value as PositionConfig['type'];
+    handleImmediateUpdate();
+  }
+
+  // Helper function to set position offset value
+  function setPositionOffset(property: 'top' | 'right' | 'bottom' | 'left', value: string): void {
+    const pos = ensurePositionBreakpoint();
+    pos[property] = value;
+    handleUpdate();
+  }
+
+  // Helper function to set z-index
+  function setPositionZIndex(value: string): void {
+    const pos = ensurePositionBreakpoint();
+    pos.zIndex = parseInt(value) || 0;
+    handleUpdate();
+  }
+
   // Sync external widget config changes to local config (e.g., from contenteditable)
   $: {
     const currentConfigString = JSON.stringify(component.config);
@@ -203,12 +241,6 @@
         _isLocalUpdate = false;
       }, 100);
     }, 100); // 100ms debounce delay (reduced from 150ms)
-  }
-
-  // Handle visual style updates
-  function handleVisualStyleUpdate(event: CustomEvent<ComponentConfig>): void {
-    config = event.detail;
-    handleUpdate();
   }
 
   // Immediate update without debouncing (for select changes, buttons, etc.)
@@ -2470,7 +2502,116 @@
               </label>
             </div>
           </div>
+          <div class="section">
+            <h4>Positioning</h4>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  bind:checked={config.sticky}
+                  on:change={handleImmediateUpdate}
+                />
+                <span>Sticky Header</span>
+              </label>
+              <p class="field-hint">
+                When enabled, the navigation bar will stay fixed at the top of the viewport as the
+                user scrolls.
+              </p>
+            </div>
+          </div>
         {/if}
+
+        <!-- Universal Positioning Section - appears for all components -->
+        <div class="section">
+          <h4>Positioning</h4>
+          <div class="form-group">
+            <label>
+              <span>Position Type</span>
+              <select
+                value={config.position?.[currentBreakpoint]?.type ||
+                  config.position?.desktop?.type ||
+                  'static'}
+                on:change={(e) => setPositionType(e.currentTarget.value)}
+              >
+                <option value="static">Static (default)</option>
+                <option value="relative">Relative</option>
+                <option value="absolute">Absolute</option>
+                <option value="fixed">Fixed</option>
+                <option value="sticky">Sticky</option>
+              </select>
+            </label>
+            <p class="field-hint">Controls how the element is positioned in the document flow.</p>
+          </div>
+
+          {#if (config.position?.[currentBreakpoint]?.type || config.position?.desktop?.type) && (config.position?.[currentBreakpoint]?.type || config.position?.desktop?.type) !== 'static'}
+            <div class="form-group">
+              <label>
+                <span>Top</span>
+                <input
+                  type="text"
+                  value={config.position?.[currentBreakpoint]?.top ||
+                    config.position?.desktop?.top ||
+                    ''}
+                  placeholder="auto, 0, 10px, 1rem"
+                  on:input={(e) => setPositionOffset('top', e.currentTarget.value)}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Right</span>
+                <input
+                  type="text"
+                  value={config.position?.[currentBreakpoint]?.right ||
+                    config.position?.desktop?.right ||
+                    ''}
+                  placeholder="auto, 0, 10px, 1rem"
+                  on:input={(e) => setPositionOffset('right', e.currentTarget.value)}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Bottom</span>
+                <input
+                  type="text"
+                  value={config.position?.[currentBreakpoint]?.bottom ||
+                    config.position?.desktop?.bottom ||
+                    ''}
+                  placeholder="auto, 0, 10px, 1rem"
+                  on:input={(e) => setPositionOffset('bottom', e.currentTarget.value)}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Left</span>
+                <input
+                  type="text"
+                  value={config.position?.[currentBreakpoint]?.left ||
+                    config.position?.desktop?.left ||
+                    ''}
+                  placeholder="auto, 0, 10px, 1rem"
+                  on:input={(e) => setPositionOffset('left', e.currentTarget.value)}
+                />
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Z-Index</span>
+                <input
+                  type="number"
+                  value={config.position?.[currentBreakpoint]?.zIndex ??
+                    config.position?.desktop?.zIndex ??
+                    0}
+                  placeholder="0"
+                  on:input={(e) => setPositionZIndex(e.currentTarget.value)}
+                />
+              </label>
+              <p class="field-hint">Higher values appear in front of elements with lower values.</p>
+            </div>
+          {/if}
+        </div>
       </div>
     {:else if activeTab === 'responsive'}
       <div class="responsive-tab">
@@ -2785,15 +2926,6 @@
       </div>
     {:else if activeTab === 'advanced'}
       <div class="advanced-tab">
-        <div class="section">
-          <h4>Visual Effects</h4>
-          <p class="section-description">
-            Apply advanced visual effects like shadows, transforms, filters, and positioning.
-          </p>
-        </div>
-
-        <VisualStyleEditor {config} {currentBreakpoint} on:update={handleVisualStyleUpdate} />
-
         <div class="section visibility-section">
           <h4>Visibility Controls</h4>
           <p class="section-description">
@@ -3774,6 +3906,12 @@
     border-top: 2px solid var(--color-primary);
     margin-bottom: 1rem;
     transition: all 0.3s ease;
+  }
+
+  .child-properties-panel:global(.highlight) {
+    animation: pulse 0.5s ease-in-out 3;
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   .child-properties-panel:last-child {

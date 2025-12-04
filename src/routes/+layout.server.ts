@@ -5,18 +5,20 @@ import { getDefaultLayout, getLayoutComponents } from '$lib/server/db/layouts';
 import { getComponent, getGlobalComponentByName } from '$lib/server/db/components';
 import { createSiteContext, createDefaultSiteContext } from '$lib/utils/templateSubstitution';
 import type { LayoutServerLoad } from './$types';
-import type { WidgetConfig } from '$lib/types/pages';
+import type { WidgetConfig, PositionConfig, ResponsiveValue } from '$lib/types/pages';
 
-// Navbar config with component resolved
+// Navbar config with component resolved and position settings from layout
 export interface NavbarLayoutData {
   type: 'navbar';
   config: WidgetConfig;
+  position?: ResponsiveValue<PositionConfig>;
 }
 
-// Footer config with component resolved
+// Footer config with component resolved and position settings from layout
 export interface FooterLayoutData {
   type: 'footer';
   config: WidgetConfig;
+  position?: ResponsiveValue<PositionConfig>;
 }
 
 // Layout data passed to the frontend
@@ -65,7 +67,7 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
     navbarHoverColor: 'var(--color-primary)',
     navbarBorderColor: 'var(--color-border-primary)',
     navbarShadow: false,
-    sticky: true,
+    sticky: false,
     navbarHeight: 0,
     // Dropdown styling
     dropdownBackground: 'var(--color-bg-secondary)',
@@ -82,7 +84,7 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
       currentUser: locals.currentUser || null,
       storeName: 'Hermes eCommerce',
       layoutData: {
-        navbar: { type: 'navbar' as const, config: defaultNavbarConfig },
+        navbar: { type: 'navbar' as const, config: defaultNavbarConfig, position: undefined },
         footer: null
       }
     };
@@ -135,6 +137,11 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
 
       // Process layout widgets to resolve component references
       for (const widget of layoutWidgets) {
+        // Extract position settings from the layout widget (if set)
+        const widgetPosition = widget.config?.position as
+          | ResponsiveValue<PositionConfig>
+          | undefined;
+
         // Handle component_ref widgets that reference navbar or footer components
         if (widget.type === 'component_ref' && widget.config?.componentId) {
           const component = await getComponent(db, siteId, widget.config.componentId as number);
@@ -146,9 +153,9 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
               if (config.logo && config.logo.text === 'Store') {
                 config.logo.text = generalSettings.storeName || 'Hermes eCommerce';
               }
-              layoutData.navbar = { type: 'navbar', config };
+              layoutData.navbar = { type: 'navbar', config, position: widgetPosition };
             } else if (component.type === 'footer') {
-              layoutData.footer = { type: 'footer', config };
+              layoutData.footer = { type: 'footer', config, position: widgetPosition };
             }
           }
         }
@@ -171,9 +178,9 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
             if (config.logo && config.logo.text === 'Store') {
               config.logo.text = generalSettings.storeName || 'Hermes eCommerce';
             }
-            layoutData.navbar = { type: 'navbar', config };
+            layoutData.navbar = { type: 'navbar', config, position: widgetPosition };
           } else if (widget.type === 'footer') {
-            layoutData.footer = { type: 'footer', config };
+            layoutData.footer = { type: 'footer', config, position: widgetPosition };
           }
         }
       }
@@ -223,7 +230,7 @@ export const load: LayoutServerLoad = async ({ platform, locals }) => {
       storeName: 'Hermes eCommerce',
       siteContext: createDefaultSiteContext(),
       layoutData: {
-        navbar: { type: 'navbar' as const, config: defaultNavbarConfig },
+        navbar: { type: 'navbar' as const, config: defaultNavbarConfig, position: undefined },
         footer: null
       }
     };

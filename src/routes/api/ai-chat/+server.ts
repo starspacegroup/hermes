@@ -121,12 +121,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
     // Check if model supports vision when images are present
     const hasImages = attachments && attachments.some((att) => att.type === 'image');
-    console.log('Has images:', hasImages, 'Model:', preferredModel, 'Provider:', providerName);
 
     if (hasImages) {
-      console.log(
-        `Processing message with ${attachments.length} attachments using model ${preferredModel}`
-      );
       if (!provider.supportsVision(preferredModel)) {
         const errorMsg = `Model ${preferredModel} does not support image analysis. Please select a vision-capable model (e.g., gpt-4o, gpt-4o-mini, claude-3-5-sonnet) in AI settings.`;
         console.error(errorMsg);
@@ -147,8 +143,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
         const processedAttachments: AIChatAttachment[] = [];
         for (const attachment of msg.attachments) {
           if (attachment.type === 'image') {
-            console.log(`Converting attachment ${attachment.url} to data URI for AI...`);
-
             // Skip if already a data URI
             if (attachment.url.startsWith('data:')) {
               processedAttachments.push(attachment);
@@ -200,21 +194,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
         });
       } else {
         allMessages.push(msg);
-      }
-    }
-    console.log('Calling AI provider with', allMessages.length, 'messages');
-
-    // Debug: Log message attachments
-    for (const msg of allMessages) {
-      if (msg.attachments && msg.attachments.length > 0) {
-        console.log(
-          `Message has ${msg.attachments.length} attachments:`,
-          msg.attachments.map((att) => ({
-            type: att.type,
-            mimeType: att.mimeType,
-            urlPrefix: att.url.substring(0, 50)
-          }))
-        );
       }
     }
 
@@ -331,15 +310,6 @@ Use this context to help the user with their current task.`;
               const { parseWidgetChanges } = await import('$lib/server/ai/widget-parser');
               const widgetChanges = parseWidgetChanges(accumulatedResponse);
 
-              // Log usage info for debugging
-              console.log('Sending final chunk with usage:', {
-                model: preferredModel,
-                usage: usageInfo,
-                estimatedCost,
-                hasProductCommand: !!productCommand,
-                hasWidgetChanges: !!widgetChanges
-              });
-
               // Send final chunk with session ID, usage info, and commands if present
               controller.enqueue(
                 encoder.encode(
@@ -406,7 +376,6 @@ Use this context to help the user with their current task.`;
                 }
               ];
               await updateAISessionMessages(db, siteId, session.id, updatedMessages);
-              console.log('Saved partial response to DB after streaming error');
             } catch (saveError) {
               console.error('Failed to save partial response after error:', saveError);
             }

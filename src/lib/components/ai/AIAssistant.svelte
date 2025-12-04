@@ -179,7 +179,6 @@
               if (parsed.done) {
                 // Check for commands in the final response
                 if (parsed.productCommand) {
-                  console.log('Received product command:', parsed.productCommand);
                   dispatch('applyChanges', {
                     type: 'product_command',
                     data: parsed.productCommand
@@ -187,7 +186,6 @@
                 }
 
                 if (parsed.widgetChanges) {
-                  console.log('Received widget changes:', parsed.widgetChanges);
                   dispatch('applyChanges', {
                     type: 'widget_changes',
                     data: parsed.widgetChanges.changes

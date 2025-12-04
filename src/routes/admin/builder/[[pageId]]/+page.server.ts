@@ -116,18 +116,8 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
   // Normalize component positions if needed (fixes duplicate positions bug)
   if (needsPositionNormalization(pageComponents)) {
-    console.log('[Builder Load] Normalizing component positions due to duplicates or gaps');
     pageComponents = normalizeComponentPositions(pageComponents);
   }
-
-  console.log('[Builder Load] Loaded revision data:', {
-    pageId: params.pageId,
-    hasRevision: !!currentRevision,
-    revisionId: currentRevisionId,
-    isPublished: currentRevisionIsPublished,
-    componentCount: pageComponents.length,
-    components: pageComponents
-  });
 
   return {
     page,

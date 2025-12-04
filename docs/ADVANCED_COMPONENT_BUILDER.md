@@ -3,18 +3,13 @@
 ## Overview
 
 The Advanced Component Builder provides **complete flexibility** for creating
-any type of component with any layout and any visual style. This comprehensive
-system combines mobile-first responsive design with full control over:
+any type of component with any layout. This comprehensive system combines
+mobile-first responsive design with full control over:
 
 - **Layout Systems**: Tailwind CSS flex and grid with visual editors
-- **Visual Effects**: Advanced styling with shadows, transforms, filters, and
-  positioning
 - **Responsive Design**: Three breakpoints (mobile, tablet, desktop) for all
   properties
 - **Theme Integration**: Full compatibility with the theme system
-
-See also: [Visual Style System](./VISUAL_STYLE_SYSTEM.md) for advanced styling
-capabilities.
 
 ## Key Features
 
@@ -74,18 +69,6 @@ values when breakpoint-specific values are not defined.
 - **Visual Controls**: Interactive buttons for justify/align items
 - **Template Builder**: Direct CSS Grid template editing
 
-#### VisualStyleEditor _(NEW)_
-
-- **Shadow Controls**: Box and text shadows with full configuration
-- **Transform Controls**: Translate, rotate, scale, and skew
-- **Filter Controls**: Blur, brightness, contrast, saturation, and more
-- **Position Controls**: Static, relative, absolute, fixed, sticky
-- **Effect Controls**: Opacity, aspect ratio, cursor, blend modes
-- **Tabbed Interface**: Organized sections for easy navigation
-- **Responsive**: All effects support breakpoint-specific values
-
-See [Visual Style System](./VISUAL_STYLE_SYSTEM.md) for complete documentation.
-
 ### 5. **Enhanced FlexWidget Component**
 
 The FlexWidget component now supports:
@@ -101,14 +84,11 @@ The FlexWidget component now supports:
 ```
 src/lib/
 ├── types/
-│   └── pages.ts                              # Enhanced with flex/grid/visual types
-├── utils/
-│   └── visualStyles.ts                       # NEW: Visual style CSS generators
+│   └── pages.ts                              # Enhanced with flex/grid types
 ├── components/
 │   ├── builder/
 │   │   ├── TailwindFlexEditor.svelte         # Flex properties editor
 │   │   ├── TailwindGridEditor.svelte         # Grid properties editor
-│   │   ├── VisualStyleEditor.svelte          # NEW: Visual effects editor
 │   │   ├── BuilderPropertiesPanel.svelte     # Updated: Integrates all editors
 │   │   ├── BuilderSidebar.svelte             # Updated: Mobile-first defaults
 │   │   └── tests/
@@ -132,25 +112,6 @@ interface ResponsiveValue<T> {
   mobile?: T;
   tablet?: T;
   desktop: T; // Desktop is required, others fallback
-}
-```
-
-**PageWidget**: Added child-specific flex/grid properties
-
-```typescript
-interface PageWidget {
-  // ... existing properties
-  flexChildProps?: {
-    flexGrow?: ResponsiveValue<number>;
-    flexShrink?: ResponsiveValue<number>;
-    flexBasis?: ResponsiveValue<string>;
-    alignSelf?: ResponsiveValue<'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch'>;
-    order?: ResponsiveValue<number>;
-    gridColumn?: ResponsiveValue<string>;
-    gridRow?: ResponsiveValue<string>;
-    gridArea?: ResponsiveValue<string>;
-    justifySelf?: ResponsiveValue<'start' | 'center' | 'end' | 'stretch'>;
-  };
 }
 ```
 

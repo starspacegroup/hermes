@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
   import { ChevronDown, X } from 'lucide-svelte';
   import type { PageComponent, ColorTheme, Component } from '$lib/types/pages';
   import type { MediaLibraryItem } from '$lib/types';
@@ -7,7 +7,6 @@
   import ThemeColorInput from '$lib/components/admin/ThemeColorInput.svelte';
   import MediaBrowser from '$lib/components/admin/MediaBrowser.svelte';
   import MediaUpload from '$lib/components/admin/MediaUpload.svelte';
-  import FlexChildPropertiesEditor from './FlexChildPropertiesEditor.svelte';
   import { getComponentDisplayLabel } from '$lib/utils/editor/componentDefaults';
 
   export let pageComponents: PageComponent[] = [];
@@ -26,9 +25,60 @@
   // Track active tab for page properties
   let pageActiveTab: 'content' | 'style' | 'responsive' = 'style';
 
-  // React to selectedComponent changes
+  // Helper function to find the parent component ID for a given component
+  // This is needed when a child inside a container is selected
+  function findParentComponentId(componentId: string): string | null {
+    // First check if it's a top-level component
+    const isTopLevel = pageComponents.some((c) => c.id === componentId);
+    if (isTopLevel) {
+      return componentId;
+    }
+
+    // Search through all components to find which one contains this child
+    for (const component of pageComponents) {
+      if (component.config?.children) {
+        const foundChild = findChildRecursively(component.config.children, componentId);
+        if (foundChild) {
+          return component.id;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Recursively search for a child component by ID
+  function findChildRecursively(children: PageComponent[], targetId: string): boolean {
+    for (const child of children) {
+      if (child.id === targetId) {
+        return true;
+      }
+      if (child.config?.children) {
+        if (findChildRecursively(child.config.children, targetId)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // React to selectedComponent changes - expand the parent component if a child is selected
   $: if (selectedComponent) {
-    expandedComponentId = selectedComponent.id;
+    const parentId = findParentComponentId(selectedComponent.id);
+    if (parentId) {
+      expandedComponentId = parentId;
+      // Scroll to the child component's properties after the DOM updates
+      tick().then(() => {
+        const childPanel = document.getElementById(`child-panel-${selectedComponent?.id}`);
+        if (childPanel) {
+          childPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Briefly highlight the panel
+          childPanel.classList.add('highlight');
+          setTimeout(() => childPanel.classList.remove('highlight'), 2000);
+        }
+      });
+    } else {
+      expandedComponentId = selectedComponent.id;
+    }
   }
 
   const dispatch = createEventDispatcher();
@@ -287,33 +337,15 @@
               component={componentItem}
               {currentBreakpoint}
               onUpdate={(config) => {
-                const updatedComponent = { ...componentItem, config };
-                dispatch('updateComponent', updatedComponent);
+                // Use the component ID to find the current version from pageComponents
+                // This avoids closure issues where componentItem might be stale
+                const currentComponent = pageComponents.find((c) => c.id === componentItem.id);
+                if (currentComponent) {
+                  const updatedComponent = { ...currentComponent, config };
+                  dispatch('updateComponent', updatedComponent);
+                }
               }}
             />
-
-            <!-- Show child properties editor if component has a flex/grid parent -->
-            {#if componentItem.config?.children}
-              <!-- This is a parent flex/grid container - children can have child props -->
-              <div class="child-props-section">
-                <p class="info-hint">
-                  💡 Children of this container can have individual positioning properties. Select a
-                  child component to edit its properties.
-                </p>
-              </div>
-            {/if}
-
-            <!-- Always show child properties for the selected component if it exists -->
-            {#if selectedComponent?.id === componentItem.id}
-              <FlexChildPropertiesEditor
-                component={componentItem}
-                {currentBreakpoint}
-                isGridParent={componentItem.config?.useGrid || false}
-                on:update={(e) => {
-                  dispatch('updateComponent', e.detail);
-                }}
-              />
-            {/if}
           </div>
         {/if}
       </div>
@@ -668,23 +700,6 @@
   .modal-close-btn:hover {
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-  }
-
-  .child-props-section {
-    padding: 1rem;
-    background: var(--color-bg-secondary);
-    border-top: 1px solid var(--color-border-secondary);
-  }
-
-  .info-hint {
-    margin: 0;
-    padding: 0.75rem;
-    background: var(--color-info-light);
-    border-left: 3px solid var(--color-info);
-    border-radius: 0.375rem;
-    font-size: 0.8125rem;
-    color: var(--color-text-secondary);
-    line-height: 1.5;
   }
 
   @media (max-width: 1024px) {

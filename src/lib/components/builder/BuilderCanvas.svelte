@@ -167,6 +167,11 @@
     dispatch('updateComponent', updatedComponent);
   }
 
+  // Handle selection of child components inside containers
+  function handleSelectChildComponent(childComponent: PageComponent) {
+    dispatch('selectComponent', childComponent);
+  }
+
   function resetToActiveTheme() {
     dispatch('resetTheme');
   }
@@ -308,6 +313,7 @@
                         {user}
                         onUpdate={(newConfig) => handleComponentConfigUpdate(component, newConfig)}
                         isEditable={true}
+                        onSelectComponent={handleSelectChildComponent}
                       />
                     </div>
                   </div>
@@ -326,7 +332,9 @@
             <!-- Layout component (grayed out, not editable) -->
             <div class="layout-component-wrapper" data-layout-component-type={layoutComponent.type}>
               <div class="layout-overlay">
-                <span class="layout-badge">Layout: {layoutComponent.type}</span>
+                <span class="layout-badge"
+                  >Layout: {getComponentDisplayLabel(layoutComponent, components)}</span
+                >
               </div>
               <div class="layout-component-content">
                 <ComponentRenderer
@@ -426,6 +434,7 @@
                 {user}
                 onUpdate={(newConfig) => handleComponentConfigUpdate(component, newConfig)}
                 isEditable={true}
+                onSelectComponent={handleSelectChildComponent}
               />
             </div>
           </div>

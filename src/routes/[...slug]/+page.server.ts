@@ -48,26 +48,15 @@ export const load: PageServerLoad = async ({
     let layout = null;
     let layoutComponents: LayoutWidget[] = [];
 
-    console.log('[page.server.ts] Page layout_id:', page.layout_id, 'siteId:', siteId);
-
     if (page.layout_id) {
       layout = await getLayout(db, siteId, page.layout_id);
-      console.log('[page.server.ts] Loaded layout:', layout);
     } else {
       // Fall back to the site's default layout
       layout = await getDefaultLayout(db, siteId);
-      console.log('[page.server.ts] Using default layout:', layout);
     }
 
     if (layout) {
       layoutComponents = await getLayoutComponents(db, layout.id);
-      console.log(
-        '[page.server.ts] Layout components:',
-        layoutComponents.length,
-        layoutComponents.map((c) => c.type)
-      );
-    } else {
-      console.log('[page.server.ts] No layout found');
     }
 
     // Log page view (only for published pages, not previews)

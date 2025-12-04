@@ -154,18 +154,6 @@ export interface PageComponent {
   position: number;
   created_at: number;
   updated_at: number;
-  // Child-specific flex/grid properties (when component is inside a flex/grid container)
-  flexChildProps?: {
-    flexGrow?: ResponsiveValue<number>;
-    flexShrink?: ResponsiveValue<number>;
-    flexBasis?: ResponsiveValue<string>;
-    alignSelf?: ResponsiveValue<'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch'>;
-    order?: ResponsiveValue<number>;
-    gridColumn?: ResponsiveValue<string>; // e.g., 'span 2', '1 / 3'
-    gridRow?: ResponsiveValue<string>;
-    gridArea?: ResponsiveValue<string>;
-    justifySelf?: ResponsiveValue<'auto' | 'start' | 'center' | 'end' | 'stretch'>;
-  };
 }
 
 /**

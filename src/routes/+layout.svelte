@@ -131,6 +131,7 @@
       <FrontendComponentRenderer
         type="navbar"
         config={navbarConfig}
+        position={data.layoutData?.navbar?.position}
         onLogout={handleLogout}
         siteContext={data.siteContext}
         user={data.currentUser}
@@ -144,6 +145,7 @@
     <FrontendComponentRenderer
       type="footer"
       config={footerConfig}
+      position={data.layoutData?.footer?.position}
       siteContext={data.siteContext}
       user={data.currentUser}
     />

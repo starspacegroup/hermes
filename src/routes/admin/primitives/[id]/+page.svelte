@@ -7,14 +7,6 @@
 
   export let data: PageData;
 
-  console.log('[Primitive Builder] Loaded data:', {
-    hasPrimitive: !!data.primitive,
-    primitiveId: data.primitive?.id,
-    primitiveType: data.primitive?.type,
-    widgetCount: data.widgets?.length || 0,
-    widgets: data.widgets
-  });
-
   // Convert primitive widgets to PageComponent format expected by AdvancedBuilder
   const parsedComponents: PageComponent[] = data.widgets.map((w) => ({
     id: w.id,
