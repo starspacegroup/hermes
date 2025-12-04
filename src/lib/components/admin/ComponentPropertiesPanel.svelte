@@ -918,10 +918,71 @@
               Drag components into the dropdown menu in the canvas to add menu items. Use buttons
               for links, text for labels, and dividers for separators.
             </p>
+
             {#if config.children && config.children.length > 0}
-              <p class="children-count">{config.children.length} item(s) in menu</p>
+              <div class="container-children-list">
+                <h5>Menu Items ({config.children.length})</h5>
+                {#each config.children as child, index (child.id)}
+                  <div class="child-wrapper">
+                    <div
+                      class="child-item"
+                      class:dragging={draggedChildIndex === index}
+                      class:drag-over={dragOverChildIndex === index}
+                      draggable="true"
+                      on:dragstart={(e) => handleChildDragStart(e, index)}
+                      on:dragover={(e) => handleChildDragOver(e, index)}
+                      on:dragleave={handleChildDragLeave}
+                      on:drop={(e) => handleChildDrop(e, index)}
+                      on:dragend={handleChildDragEnd}
+                      role="listitem"
+                    >
+                      <div class="drag-handle" title="Drag to reorder">
+                        <GripVertical size={16} />
+                      </div>
+                      <div class="child-info">
+                        <span class="child-type">{child.type}</span>
+                        {#if child.config.label}
+                          <span class="child-title">- {child.config.label}</span>
+                        {:else if child.config.text}
+                          <span class="child-title"
+                            >- {child.config.text.substring(0, 30)}{child.config.text.length > 30
+                              ? '...'
+                              : ''}</span
+                          >
+                        {:else if child.config.heading}
+                          <span class="child-title"
+                            >- {child.config.heading.substring(0, 30)}{child.config.heading.length >
+                            30
+                              ? '...'
+                              : ''}</span
+                          >
+                        {/if}
+                      </div>
+                      <button
+                        type="button"
+                        class="btn-edit-child"
+                        on:click={() => scrollToChildPanel(child.id)}
+                        title="Jump to properties"
+                      >
+                        ↓ Properties
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-delete-child"
+                        on:click={() => handleDeleteChild(index)}
+                        title="Delete item"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
             {:else}
-              <p class="children-empty">No items yet. Drag components into the menu area.</p>
+              <div class="empty-children-state">
+                <p>No menu items yet</p>
+                <span>Drop widgets from the sidebar into the dropdown menu</span>
+              </div>
             {/if}
           </div>
         {:else if component.type === 'divider'}
@@ -3806,20 +3867,5 @@
     background: var(--color-bg-secondary);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-  }
-
-  /* Dropdown menu children indicators */
-  .children-count {
-    font-size: 0.875rem;
-    color: var(--color-primary);
-    font-weight: 500;
-    margin: 0;
-  }
-
-  .children-empty {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    font-style: italic;
-    margin: 0;
   }
 </style>
