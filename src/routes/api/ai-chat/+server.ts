@@ -9,8 +9,8 @@ import {
   updateAISessionMessages
 } from '$lib/server/db/ai-sessions';
 import { createAIProvider } from '$lib/server/ai/providers';
-import { PRODUCT_CREATION_SYSTEM_PROMPT } from '$lib/server/ai/prompts';
 import { parseProductCommand } from '$lib/server/ai/product-parser';
+import { detectAIContext } from '$lib/server/ai/context-detector';
 import type { AIChatMessage, AIChatAttachment } from '$lib/types/ai-chat';
 
 /**
@@ -39,7 +39,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
   try {
     const body = await request.json();
-    const { sessionId, message, attachments } = body as {
+    const { sessionId, message, attachments, urlPath, entityData, conversationHistory } = body as {
       sessionId?: string;
       message: string;
       attachments?: Array<{
@@ -50,6 +50,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
         mimeType: string;
         size: number;
       }>;
+      urlPath?: string;
+      entityData?: Record<string, unknown>;
+      conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
     };
 
     // Validate message - allow empty message if there are attachments
@@ -215,11 +218,28 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
       }
     }
 
-    // Get available fulfillment providers for AI context
-    const fulfillmentProviders = await getAvailableFulfillmentProvidersForAI(db, siteId);
+    // Detect context from URL and conversation
+    const contextDetection = detectAIContext(
+      urlPath || '/admin/ai-chat',
+      entityData,
+      conversationHistory ||
+        allMessages
+          .filter((m) => m.role !== 'system')
+          .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    );
 
-    // Build enhanced system prompt with fulfillment provider context
-    const enhancedSystemPrompt = `${PRODUCT_CREATION_SYSTEM_PROMPT}
+    // Get available fulfillment providers for AI context (for product-related contexts)
+    const fulfillmentProviders =
+      contextDetection.context.type === 'product_creation' ||
+      contextDetection.context.type === 'product_editing'
+        ? await getAvailableFulfillmentProvidersForAI(db, siteId)
+        : [];
+
+    // Build enhanced system prompt with context and fulfillment provider info
+    let enhancedSystemPrompt = contextDetection.systemPrompt;
+
+    if (fulfillmentProviders.length > 0) {
+      enhancedSystemPrompt += `
 
 ## Available Fulfillment Providers
 
@@ -227,7 +247,18 @@ The following fulfillment providers are currently available for this site:
 
 ${fulfillmentProviders.map((p) => `- **${p.name}** (ID: ${p.id})${p.isDefault ? ' [DEFAULT]' : ''}`).join('\n')}
 
-When creating products, use these provider IDs in the fulfillmentOptions array. If the user doesn't specify providers, use the default provider${fulfillmentProviders.length === 0 ? ' (Note: No providers configured - prompt user to set up fulfillment first)' : ''}.`;
+When creating products, use these provider IDs in the fulfillmentOptions array. If the user doesn't specify providers, use the default provider.`;
+    }
+
+    if (entityData && Object.keys(entityData).length > 0) {
+      enhancedSystemPrompt += `
+
+## Current Context
+
+${JSON.stringify(entityData, null, 2)}
+
+Use this context to help the user with their current task.`;
+    }
 
     // Create a streaming response
     const stream = new ReadableStream({
@@ -296,14 +327,20 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
               // Check if response contains a product command
               const productCommand = parseProductCommand(accumulatedResponse);
 
+              // Check if response contains widget changes
+              const { parseWidgetChanges } = await import('$lib/server/ai/widget-parser');
+              const widgetChanges = parseWidgetChanges(accumulatedResponse);
+
               // Log usage info for debugging
               console.log('Sending final chunk with usage:', {
                 model: preferredModel,
                 usage: usageInfo,
-                estimatedCost
+                estimatedCost,
+                hasProductCommand: !!productCommand,
+                hasWidgetChanges: !!widgetChanges
               });
 
-              // Send final chunk with session ID, usage info, and product command if present
+              // Send final chunk with session ID, usage info, and commands if present
               controller.enqueue(
                 encoder.encode(
                   `data: ${JSON.stringify({
@@ -313,7 +350,8 @@ When creating products, use these provider IDs in the fulfillmentOptions array. 
                     model: preferredModel,
                     usage: usageInfo,
                     estimatedCost,
-                    productCommand: productCommand || undefined
+                    productCommand: productCommand || undefined,
+                    widgetChanges: widgetChanges || undefined
                   })}\n\n`
                 )
               );

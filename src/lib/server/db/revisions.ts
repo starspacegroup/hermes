@@ -6,7 +6,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type {
   PageRevision,
   ParsedPageRevision,
-  PageWidget,
+  PageComponent,
   CreateRevisionData,
   RevisionNode
 } from '$lib/types/pages';
@@ -36,7 +36,7 @@ export async function getPageRevisions(
 
   return (result.results || []).map((rev) => ({
     ...rev,
-    widgets: JSON.parse(rev.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(rev.widgets_snapshot) as PageComponent[]
   }));
 }
 
@@ -65,7 +65,7 @@ export async function getRevisionById(
 
   return {
     ...result,
-    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
   };
 }
 
@@ -104,7 +104,7 @@ export async function createRevision(
 
   const revisionId = nanoid();
   const now = Math.floor(Date.now() / 1000);
-  const widgetsSnapshot = JSON.stringify(data.widgets);
+  const componentsSnapshot = JSON.stringify(data.components);
 
   await db
     .prepare(
@@ -125,13 +125,22 @@ export async function createRevision(
       data.slug,
       data.status,
       data.colorTheme || null,
-      widgetsSnapshot,
+      componentsSnapshot,
       data.created_by || null,
       now,
       data.status === 'published' ? 1 : 0,
       data.notes || null
     )
     .run();
+
+  // Update the page's draft_revision_id when creating a draft revision
+  // This is used by the admin pages list to show draft status
+  if (data.status === 'draft') {
+    await db
+      .prepare('UPDATE pages SET draft_revision_id = ? WHERE id = ?')
+      .bind(revisionId, pageId)
+      .run();
+  }
 
   return {
     id: revisionId,
@@ -142,7 +151,7 @@ export async function createRevision(
     slug: data.slug,
     status: data.status,
     color_theme: data.colorTheme || undefined,
-    widgets: data.widgets,
+    components: data.components,
     created_by: data.created_by,
     created_at: now,
     is_published: data.status === 'published',
@@ -177,7 +186,7 @@ export async function publishRevision(
     slug: revisionToPublish.slug,
     status: 'published',
     colorTheme: revisionToPublish.color_theme,
-    widgets: revisionToPublish.widgets,
+    components: revisionToPublish.components,
     notes: `Published from revision ${revisionToPublish.revision_hash}`,
     created_by: createdBy,
     parent_revision_id: currentPublished?.id || revisionToPublish.id
@@ -193,12 +202,12 @@ export async function publishRevision(
       .prepare('UPDATE page_revisions SET is_published = 1, status = ? WHERE id = ?')
       .bind('published', newRevision.id),
 
-    // Update the page itself
+    // Update the page itself (including published_revision_id for admin page list)
     db
       .prepare(
         `
         UPDATE pages 
-        SET title = ?, slug = ?, status = ?, color_theme = ?, updated_at = ?
+        SET title = ?, slug = ?, status = ?, color_theme = ?, published_revision_id = ?, updated_at = ?
         WHERE id = ?
       `
       )
@@ -207,17 +216,18 @@ export async function publishRevision(
         newRevision.slug,
         'published',
         newRevision.color_theme || null,
+        newRevision.id,
         Math.floor(Date.now() / 1000),
         pageId
       )
   ];
 
-  // Delete all current widgets for the page
+  // Delete all current components for the page
   batch.push(db.prepare('DELETE FROM page_widgets WHERE page_id = ?').bind(pageId));
 
-  // Insert widgets from the new revision
-  for (const widget of newRevision.widgets) {
-    const widgetId = widget.id.startsWith('temp-') ? nanoid() : widget.id;
+  // Insert components from the new revision
+  for (const component of newRevision.components) {
+    const componentId = component.id.startsWith('temp-') ? nanoid() : component.id;
     batch.push(
       db
         .prepare(
@@ -227,12 +237,12 @@ export async function publishRevision(
         `
         )
         .bind(
-          widgetId,
+          componentId,
           pageId,
-          widget.type,
-          JSON.stringify(widget.config),
-          widget.position,
-          widget.created_at || Math.floor(Date.now() / 1000),
+          component.type,
+          JSON.stringify(component.config),
+          component.position,
+          component.created_at || Math.floor(Date.now() / 1000),
           Math.floor(Date.now() / 1000)
         )
     );
@@ -269,7 +279,37 @@ export async function getPublishedRevision(
 
   return {
     ...result,
-    widgets: JSON.parse(result.widgets_snapshot) as PageWidget[]
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
+  };
+}
+
+/**
+ * Get the most recent draft revision for a page
+ */
+export async function getMostRecentDraftRevision(
+  db: D1Database,
+  siteId: string,
+  pageId: string
+): Promise<ParsedPageRevision | null> {
+  const result = await db
+    .prepare(
+      `
+      SELECT pr.* 
+      FROM page_revisions pr
+      INNER JOIN pages p ON pr.page_id = p.id
+      WHERE p.site_id = ? AND pr.page_id = ? AND pr.status = 'draft'
+      ORDER BY pr.created_at DESC
+      LIMIT 1
+    `
+    )
+    .bind(siteId, pageId)
+    .first<PageRevision>();
+
+  if (!result) return null;
+
+  return {
+    ...result,
+    components: JSON.parse(result.widgets_snapshot) as PageComponent[]
   };
 }
 
