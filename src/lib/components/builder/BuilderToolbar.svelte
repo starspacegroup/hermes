@@ -134,13 +134,15 @@
         on:input={(e) => dispatch('updateTitle', e.currentTarget.value)}
         placeholder="Page title"
       />
-      <input
-        type="text"
-        class="slug-input"
-        value={slug}
-        on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
-        placeholder="/page-url"
-      />
+      {#if mode === 'page'}
+        <input
+          type="text"
+          class="slug-input"
+          value={slug}
+          on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
+          placeholder="/page-url"
+        />
+      {/if}
     </div>
   </div>
 

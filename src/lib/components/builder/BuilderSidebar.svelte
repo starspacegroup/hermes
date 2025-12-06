@@ -461,17 +461,19 @@
             placeholder="{entityLabel} title"
           />
         </div>
-        <div class="setting-group">
-          <label for="page-slug" class="setting-label">URL Slug</label>
-          <input
-            id="page-slug"
-            type="text"
-            class="setting-input"
-            value={slug}
-            on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
-            placeholder="/{entityLabelLower}-url"
-          />
-        </div>
+        {#if mode === 'page'}
+          <div class="setting-group">
+            <label for="page-slug" class="setting-label">URL Slug</label>
+            <input
+              id="page-slug"
+              type="text"
+              class="setting-input"
+              value={slug}
+              on:input={(e) => dispatch('updateSlug', e.currentTarget.value)}
+              placeholder="/{entityLabelLower}-url"
+            />
+          </div>
+        {/if}
         <button class="btn-properties" on:click={() => dispatch('showPageProperties')}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
