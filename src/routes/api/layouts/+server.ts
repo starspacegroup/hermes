@@ -1,11 +1,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createLayout, createLayoutWidget } from '$lib/server/db/layouts';
-import type { PageWidget } from '$lib/types/pages';
+import type { PageWidget, PageComponent } from '$lib/types/pages';
 
 /**
  * POST /api/layouts
- * Create a new layout with widgets
+ * Create a new layout with widgets/components
  */
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
   if (!platform?.env?.DB) {
@@ -20,6 +20,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       slug: string;
       description?: string;
       widgets?: PageWidget[];
+      components?: PageComponent[]; // Also accept components (used by builder)
     };
 
     if (!body.name || !body.slug) {
@@ -34,15 +35,19 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
       is_default: false
     });
 
+    // Accept either widgets or components (builder sends components)
+    const widgetsToCreate = body.widgets || body.components || [];
+
     // If widgets are provided, create them
-    if (body.widgets && body.widgets.length > 0) {
+    if (widgetsToCreate.length > 0) {
       // Create each widget for the layout
       await Promise.all(
-        body.widgets.map((widget) =>
+        widgetsToCreate.map((widget, index) =>
           createLayoutWidget(platform.env.DB, layout.id, {
             id: widget.id,
             type: widget.type,
-            position: widget.position,
+            // Ensure position is set, fallback to index if not provided
+            position: widget.position ?? index,
             config: widget.config
           })
         )

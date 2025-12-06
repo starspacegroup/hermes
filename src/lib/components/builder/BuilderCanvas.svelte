@@ -83,6 +83,46 @@
   // This ensures consistent ordering even with duplicate positions
   $: sortedComponents = stableSortComponents(pageComponents);
 
+  // Filter to only root-level components (those without parent_id)
+  // Child components will be rendered by their parent containers
+  $: rootComponents = sortedComponents.filter((c) => !c.parent_id);
+
+  // Build a map of parent_id -> children for efficient lookup
+  $: childrenMap = sortedComponents.reduce(
+    (map, comp) => {
+      if (comp.parent_id) {
+        if (!map[comp.parent_id]) {
+          map[comp.parent_id] = [];
+        }
+        map[comp.parent_id].push(comp);
+      }
+      return map;
+    },
+    {} as Record<string, typeof sortedComponents>
+  );
+
+  // Function to inject children into a component's config for rendering
+  function injectChildrenIntoConfig(comp: PageComponent): PageComponent {
+    const children = childrenMap[comp.id];
+    if (!children || children.length === 0) {
+      return comp;
+    }
+    // Recursively inject children into nested components
+    const childrenWithNested = children
+      .sort((a, b) => a.position - b.position)
+      .map((child) => injectChildrenIntoConfig(child));
+    return {
+      ...comp,
+      config: {
+        ...comp.config,
+        children: childrenWithNested
+      }
+    };
+  }
+
+  // Compute components with children injected into their config
+  $: componentsWithChildren = rootComponents.map((comp) => injectChildrenIntoConfig(comp));
+
   // Compute sorted layout components (simple sort by position)
   $: sortedLayoutComponents = [...layoutComponents].sort((a, b) => a.position - b.position);
 
@@ -231,7 +271,7 @@
                 <span>Page Content Area</span>
               </div>
               <div class="yield-content">
-                {#each sortedComponents as component, index (component.id)}
+                {#each componentsWithChildren as component, index (component.id)}
                   <div
                     class="component-wrapper"
                     class:selected={selectedComponent?.id === component.id}
@@ -268,7 +308,7 @@
                             <button
                               class="btn-control"
                               on:click|stopPropagation={() => moveDown(component)}
-                              disabled={index === sortedComponents.length - 1}
+                              disabled={index === componentsWithChildren.length - 1}
                               aria-label="Move down"
                               title="Move down"
                             >
@@ -356,7 +396,7 @@
         {/each}
       {:else}
         <!-- Normal mode: render page components directly -->
-        {#each sortedComponents as component, index (component.id)}
+        {#each componentsWithChildren as component, index (component.id)}
           <div
             class="component-wrapper"
             class:selected={selectedComponent?.id === component.id}
@@ -391,7 +431,7 @@
                     <button
                       class="btn-control"
                       on:click|stopPropagation={() => moveDown(component)}
-                      disabled={index === sortedComponents.length - 1}
+                      disabled={index === componentsWithChildren.length - 1}
                       aria-label="Move down"
                       title="Move down"
                     >

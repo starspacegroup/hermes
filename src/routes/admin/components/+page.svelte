@@ -179,8 +179,10 @@
                   isCloning = true;
                   return async ({ result }) => {
                     isCloning = false;
-                    if (result.type === 'redirect') {
-                      goto(result.location);
+                    if (result.type === 'redirect' && 'location' in result) {
+                      await goto(result.location);
+                    } else if (result.type === 'failure') {
+                      alert(result.data?.error || 'Failed to clone component');
                     }
                   };
                 }}
@@ -303,8 +305,10 @@
                         isCloning = true;
                         return async ({ result }) => {
                           isCloning = false;
-                          if (result.type === 'redirect') {
-                            goto(result.location);
+                          if (result.type === 'redirect' && 'location' in result) {
+                            await goto(result.location);
+                          } else if (result.type === 'failure') {
+                            alert(result.data?.error || 'Failed to clone component');
                           }
                         };
                       }}

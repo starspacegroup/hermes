@@ -48,27 +48,113 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
   const component = componentWithWidgets;
 
-  // Convert ComponentWidget[] to PageWidget[] format expected by AdvancedBuilder
-  const widgets = componentWithWidgets.widgets.map((w) => ({
-    id: w.id,
-    page_id: String(component.id), // Use component ID as page_id for builder
-    type: w.type,
-    position: w.position,
-    config: w.config,
-    created_at: new Date(w.created_at).getTime(),
-    updated_at: new Date(w.updated_at).getTime(),
-    parent_id: w.parent_id
-  }));
+  // Check if the component has inline children in config.children (new architecture)
+  // This takes priority over the component_widgets table which may have stale data
+  const config = component.config as Record<string, unknown> | undefined;
+  const configChildren = config?.children as
+    | Array<{
+        id: string;
+        type: string;
+        config: Record<string, unknown>;
+        position: number;
+      }>
+    | undefined;
 
-  // If no widgets exist yet, check if component has old-style config
-  // Convert single config to single widget for backward compatibility
-  if (widgets.length === 0 && component.config && Object.keys(component.config).length > 0) {
+  // If component has inline children, use those (source of truth for new architecture)
+  let widgets: Array<{
+    id: string;
+    page_id: string;
+    type: string;
+    position: number;
+    config: Record<string, unknown>;
+    created_at: number;
+    updated_at: number;
+    parent_id: string | undefined;
+  }> = [];
+
+  if (configChildren && Array.isArray(configChildren) && configChildren.length > 0) {
+    // Create root widget from the component itself FIRST
+    // Use 'container' type for builder display - the actual component type (navbar, footer)
+    // is preserved on save via +page.svelte's handleSave which checks data.component.type
+    const rootId = `component-${component.id}`;
+    const rootConfig = { ...config };
+    delete rootConfig.children; // Children will be separate widgets
+
+    widgets.push({
+      id: rootId,
+      page_id: String(component.id),
+      type: 'container',
+      position: 0,
+      config: rootConfig,
+      created_at: new Date(component.created_at).getTime(),
+      updated_at: new Date(component.updated_at).getTime(),
+      parent_id: undefined
+    });
+
+    // Flatten nested children structure into widgets array
+    const flattenChildren = (
+      children: Array<{
+        id: string;
+        type: string;
+        config: Record<string, unknown>;
+        position: number;
+      }>,
+      parentId: string
+    ): void => {
+      for (const child of children) {
+        const childConfig = { ...child.config };
+        const nestedChildren = childConfig.children as
+          | Array<{
+              id: string;
+              type: string;
+              config: Record<string, unknown>;
+              position: number;
+            }>
+          | undefined;
+
+        // Remove children from config before adding widget (they'll be separate widgets)
+        delete childConfig.children;
+
+        widgets.push({
+          id: child.id,
+          page_id: String(component.id),
+          type: child.type,
+          position: child.position,
+          config: childConfig,
+          created_at: new Date(component.created_at).getTime(),
+          updated_at: new Date(component.updated_at).getTime(),
+          parent_id: parentId
+        });
+
+        // Recursively flatten nested children
+        if (nestedChildren && Array.isArray(nestedChildren) && nestedChildren.length > 0) {
+          flattenChildren(nestedChildren, child.id);
+        }
+      }
+    };
+
+    // Flatten all children with the root widget as parent
+    flattenChildren(configChildren, rootId);
+  } else if (componentWithWidgets.widgets.length > 0) {
+    // Fall back to component_widgets table (legacy system)
+    widgets = componentWithWidgets.widgets.map((w) => ({
+      id: w.id,
+      page_id: String(component.id),
+      type: w.type,
+      position: w.position,
+      config: w.config as Record<string, unknown>,
+      created_at: new Date(w.created_at).getTime(),
+      updated_at: new Date(w.updated_at).getTime(),
+      parent_id: w.parent_id
+    }));
+  } else if (config && Object.keys(config).length > 0) {
+    // No nested children and no database widgets - create single widget from component (legacy format)
     widgets.push({
       id: `component-${component.id}`,
       page_id: String(component.id),
-      type: component.type as never,
+      type: component.type,
       position: 0,
-      config: component.config,
+      config: config,
       created_at: new Date(component.created_at).getTime(),
       updated_at: new Date(component.updated_at).getTime(),
       parent_id: undefined

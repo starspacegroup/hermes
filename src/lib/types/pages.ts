@@ -154,6 +154,7 @@ export interface PageComponent {
   position: number;
   created_at: number;
   updated_at: number;
+  parent_id?: string; // For nested components within containers
 }
 
 /**

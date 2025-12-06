@@ -17,7 +17,8 @@
     position: w.position,
     config: w.config,
     created_at: new Date(w.created_at).getTime(),
-    updated_at: new Date(w.updated_at).getTime()
+    updated_at: new Date(w.updated_at).getTime(),
+    parent_id: w.parent_id // Preserve hierarchy for nested components
   }));
 
   interface SaveData {

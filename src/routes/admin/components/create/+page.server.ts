@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { createComponent } from '$lib/server/db/components';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import type { WidgetType, WidgetConfig } from '$lib/types/pages';
 
@@ -50,7 +50,7 @@ export const actions: Actions = {
 
       throw redirect(303, `/admin/components/${component.id}/edit`);
     } catch (err) {
-      if (err instanceof Response) throw err;
+      if (isRedirect(err)) throw err;
       console.error('Failed to create component:', err);
       return fail(500, { error: 'Failed to create component' });
     }

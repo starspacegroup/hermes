@@ -146,19 +146,37 @@ export function getDefaultConfig(type: ComponentType): ComponentConfig {
       };
 
     case 'navbar':
+      // The navbar uses a container-based architecture with children widgets.
+      // This config matches the Navigation Bar component designed in the builder.
+      // Note: We use type assertion because the runtime config is more flexible
+      // than the strict TypeScript types (e.g., 'auto' margins, simplified children)
       return {
-        logo: { text: 'Store', url: '/' },
-        links: [
-          { text: 'Home', url: '/' },
-          { text: 'Products', url: '/products' },
-          { text: 'About', url: '/about' }
-        ],
-        showSearch: false,
-        showCart: true,
-        showAuth: true,
-        navbarBackground: 'theme:background',
-        navbarTextColor: 'theme:text',
-        sticky: true
+        containerPadding: {
+          desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+          tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+          mobile: { top: 12, right: 16, bottom: 12, left: 16 }
+        },
+        containerMargin: {
+          desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+          tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+          mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+        },
+        containerBackground: 'theme:secondary',
+        containerBorderRadius: 0,
+        containerMaxWidth: '1400px',
+        containerJustifyContent: 'space-between',
+        containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
+        containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+        containerAlignItems: 'stretch',
+        containerWrap: 'nowrap',
+        containerGap: { desktop: 16, tablet: 16, mobile: 16 },
+        containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+        containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
+        containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+        visibilityRule: 'always',
+        sticky: true,
+        // Children are simplified for the default config - full structure is in database migration
+        children: []
       };
 
     case 'footer':

@@ -1,6 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { updateLayout, updateLayoutComponents } from '$lib/server/db/layouts';
+import {
+  updateLayout,
+  updateLayoutComponents,
+  getLayoutComponents,
+  createLayoutWidget,
+  deleteLayoutWidget
+} from '$lib/server/db/layouts';
 import type { PageComponent } from '$lib/types/pages';
 
 /**
@@ -38,15 +44,53 @@ export const PUT: RequestHandler = async ({ request, locals, platform, params })
 
     // Update components if provided
     if (body.components) {
-      // Map components to the format expected by updateLayoutComponents
-      const componentsToUpdate = body.components.map((component) => ({
-        id: component.id,
-        type: component.type,
-        position: component.position,
-        config: component.config
-      }));
+      // Get existing components to determine which ones to create/update/delete
+      const existingComponents = await getLayoutComponents(platform.env.DB, layoutId);
+      const existingIds = new Set(existingComponents.map((c) => c.id));
+      const newIds = new Set(body.components.map((c) => c.id));
 
-      await updateLayoutComponents(platform.env.DB, componentsToUpdate);
+      // Components to update (exist in both)
+      const componentsToUpdate = body.components
+        .filter((c) => existingIds.has(c.id))
+        .map((component, _index, arr) => ({
+          id: component.id,
+          type: component.type,
+          // Normalize positions to be sequential
+          position:
+            [...arr]
+              .sort((a, b) => a.position - b.position)
+              .findIndex((c) => c.id === component.id) ?? component.position,
+          config: component.config
+        }));
+
+      // Components to create (new ones)
+      const componentsToCreate = body.components.filter((c) => !existingIds.has(c.id));
+
+      // Components to delete (in existing but not in new)
+      const componentIdsToDelete = [...existingIds].filter((id) => !newIds.has(id));
+
+      // Delete removed components
+      for (const id of componentIdsToDelete) {
+        await deleteLayoutWidget(platform.env.DB, id);
+      }
+
+      // Create new components with correct positions
+      for (const component of componentsToCreate) {
+        const sortedComponents = [...body.components].sort((a, b) => a.position - b.position);
+        const normalizedPosition = sortedComponents.findIndex((c) => c.id === component.id);
+
+        await createLayoutWidget(platform.env.DB, layoutId, {
+          id: component.id,
+          type: component.type,
+          position: normalizedPosition >= 0 ? normalizedPosition : component.position,
+          config: component.config
+        });
+      }
+
+      // Update existing components
+      if (componentsToUpdate.length > 0) {
+        await updateLayoutComponents(platform.env.DB, componentsToUpdate);
+      }
     }
 
     return json({ success: true }, { status: 200 });

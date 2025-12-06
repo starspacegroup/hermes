@@ -270,7 +270,7 @@ describe('+layout.server load function', () => {
   });
 
   describe('default navbar config', () => {
-    it('should have correct default links', async () => {
+    it('should have correct container architecture', async () => {
       const result = (await load({
         platform: undefined,
         locals: mockLocals
@@ -278,70 +278,100 @@ describe('+layout.server load function', () => {
 
       const navbarConfig = result.layoutData.navbar?.config;
       expect(navbarConfig).toBeDefined();
-      expect(navbarConfig?.links).toHaveLength(3);
-      expect(navbarConfig?.links?.[0]).toEqual({ text: 'See Example', url: '#products' });
-      expect(navbarConfig?.links?.[1]).toEqual({ text: 'Features', url: '#features' });
-      expect(navbarConfig?.links?.[2]).toEqual({ text: 'Pricing', url: '#pricing' });
-    });
-
-    it('should enable cart, auth, theme toggle, and account menu', async () => {
-      const result = (await load({
-        platform: undefined,
-        locals: mockLocals
-      } as never)) as LayoutLoadResult;
-
-      const navbarConfig = result.layoutData.navbar?.config;
-      expect(navbarConfig?.showCart).toBe(true);
-      expect(navbarConfig?.showAuth).toBe(true);
-      expect(navbarConfig?.showThemeToggle).toBe(true);
-      expect(navbarConfig?.showAccountMenu).toBe(true);
-    });
-
-    it('should have correct logo configuration', async () => {
-      const result = (await load({
-        platform: undefined,
-        locals: mockLocals
-      } as never)) as LayoutLoadResult;
-
-      const navbarConfig = result.layoutData.navbar?.config;
-      expect(navbarConfig?.logo?.text).toBe('Hermes eCommerce');
-      expect(navbarConfig?.logo?.url).toBe('/');
-      expect(navbarConfig?.logoPosition).toBe('left');
-    });
-
-    it('should have correct positioning settings', async () => {
-      const result = (await load({
-        platform: undefined,
-        locals: mockLocals
-      } as never)) as LayoutLoadResult;
-
-      const navbarConfig = result.layoutData.navbar?.config;
-      expect(navbarConfig?.linksPosition).toBe('center');
-      expect(navbarConfig?.actionsPosition).toBe('right');
-    });
-
-    it('should have container architecture properties', async () => {
-      const result = (await load({
-        platform: undefined,
-        locals: mockLocals
-      } as never)) as LayoutLoadResult;
-
-      const navbarConfig = result.layoutData.navbar?.config;
 
       // Verify container padding (responsive)
       expect(navbarConfig?.containerPadding).toBeDefined();
-      expect(navbarConfig?.containerPadding?.desktop).toBeDefined();
-      expect(navbarConfig?.containerPadding?.tablet).toBeDefined();
-      expect(navbarConfig?.containerPadding?.mobile).toBeDefined();
+      expect(navbarConfig?.containerPadding?.desktop).toEqual({
+        top: 16,
+        right: 24,
+        bottom: 16,
+        left: 24
+      });
+      expect(navbarConfig?.containerPadding?.tablet).toEqual({
+        top: 12,
+        right: 20,
+        bottom: 12,
+        left: 20
+      });
+      expect(navbarConfig?.containerPadding?.mobile).toEqual({
+        top: 12,
+        right: 16,
+        bottom: 12,
+        left: 16
+      });
+    });
 
-      // Verify container max width (100% for full-width navbar)
-      expect(navbarConfig?.containerMaxWidth).toBe('100%');
+    it('should have correct container margin', async () => {
+      const result = (await load({
+        platform: undefined,
+        locals: mockLocals
+      } as never)) as LayoutLoadResult;
 
-      // Verify container background
-      expect(navbarConfig?.containerBackground).toBe('var(--color-bg-primary)');
+      const navbarConfig = result.layoutData.navbar?.config;
+      expect(navbarConfig?.containerMargin).toBeDefined();
+      expect(navbarConfig?.containerMargin?.desktop).toEqual({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0
+      });
+      expect(navbarConfig?.containerMargin?.tablet).toEqual({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0
+      });
+      expect(navbarConfig?.containerMargin?.mobile).toEqual({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0
+      });
+    });
 
-      // Verify container border radius (0 for navbar)
+    it('should have correct container styling', async () => {
+      const result = (await load({
+        platform: undefined,
+        locals: mockLocals
+      } as never)) as LayoutLoadResult;
+
+      const navbarConfig = result.layoutData.navbar?.config;
+      expect(navbarConfig?.containerBackground).toBe('theme:secondary');
       expect(navbarConfig?.containerBorderRadius).toBe(0);
+      expect(navbarConfig?.containerMaxWidth).toBe('1400px');
+    });
+
+    it('should have correct layout properties', async () => {
+      const result = (await load({
+        platform: undefined,
+        locals: mockLocals
+      } as never)) as LayoutLoadResult;
+
+      const navbarConfig = result.layoutData.navbar?.config;
+      expect(navbarConfig?.containerJustifyContent).toBe('space-between');
+      expect(navbarConfig?.containerDisplay).toEqual({
+        desktop: 'flex',
+        tablet: 'flex',
+        mobile: 'flex'
+      });
+      expect(navbarConfig?.containerFlexDirection).toEqual({
+        desktop: 'row',
+        tablet: 'row',
+        mobile: 'column'
+      });
+      expect(navbarConfig?.containerAlignItems).toBe('stretch');
+      expect(navbarConfig?.containerWrap).toBe('nowrap');
+    });
+
+    it('should have visibility and sticky settings', async () => {
+      const result = (await load({
+        platform: undefined,
+        locals: mockLocals
+      } as never)) as LayoutLoadResult;
+
+      const navbarConfig = result.layoutData.navbar?.config;
+      expect(navbarConfig?.visibilityRule).toBe('always');
+      expect(navbarConfig?.sticky).toBe(true);
     });
   });
 
@@ -457,17 +487,11 @@ describe('+layout.server load function', () => {
 
       expect(result.layoutData.navbar).toBeDefined();
       expect(result.layoutData.navbar?.type).toBe('navbar');
-      // Should use default config with site title from settings
-      expect(result.layoutData.navbar?.config?.logo?.text).toBe('Fallback Store');
-      // Should have default links
-      expect(result.layoutData.navbar?.config?.links).toEqual([
-        { text: 'See Example', url: '#products' },
-        { text: 'Features', url: '#features' },
-        { text: 'Pricing', url: '#pricing' }
-      ]);
       // Should have container architecture properties from default
-      expect(result.layoutData.navbar?.config?.containerMaxWidth).toBe('100%');
-      expect(result.layoutData.navbar?.config?.containerBackground).toBe('var(--color-bg-primary)');
+      expect(result.layoutData.navbar?.config?.containerMaxWidth).toBe('1400px');
+      expect(result.layoutData.navbar?.config?.containerBackground).toBe('theme:secondary');
+      expect(result.layoutData.navbar?.config?.containerJustifyContent).toBe('space-between');
+      expect(result.layoutData.navbar?.config?.sticky).toBe(true);
     });
   });
 

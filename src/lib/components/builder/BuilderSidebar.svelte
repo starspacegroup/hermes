@@ -116,13 +116,16 @@
 
   // Filter out components that shouldn't appear in the custom components list:
   // 1. Current component being edited (prevent circular references)
-  // 2. Empty custom components (those with no children)
+  // 2. Empty custom components (those with no children) - but allow navbar/footer which store children in config
   // 3. Global primitive components (they're already in the built-in library)
   // 4. Components with built-in types (container, hero, etc.) - but NOT navbar/footer which are editable
   $: availableComponents = components.filter(
     (c) =>
       c.id !== currentComponentId &&
-      (c.children_count === undefined || c.children_count > 0) &&
+      (c.children_count === undefined ||
+        c.children_count > 0 ||
+        c.type === 'navbar' ||
+        c.type === 'footer') &&
       !c.is_primitive &&
       !builtInTypes.has(c.type)
   );

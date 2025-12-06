@@ -8,7 +8,7 @@ import {
   resetBuiltInComponent
 } from '$lib/server/db/components';
 import { getComponentChildren } from '$lib/server/db/componentChildren';
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect, isRedirect } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
@@ -84,23 +84,38 @@ export const actions: Actions = {
       // Get source component children if any
       const sourceChildren = await getComponentChildren(db, componentId);
 
+      // Create ID mapping for parent_id references
+      const idMapping = new Map<string, string>();
+      const now = Date.now();
+
+      // Generate new IDs for all children
+      sourceChildren.forEach((child, index) => {
+        const newId = `child-${now}-${index}`;
+        idMapping.set(child.id, newId);
+      });
+
+      // Map children with new IDs and remapped parent_ids
+      const clonedChildren = sourceChildren.map((child, index) => ({
+        id: idMapping.get(child.id) || `child-${now}-${index}`,
+        type: child.type,
+        config: child.config as Record<string, unknown>,
+        position: child.position,
+        parent_id: child.parent_id ? idMapping.get(child.parent_id) : undefined
+      }));
+
       // Create a new component with cloned data
       const newComponent = await createComponent(db, siteId, {
         name: `${sourceComponent.name} (Copy)`,
         description: sourceComponent.description || '',
         type: sourceComponent.type,
         config: sourceComponent.config as Record<string, unknown>,
-        widgets: sourceChildren.map((c) => ({
-          type: c.type,
-          config: c.config as Record<string, unknown>,
-          position: c.position
-        }))
+        widgets: clonedChildren
       });
 
       // Redirect to the new component editor
       throw redirect(303, `/admin/builder/component/${newComponent.id}`);
     } catch (err) {
-      if (err instanceof Response) {
+      if (isRedirect(err)) {
         throw err; // Re-throw redirects
       }
       console.error('Failed to clone component:', err);

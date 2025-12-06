@@ -1,11 +1,50 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
+  getComponent,
   updateComponent,
   deleteComponent,
   saveComponentWithChildren
 } from '$lib/server/db/components';
 import { getComponentChildren } from '$lib/server/db/componentChildren';
+
+/**
+ * GET /api/components/[id]
+ * Get a single component by ID
+ */
+export const GET: RequestHandler = async ({ params, locals, platform }) => {
+  const db = platform?.env?.DB;
+  const siteId = locals.siteId;
+  const componentId = parseInt(params.id);
+
+  if (!db) {
+    throw error(500, 'Database connection not available');
+  }
+
+  if (!siteId) {
+    throw error(400, 'Site ID not available');
+  }
+
+  if (isNaN(componentId)) {
+    throw error(400, 'Invalid component ID');
+  }
+
+  try {
+    const component = await getComponent(db, siteId, componentId);
+
+    if (!component) {
+      throw error(404, 'Component not found');
+    }
+
+    return json({ component });
+  } catch (err) {
+    if (err instanceof Error && 'status' in err) {
+      throw err;
+    }
+    console.error('Failed to get component:', err);
+    throw error(500, 'Failed to get component');
+  }
+};
 
 /**
  * Check if adding a component reference would create a circular dependency

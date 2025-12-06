@@ -28,52 +28,37 @@ export interface LayoutData {
 }
 
 export const load: LayoutServerLoad = async ({ platform, locals }) => {
-  // Default navbar config - uses Container architecture
-  // containerPadding, containerMaxWidth, containerBackground align with Container component
+  // Default navbar config - uses Container-based architecture with children widgets
+  // This matches the Navigation Bar component designed in the builder.
+  // Note: The full children structure is stored in the database migration (0049_update_navbar_from_builder.sql)
+  // Here we provide a simplified fallback for when the database is not available.
   const defaultNavbarConfig: WidgetConfig = {
-    // Container properties (new architecture)
     containerPadding: {
       desktop: { top: 16, right: 24, bottom: 16, left: 24 },
       tablet: { top: 12, right: 20, bottom: 12, left: 20 },
       mobile: { top: 12, right: 16, bottom: 12, left: 16 }
     },
-    containerMaxWidth: '100%',
-    containerBackground: 'var(--color-bg-primary)',
+    containerMargin: {
+      desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+      tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+      mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+    },
+    containerBackground: 'theme:secondary',
     containerBorderRadius: 0,
-    // Logo configuration
-    logo: { text: 'Hermes eCommerce', url: '/', image: '', imageHeight: 40 },
-    logoPosition: 'left',
-    // Navigation links
-    links: [
-      { text: 'See Example', url: '#products' },
-      { text: 'Features', url: '#features' },
-      { text: 'Pricing', url: '#pricing' }
-    ],
-    linksPosition: 'center',
-    // Action buttons
-    showSearch: false,
-    showCart: true,
-    showAuth: true,
-    showThemeToggle: true,
-    showAccountMenu: true,
-    actionsPosition: 'right',
-    accountMenuItems: [
-      { text: 'Profile', url: '/profile', icon: '👤' },
-      { text: 'Settings', url: '/settings', icon: '⚙️', dividerBefore: true }
-    ],
-    // Styling (backward compatibility)
-    navbarBackground: 'var(--color-bg-primary)',
-    navbarTextColor: 'var(--color-text-primary)',
-    navbarHoverColor: 'var(--color-primary)',
-    navbarBorderColor: 'var(--color-border-primary)',
-    navbarShadow: false,
-    sticky: false,
-    navbarHeight: 0,
-    // Dropdown styling
-    dropdownBackground: 'var(--color-bg-secondary)',
-    dropdownTextColor: 'var(--color-text-primary)',
-    dropdownHoverBackground: 'var(--color-bg-tertiary)',
-    mobileBreakpoint: 768
+    containerMaxWidth: '1400px',
+    containerJustifyContent: 'space-between',
+    containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
+    containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+    containerAlignItems: 'stretch',
+    containerWrap: 'nowrap',
+    containerGap: { desktop: 16, tablet: 16, mobile: 16 },
+    containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+    containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
+    containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+    visibilityRule: 'always',
+    sticky: true,
+    // Children are simplified for the fallback config - full structure is in database
+    children: []
   };
 
   // If platform is not available (development without D1), return defaults

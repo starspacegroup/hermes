@@ -1,7 +1,10 @@
 <script lang="ts">
   /**
-   * ComponentRefRenderer - Renders a component's child composition
-   * Fetches component children and renders them recursively
+   * ComponentRefRenderer - Renders a referenced component
+   * Fetches the component and renders it with its full configuration
+   * This handles both:
+   * 1. Components with children in component_widgets table (old system)
+   * 2. Components with inline children in config.children (new architecture)
    */
   import { onMount } from 'svelte';
   import type { PageComponent, Breakpoint, ColorTheme, ChildComponent } from '$lib/types/pages';
@@ -15,7 +18,7 @@
   export let siteContext: SiteContext | undefined = undefined;
   export let user: UserInfo | null | undefined = undefined;
 
-  let childComponents: PageComponent[] = [];
+  let resolvedComponent: PageComponent | null = null;
   let isLoading = true;
   let error: string | null = null;
 
@@ -27,27 +30,77 @@
     }
 
     try {
-      const response = await fetch(`/api/components/${componentId}/children`);
-      if (!response.ok) {
-        throw new Error('Failed to load component children');
+      // First, fetch the component itself to get its type and config
+      const componentResponse = await fetch(`/api/components/${componentId}`);
+      if (!componentResponse.ok) {
+        throw new Error('Failed to load component');
       }
 
-      const data = (await response.json()) as { children: ChildComponent[] };
+      const componentData = (await componentResponse.json()) as {
+        component: {
+          id: number;
+          type: string;
+          name: string;
+          config: Record<string, unknown>;
+        };
+      };
 
-      // Convert ChildComponent[] to PageComponent[] format
-      childComponents = data.children.map((c) => ({
-        id: c.id,
-        page_id: String(componentId),
-        type: c.type,
-        position: c.position,
-        config: c.config,
-        created_at: new Date(c.created_at).getTime(),
-        updated_at: new Date(c.updated_at).getTime()
-      }));
+      const component = componentData.component;
+
+      // Check if the component already has inline children in its config
+      const hasInlineChildren =
+        component.config?.children && Array.isArray(component.config.children);
+
+      if (hasInlineChildren) {
+        // Use the component directly with its inline children
+        resolvedComponent = {
+          id: `component-ref-${componentId}`,
+          page_id: String(componentId),
+          type: component.type as PageComponent['type'],
+          position: 0,
+          config: component.config,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        };
+      } else {
+        // Fetch children from component_widgets table
+        const childrenResponse = await fetch(`/api/components/${componentId}/children`);
+        if (!childrenResponse.ok) {
+          throw new Error('Failed to load component children');
+        }
+
+        const childrenData = (await childrenResponse.json()) as { children: ChildComponent[] };
+
+        // Convert children to the expected PageComponent format
+        const children: PageComponent[] = childrenData.children.map((c) => ({
+          id: c.id,
+          page_id: String(componentId),
+          type: c.type,
+          position: c.position,
+          config: c.config,
+          parent_id: c.parent_id,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        }));
+
+        // Create a resolved component with children injected
+        resolvedComponent = {
+          id: `component-ref-${componentId}`,
+          page_id: String(componentId),
+          type: component.type as PageComponent['type'],
+          position: 0,
+          config: {
+            ...component.config,
+            children
+          },
+          created_at: Date.now(),
+          updated_at: Date.now()
+        };
+      }
 
       isLoading = false;
     } catch (err) {
-      console.error('Failed to load component children:', err);
+      console.error('Failed to load component:', err);
       error = err instanceof Error ? err.message : 'Failed to load component';
       isLoading = false;
     }
@@ -63,24 +116,22 @@
   <div class="component-ref-error">
     <span>⚠️ {error}</span>
   </div>
-{:else if childComponents.length === 0}
+{:else if resolvedComponent}
+  <div class="component-ref-container">
+    <ComponentRenderer
+      component={resolvedComponent}
+      {currentBreakpoint}
+      {colorTheme}
+      {isEditable}
+      {siteContext}
+      {user}
+      onUpdate={undefined}
+    />
+  </div>
+{:else}
   <div class="component-ref-empty">
     <span>📦 This component is empty</span>
     <p class="hint">Edit this component in Admin → Components to add widgets</p>
-  </div>
-{:else}
-  <div class="component-ref-container">
-    {#each childComponents as component (component.id)}
-      <ComponentRenderer
-        {component}
-        {currentBreakpoint}
-        {colorTheme}
-        {isEditable}
-        {siteContext}
-        {user}
-        onUpdate={undefined}
-      />
-    {/each}
   </div>
 {/if}
 

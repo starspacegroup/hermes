@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { createLayout } from '$lib/server/db/layouts';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 
 export const load: PageServerLoad = async () => {
@@ -32,7 +32,7 @@ export const actions: Actions = {
 
       throw redirect(303, `/admin/layouts/${layout.id}/edit`);
     } catch (err) {
-      if (err instanceof Response) throw err;
+      if (isRedirect(err)) throw err;
       console.error('Failed to create layout:', err);
       return fail(500, { error: 'Failed to create layout' });
     }

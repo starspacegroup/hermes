@@ -192,9 +192,11 @@ export async function createComponent(
     is_global?: boolean;
     is_primitive?: boolean;
     widgets?: Array<{
+      id?: string;
       type: string;
       config: Record<string, unknown>;
       position: number;
+      parent_id?: string;
     }>;
   }
 ): Promise<Component> {
@@ -230,10 +232,11 @@ export async function createComponent(
     // If children were provided, save them
     if (data.widgets && data.widgets.length > 0) {
       const childrenWithIds = data.widgets.map((w, index) => ({
-        id: `child-${Date.now()}-${index}`,
+        id: w.id || `child-${Date.now()}-${index}`,
         type: w.type,
         config: w.config,
-        position: w.position
+        position: w.position,
+        parent_id: w.parent_id
       }));
       await saveComponentChildren(db, component.id, childrenWithIds);
     }
@@ -356,20 +359,20 @@ export async function isComponentInUse(
   componentId: number
 ): Promise<{ inUse: boolean; count: number }> {
   try {
-    // Check layout_widgets
+    // Check layout_widgets for component references
     const layoutResult = await db
       .prepare(
         `SELECT COUNT(*) as count FROM layout_widgets 
-         WHERE json_extract(config, '$.componentId') = ? OR type = 'component_ref'`
+         WHERE type = 'component_ref' AND json_extract(config, '$.componentId') = ?`
       )
       .bind(componentId)
       .first<{ count: number }>();
 
-    // Check page_widgets
+    // Check page_widgets for component references
     const pageResult = await db
       .prepare(
         `SELECT COUNT(*) as count FROM page_widgets 
-         WHERE json_extract(config, '$.componentId') = ? OR type = 'component_ref'`
+         WHERE type = 'component_ref' AND json_extract(config, '$.componentId') = ?`
       )
       .bind(componentId)
       .first<{ count: number }>();
@@ -510,12 +513,12 @@ function generateWidgetId(): string {
 }
 
 /**
- * Get the default children (widget structure) for a navbar component
- * Returns a single Container primitive as the default child for editing in the builder.
- * The NavBar component (NavBar.svelte) is self-contained and renders its own layout
- * from the component config (logo, links, actions).
+ * @deprecated This function is no longer used.
+ * Navbar children are now stored inline in the component config.children array
+ * (container-based architecture matching migration 0049).
+ * Kept for reference only.
  */
-function getDefaultNavbarChildren(): Array<{
+function _getDefaultNavbarChildren(): Array<{
   id: string;
   type: string;
   position: number;
@@ -572,35 +575,15 @@ export async function resetBuiltInComponent(
       .run();
 
     // Delete any existing component children (reset to clean state)
+    // For navbar, the children are now stored inside config.children (container-based architecture)
+    // So we just clear the component_widgets table
     await db
       .prepare('DELETE FROM component_widgets WHERE component_id = ?')
       .bind(componentId)
       .run();
 
-    // For navbar components, create the default nested container structure
-    if (componentType === 'navbar') {
-      const defaultChildren = getDefaultNavbarChildren();
-      const now = new Date().toISOString();
-
-      for (const child of defaultChildren) {
-        await db
-          .prepare(
-            `INSERT INTO component_widgets (id, component_id, type, position, config, parent_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .bind(
-            child.id,
-            componentId,
-            child.type,
-            child.position,
-            JSON.stringify(child.config),
-            child.parent_id || null,
-            now,
-            now
-          )
-          .run();
-      }
-    }
+    // Note: Navbar children are now stored inline in config.children (matching migration 0049)
+    // No need to create component_widgets entries for navbar anymore
   } catch (error) {
     console.error('Failed to reset built-in component:', error);
     throw error;
@@ -613,52 +596,228 @@ export async function resetBuiltInComponent(
 function getDefaultComponentConfig(type: string): Record<string, unknown> {
   const defaults: Record<string, Record<string, unknown>> = {
     navbar: {
-      // Container properties (Container architecture)
+      // Container-based architecture matching migration 0049
       containerPadding: {
         desktop: { top: 16, right: 24, bottom: 16, left: 24 },
         tablet: { top: 12, right: 20, bottom: 12, left: 20 },
         mobile: { top: 12, right: 16, bottom: 12, left: 16 }
       },
-      containerMaxWidth: '100%',
-      containerBackground: '#ffffff',
+      containerMargin: {
+        desktop: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+        tablet: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+        mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+      },
+      containerBackground: 'theme:secondary',
       containerBorderRadius: 0,
-      // Logo configuration
-      logo: { text: 'Store', url: '/', image: '', imageHeight: 40 },
-      logoPosition: 'left',
-      // Navigation links
-      links: [
-        { text: 'Home', url: '/' },
-        { text: 'Products', url: '/products' },
-        { text: 'About', url: '/about' },
-        { text: 'Contact', url: '/contact' }
-      ],
-      linksPosition: 'center',
-      // Action buttons
-      showSearch: false,
-      showCart: true,
-      showAuth: true,
-      showThemeToggle: true,
-      showAccountMenu: true,
-      actionsPosition: 'right',
-      // Account menu items
-      accountMenuItems: [
-        { text: 'Profile', url: '/profile', icon: '👤' },
-        { text: 'Settings', url: '/settings', icon: '⚙️', dividerBefore: true }
-      ],
-      // Styling (backward compatibility)
-      navbarBackground: '#ffffff',
-      navbarTextColor: '#000000',
-      navbarHoverColor: 'var(--color-primary)',
-      navbarBorderColor: '#e5e7eb',
-      navbarShadow: false,
-      sticky: true,
-      navbarHeight: 0,
-      // Dropdown styling
-      dropdownBackground: '#ffffff',
-      dropdownTextColor: '#000000',
-      dropdownHoverBackground: '#f3f4f6',
-      // Mobile
-      mobileBreakpoint: 768
+      containerMaxWidth: '1400px',
+      containerJustifyContent: 'space-between',
+      containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
+      containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+      containerAlignItems: 'stretch',
+      containerWrap: 'nowrap',
+      containerGap: { desktop: 16, tablet: 16, mobile: 16 },
+      containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+      containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
+      containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+      containerPlaceItems: null,
+      visibilityRule: 'always',
+      position: 'sticky',
+      positionType: 'sticky',
+      children: [
+        {
+          id: 'logo-container',
+          type: 'container',
+          config: {
+            containerPadding: {
+              desktop: { top: 40, right: 40, bottom: 40, left: 40 },
+              tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+              mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+            },
+            containerMargin: {
+              desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+              tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+              mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+            },
+            containerBackground: 'transparent',
+            containerBorderRadius: 0,
+            containerMaxWidth: '1200px',
+            containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+            containerJustifyContent: 'flex-start',
+            containerAlignItems: 'center',
+            containerWrap: 'wrap',
+            children: [
+              {
+                id: 'site-name-heading',
+                type: 'heading',
+                config: {
+                  heading: '${site.name}',
+                  level: 2,
+                  textColor: 'theme:text',
+                  link: '/'
+                },
+                position: 0
+              }
+            ]
+          },
+          position: 0
+        },
+        {
+          id: 'nav-links-container',
+          type: 'container',
+          config: {
+            containerPadding: {
+              desktop: { top: 0, right: 40, bottom: 0, left: 40 },
+              tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+              mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+            },
+            containerMargin: {
+              desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+              tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+              mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+            },
+            containerBackground: 'transparent',
+            containerBorderRadius: 0,
+            containerMaxWidth: '1200px',
+            containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+            containerJustifyContent: 'flex-end',
+            containerAlignItems: 'center',
+            containerWrap: 'wrap',
+            containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
+            containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+            containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+            containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
+            containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+            children: [
+              {
+                id: 'products-link',
+                type: 'button',
+                config: {
+                  label: 'Products',
+                  url: '/#products',
+                  variant: 'text',
+                  size: 'medium',
+                  fullWidth: { desktop: false, tablet: false, mobile: true }
+                },
+                position: 0
+              },
+              {
+                id: 'pricing-link',
+                type: 'button',
+                config: {
+                  label: 'Pricing',
+                  url: '/#pricing',
+                  variant: 'text',
+                  size: 'medium',
+                  fullWidth: { desktop: false, tablet: false, mobile: true }
+                },
+                position: 1
+              },
+              {
+                id: 'login-button',
+                type: 'button',
+                config: {
+                  label: 'Login',
+                  url: '/auth/login',
+                  variant: 'outline',
+                  size: 'medium',
+                  fullWidth: { desktop: false, tablet: false, mobile: true },
+                  icon: 'LogIn',
+                  visibilityRule: 'unauthenticated'
+                },
+                position: 2
+              },
+              {
+                id: 'user-dropdown',
+                type: 'dropdown',
+                config: {
+                  label: 'Select Option',
+                  placeholder: 'Choose...',
+                  options: [
+                    { value: 'option1', label: 'Option 1' },
+                    { value: 'option2', label: 'Option 2' },
+                    { value: 'option3', label: 'Option 3' }
+                  ],
+                  required: false,
+                  searchable: false,
+                  size: 'medium',
+                  defaultValue: '',
+                  triggerIcon: '',
+                  triggerVariant: 'text',
+                  menuAlign: 'left',
+                  triggerLabel: '${user.display_name}',
+                  visibilityRule: 'authenticated',
+                  children: [
+                    {
+                      id: 'admin-dashboard-link',
+                      type: 'button',
+                      config: {
+                        label: 'Admin Dashboard',
+                        url: '/admin/dashboard',
+                        variant: 'text',
+                        size: 'medium',
+                        fullWidth: { desktop: false, tablet: false, mobile: true },
+                        visibilityRule: 'role',
+                        requiredRoles: ['admin']
+                      },
+                      position: 0
+                    },
+                    {
+                      id: 'dropdown-divider',
+                      type: 'divider',
+                      config: {
+                        thickness: 1,
+                        dividerColor: 'theme:border',
+                        dividerStyle: 'solid',
+                        spacing: { desktop: 20, tablet: 15, mobile: 10 }
+                      },
+                      position: 1
+                    },
+                    {
+                      id: 'logout-button',
+                      type: 'button',
+                      config: {
+                        label: 'Logout',
+                        url: '/auth/logout',
+                        variant: 'text',
+                        size: 'medium',
+                        fullWidth: { desktop: false, tablet: false, mobile: true }
+                      },
+                      position: 2
+                    },
+                    {
+                      id: 'profile-button',
+                      type: 'button',
+                      config: {
+                        label: 'Profile',
+                        url: '#',
+                        variant: 'text',
+                        size: 'medium',
+                        fullWidth: { desktop: false, tablet: false, mobile: true }
+                      },
+                      position: 3
+                    }
+                  ]
+                },
+                position: 3
+              },
+              {
+                id: 'cart-button',
+                type: 'button',
+                config: {
+                  label: 'Cart',
+                  url: '/cart',
+                  variant: 'text',
+                  size: 'medium',
+                  fullWidth: { desktop: false, tablet: false, mobile: true },
+                  icon: 'ShoppingCart'
+                },
+                position: 4
+              }
+            ]
+          },
+          position: 1
+        }
+      ]
     },
     footer: {
       copyright: '© 2025 Store Name. All rights reserved.',

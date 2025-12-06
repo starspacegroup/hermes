@@ -943,26 +943,77 @@
       </div>
     </div>
   {:else if component.type === 'navbar'}
-    <div class="navbar-preview">
-      <div class="navbar-container">
-        <div class="navbar-brand">
-          {#if component.config.logo?.image}
-            <img
-              src={component.config.logo.image}
-              alt={sub(component.config.logo.text || 'Logo')}
-              class="logo"
-            />
-          {:else}
-            <span class="logo-text">{sub(component.config.logo?.text || 'Store')}</span>
-          {/if}
-        </div>
-        <div class="navbar-links">
-          {#each component.config.links || [] as link}
-            <a href={link.url} class="nav-link">{sub(link.text)}</a>
-          {/each}
+    <!-- Navbar with container-based architecture (new) or legacy format -->
+    {@const navChildrenRaw = component.config.children}
+    {@const hasNavChildren =
+      navChildrenRaw && Array.isArray(navChildrenRaw) && navChildrenRaw.length > 0}
+    {@const navDisplay =
+      getBreakpointValue(component.config.containerDisplay, currentBreakpoint) || 'flex'}
+    {@const navFlexDirection =
+      getBreakpointValue(component.config.containerFlexDirection, currentBreakpoint) || 'row'}
+    {@const navGap = getBreakpointValue(component.config.containerGap, currentBreakpoint) || 16}
+    {@const navPadding = getBreakpointValue(component.config.containerPadding, currentBreakpoint)}
+    {@const navBackground =
+      component.config.containerBackground || component.config.navbarBackground || 'transparent'}
+    {@const rawConfig = component.config}
+    {@const isSticky = 'positionType' in rawConfig && rawConfig['positionType'] === 'sticky'}
+    {#if hasNavChildren}
+      <!-- New container-based navbar with children -->
+      <nav
+        class="navbar-container-based"
+        style="
+          display: {navDisplay};
+          flex-direction: {navFlexDirection};
+          justify-content: {component.config.containerJustifyContent || 'space-between'};
+          align-items: {component.config.containerAlignItems || 'center'};
+          flex-wrap: {component.config.containerWrap || 'nowrap'};
+          gap: {navGap}px;
+          padding: {navPadding
+          ? `${navPadding.top || 16}px ${navPadding.right || 24}px ${navPadding.bottom || 16}px ${navPadding.left || 24}px`
+          : '16px 24px'};
+          background: {resolveThemeColor(navBackground, colorTheme, 'transparent', true)};
+          max-width: {component.config.containerMaxWidth || '100%'};
+          width: 100%;
+          box-sizing: border-box;
+          {isSticky ? 'position: sticky; top: 0; z-index: 100;' : ''}
+        "
+      >
+        {#each navChildrenRaw as child (child.id)}
+          <svelte:self
+            component={child}
+            {currentBreakpoint}
+            {colorTheme}
+            onUpdate={createChildUpdateHandler(child.id)}
+            {isEditable}
+            {siteContext}
+            {user}
+            {onSelectComponent}
+          />
+        {/each}
+      </nav>
+    {:else}
+      <!-- Legacy navbar format -->
+      <div class="navbar-preview">
+        <div class="navbar-container">
+          <div class="navbar-brand">
+            {#if component.config.logo?.image}
+              <img
+                src={component.config.logo.image}
+                alt={sub(component.config.logo.text || 'Logo')}
+                class="logo"
+              />
+            {:else}
+              <span class="logo-text">{sub(component.config.logo?.text || 'Store')}</span>
+            {/if}
+          </div>
+          <div class="navbar-links">
+            {#each component.config.links || [] as link}
+              <a href={link.url} class="nav-link">{sub(link.text)}</a>
+            {/each}
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   {:else if component.type === 'footer'}
     <div class="footer-preview">
       <div class="footer-container">

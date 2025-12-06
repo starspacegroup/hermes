@@ -934,7 +934,7 @@ describe('Component Database Functions', () => {
   });
 
   describe('resetBuiltInComponent', () => {
-    it('should reset component to default navbar config with a container child widget', async () => {
+    it('should reset component to default navbar config with container-based children in config', async () => {
       mockDb.run.mockResolvedValue({ success: true });
 
       await resetBuiltInComponent(mockDb as unknown as D1Database, 1, 'navbar');
@@ -945,25 +945,34 @@ describe('Component Database Functions', () => {
       );
       const updateBindCall = mockDb.bind.mock.calls[0];
       const parsedConfig = JSON.parse(updateBindCall[0] as string);
-      expect(parsedConfig.logo).toBeDefined();
-      expect(parsedConfig.showCart).toBe(true);
 
-      // Should delete existing children
+      // New container-based architecture has containerPadding and children in config
+      expect(parsedConfig.containerPadding).toBeDefined();
+      expect(parsedConfig.containerBackground).toBe('theme:secondary');
+      expect(parsedConfig.children).toBeDefined();
+      expect(parsedConfig.children.length).toBe(2); // logo-container and nav-links-container
+
+      // Verify the nested children structure
+      const logoContainer = parsedConfig.children[0];
+      expect(logoContainer.id).toBe('logo-container');
+      expect(logoContainer.type).toBe('container');
+      expect(logoContainer.config.children).toBeDefined();
+
+      const navLinksContainer = parsedConfig.children[1];
+      expect(navLinksContainer.id).toBe('nav-links-container');
+      expect(navLinksContainer.type).toBe('container');
+
+      // Should delete existing children from component_widgets table
       expect(mockDb.prepare).toHaveBeenCalledWith(
         'DELETE FROM component_widgets WHERE component_id = ?'
       );
 
-      // Should create 1 container widget as the default child
+      // Should NOT create component_widgets entries (children are now in config)
       const insertCalls = mockDb.bind.mock.calls.filter((call) => {
-        // INSERT calls have at least 8 parameters
+        // INSERT calls would have 8+ parameters
         return call.length >= 8;
       });
-      expect(insertCalls.length).toBe(1);
-
-      // Verify the container widget config
-      const containerConfig = JSON.parse(insertCalls[0][4] as string);
-      expect(containerConfig.containerPadding).toBeDefined();
-      expect(containerConfig.containerMaxWidth).toBe('1400px');
+      expect(insertCalls.length).toBe(0);
     });
 
     it('should reset component to default footer config', async () => {
