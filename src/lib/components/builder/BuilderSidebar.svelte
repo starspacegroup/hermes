@@ -11,7 +11,9 @@
     ShoppingCart,
     ChevronDown,
     ChevronDownSquare,
-    Package
+    Package,
+    SunMoon,
+    Palette
   } from 'lucide-svelte';
   import type { PageComponent, ComponentType, Component } from '$lib/types/pages';
 
@@ -66,6 +68,14 @@
         description: 'Select dropdown field'
       }
     ],
+    theme: [
+      {
+        type: 'theme_toggle',
+        name: 'Theme Toggle',
+        icon: SunMoon,
+        description: 'Light/dark mode toggle button'
+      }
+    ],
     sections: [
       { type: 'hero', name: 'Hero Section', icon: Layout, description: 'Large banner with CTA' },
       { type: 'features', name: 'Features', icon: Layout, description: 'Feature grid showcase' },
@@ -92,6 +102,7 @@
     { id: 'containers', name: 'Layout', icon: Layout },
     { id: 'content', name: 'Content', icon: Type },
     { id: 'sections', name: 'Sections', icon: Layout },
+    { id: 'theme', name: 'Theme', icon: Palette },
     { id: 'commerce', name: 'Commerce', icon: ShoppingCart },
     { id: 'custom', name: 'Custom', icon: Package }
   ];
@@ -110,6 +121,7 @@
     'hero',
     'features',
     'cta', // sections
+    'theme_toggle', // theme
     'single_product',
     'product_list' // commerce
   ]);
@@ -426,6 +438,11 @@
         menuShadow: true,
         menuPadding: { top: 8, right: 8, bottom: 8, left: 8 },
         children: []
+      },
+      theme_toggle: {
+        size: 'medium',
+        toggleVariant: 'icon',
+        alignment: 'left'
       },
       component_ref: {
         componentId: null // Will be set when adding from component library

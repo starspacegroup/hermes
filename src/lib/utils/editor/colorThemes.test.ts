@@ -12,7 +12,10 @@ import {
   deleteCustomTheme,
   setDefaultTheme,
   themeRefToCssVar,
-  resolveThemeColor
+  resolveThemeColor,
+  getSystemTheme,
+  setSystemTheme,
+  saveThemeOrder
 } from './colorThemes';
 import type { ColorThemeDefinition } from '$lib/types/pages';
 
@@ -281,6 +284,11 @@ describe('Color Themes', () => {
       const result = themeRefToCssVar(undefined);
       expect(result).toBeNull();
     });
+
+    it('should return null for empty string', () => {
+      const result = themeRefToCssVar('');
+      expect(result).toBeNull();
+    });
   });
 
   describe('resolveThemeColor', () => {
@@ -323,6 +331,130 @@ describe('Color Themes', () => {
     it('should return empty string when no value or fallback', () => {
       const result = resolveThemeColor(undefined, 'default-light');
       expect(result).toBe('');
+    });
+
+    it('should resolve color: references to CSS vars', () => {
+      const result = resolveThemeColor('color:primary-light', 'default-light');
+      expect(result).toBe('var(--color-primary-light)');
+    });
+
+    it('should convert object theme color to CSS var when asCssVar is true', () => {
+      const colorObj = {
+        'default-light': 'theme:primary',
+        'default-dark': 'theme:secondary'
+      };
+      const result = resolveThemeColor(colorObj, 'default-light', '', true);
+      expect(result).toBe('var(--theme-primary)');
+    });
+
+    it('should return first available color from object when theme not found', () => {
+      const colorObj = {
+        'custom-theme': '#ff0000',
+        'another-theme': '#00ff00'
+      };
+      const result = resolveThemeColor(colorObj, 'default-light');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should convert first available color to CSS var when needed', () => {
+      const colorObj = {
+        'custom-theme': 'theme:accent'
+      };
+      const result = resolveThemeColor(colorObj, 'default-light', '', true);
+      expect(result).toBe('var(--theme-accent)');
+    });
+
+    it('should return fallback for empty object', () => {
+      const result = resolveThemeColor({} as Record<string, string>, 'default-light', '#fallback');
+      expect(result).toBe('#fallback');
+    });
+
+    it('should return empty string for empty object without fallback', () => {
+      const result = resolveThemeColor({} as Record<string, string>, 'default-light');
+      expect(result).toBe('');
+    });
+
+    it('should resolve color for same mode when exact theme not found', () => {
+      // Save a custom light theme first
+      saveCustomTheme({
+        id: 'custom-light-test',
+        name: 'Custom Light Test',
+        mode: 'light',
+        isDefault: false,
+        isSystem: false,
+        colors: getThemeColors('default-light')
+      });
+
+      const colorObj = {
+        'default-light': '#ff0000',
+        'default-dark': '#00ff00'
+      };
+
+      // This should fallback to default-light since custom-light-test is in light mode
+      const result = resolveThemeColor(colorObj, 'custom-light-test');
+      expect(result).toBe('#ff0000');
+
+      // Cleanup
+      deleteCustomTheme('custom-light-test');
+    });
+  });
+
+  describe('saveThemeOrder', () => {
+    it('should save theme order successfully', () => {
+      saveThemeOrder(['default-dark', 'default-light', 'minimal']);
+      // Just verify no error is thrown
+      const themes = getAllThemes();
+      expect(themes.length).toBeGreaterThan(0);
+    });
+
+    it('should handle empty order array', () => {
+      saveThemeOrder([]);
+      const themes = getAllThemes();
+      expect(themes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('getSystemTheme and setSystemTheme', () => {
+    it('should return default-light for light mode', () => {
+      const result = getDefaultTheme('light');
+      expect(result.mode).toBe('light');
+    });
+
+    it('should return default-dark for dark mode', () => {
+      const result = getDefaultTheme('dark');
+      expect(result.mode).toBe('dark');
+    });
+
+    it('should get system theme for light mode', () => {
+      const result = getSystemTheme('light');
+      expect(result).toBeDefined();
+      expect(typeof result).toBe('string');
+    });
+
+    it('should get system theme for dark mode', () => {
+      const result = getSystemTheme('dark');
+      expect(result).toBeDefined();
+      expect(typeof result).toBe('string');
+    });
+
+    it('should set system theme for light mode', () => {
+      const result = setSystemTheme('default-light', 'light');
+      expect(result).toBe(true);
+    });
+
+    it('should set system theme for dark mode', () => {
+      const result = setSystemTheme('default-dark', 'dark');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when setting theme with wrong mode', () => {
+      const result = setSystemTheme('default-light', 'dark');
+      expect(result).toBe(false);
+    });
+
+    it('should return false when setting non-existent theme', () => {
+      const result = setSystemTheme('non-existent', 'light');
+      expect(result).toBe(false);
     });
   });
 });

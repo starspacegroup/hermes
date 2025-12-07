@@ -61,6 +61,36 @@
     return false;
   }
 
+  // Helper to recursively dispatch updates for nested children with correct parent_id
+  function dispatchNestedChildUpdates(
+    children: unknown[],
+    parentId: string,
+    dispatchFn: (event: string, detail: PageComponent) => void
+  ): void {
+    if (!children || !Array.isArray(children)) return;
+
+    children.forEach((child, index) => {
+      const typedChild = child as PageComponent;
+
+      // Recursively handle nested children first
+      const nestedChildren = typedChild.config?.children;
+      if (nestedChildren && Array.isArray(nestedChildren)) {
+        dispatchNestedChildUpdates(nestedChildren, typedChild.id, dispatchFn);
+      }
+
+      // Strip children from this child's config (they're dispatched separately)
+      const childConfig = typedChild.config || {};
+      const { children: _nestedChildren, ...childConfigWithoutChildren } = childConfig;
+      const updatedChild = {
+        ...typedChild,
+        config: childConfigWithoutChildren,
+        position: index,
+        parent_id: parentId
+      };
+      dispatchFn('updateComponent', updatedChild);
+    });
+  }
+
   // React to selectedComponent changes - expand the parent component if a child is selected
   $: if (selectedComponent) {
     const parentId = findParentComponentId(selectedComponent.id);
@@ -105,6 +135,69 @@
     localBackgroundImage = media.url;
     handlePagePropertyChange();
   }
+
+  // Build a map of parent_id -> children for efficient lookup
+  $: childrenMap = pageComponents.reduce(
+    (map, comp) => {
+      if (comp.parent_id) {
+        if (!map[comp.parent_id]) {
+          map[comp.parent_id] = [];
+        }
+        map[comp.parent_id].push(comp);
+      }
+      return map;
+    },
+    {} as Record<string, PageComponent[]>
+  );
+
+  // Function to inject children into a component's config for properties panel
+  // This handles two cases:
+  // 1. Components with parent_id references (containers) - inject from childrenMap
+  // 2. Components with inline children (navbar/footer) - recursively process existing children
+  function injectChildrenIntoConfig(comp: PageComponent): PageComponent {
+    // First, check if this component has children via parent_id references
+    const childrenFromMap = childrenMap[comp.id];
+
+    // Also check for existing inline children (navbar/footer pattern)
+    const existingInlineChildren = comp.config?.children as PageComponent[] | undefined;
+
+    // If we have children from the parent_id map, use those
+    if (childrenFromMap && childrenFromMap.length > 0) {
+      const childrenWithNested = childrenFromMap
+        .sort((a, b) => a.position - b.position)
+        .map((child) => injectChildrenIntoConfig(child));
+      return {
+        ...comp,
+        config: {
+          ...comp.config,
+          children: childrenWithNested
+        }
+      };
+    }
+
+    // If we have existing inline children (navbar/footer), recursively process them
+    if (existingInlineChildren && existingInlineChildren.length > 0) {
+      const processedChildren = existingInlineChildren.map((child) =>
+        injectChildrenIntoConfig(child)
+      );
+      return {
+        ...comp,
+        config: {
+          ...comp.config,
+          children: processedChildren
+        }
+      };
+    }
+
+    // No children to inject
+    return comp;
+  }
+
+  // Get only root-level components (those without parent_id) for the list
+  $: rootComponents = pageComponents.filter((c) => !c.parent_id);
+
+  // Create components with children injected for properties panel display
+  $: componentsWithChildren = rootComponents.map((comp) => injectChildrenIntoConfig(comp));
 
   function handleMediaSelected(media: MediaLibraryItem[]) {
     selectedMediaItems = media;
@@ -290,8 +383,8 @@
       </div>
     {/if}
 
-    <!-- All Page Components -->
-    {#each pageComponents as componentItem, _index (componentItem.id)}
+    <!-- All Page Components (root level only, with children injected) -->
+    {#each componentsWithChildren as componentItem, _index (componentItem.id)}
       <div class="component-section">
         <button
           class="component-section-header"
@@ -341,8 +434,31 @@
                 // This avoids closure issues where componentItem might be stale
                 const currentComponent = pageComponents.find((c) => c.id === componentItem.id);
                 if (currentComponent) {
-                  const updatedComponent = { ...currentComponent, config };
-                  dispatch('updateComponent', updatedComponent);
+                  // Check if this is a component type that stores children inline (navbar, footer)
+                  // vs one that uses parent_id references (container)
+                  const usesInlineChildren =
+                    componentItem.type === 'navbar' || componentItem.type === 'footer';
+
+                  if (usesInlineChildren) {
+                    // For navbar/footer, keep children in config as-is
+                    const updatedComponent = { ...currentComponent, config };
+                    dispatch('updateComponent', updatedComponent);
+                  } else {
+                    // For containers, children are stored separately with parent_id
+                    // Strip children from config and dispatch updates for each child
+
+                    const { children: configChildren, ...configWithoutChildren } = config;
+                    const updatedComponent = {
+                      ...currentComponent,
+                      config: configWithoutChildren
+                    };
+                    dispatch('updateComponent', updatedComponent);
+
+                    // Dispatch updates for children with correct parent_id
+                    if (configChildren && Array.isArray(configChildren)) {
+                      dispatchNestedChildUpdates(configChildren, componentItem.id, dispatch);
+                    }
+                  }
                 }
               }}
             />

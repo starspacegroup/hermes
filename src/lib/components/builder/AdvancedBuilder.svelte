@@ -214,13 +214,86 @@
     }
   }
 
+  /**
+   * Recursively extract all children from a component's config.children into a flat array.
+   * This is needed to sync the nested config.children structure back to the flat pageComponents array.
+   */
+  function extractNestedChildren(component: PageComponent, parentId: string): PageComponent[] {
+    const result: PageComponent[] = [];
+    const children = component.config?.children as PageComponent[] | undefined;
+
+    if (!children || !Array.isArray(children)) {
+      return result;
+    }
+
+    for (const child of children) {
+      // Add the child with its parent_id set correctly
+      const childWithParent: PageComponent = {
+        ...child,
+        parent_id: parentId
+      };
+      result.push(childWithParent);
+
+      // Recursively extract nested children
+      const nestedChildren = extractNestedChildren(child, child.id);
+      result.push(...nestedChildren);
+    }
+
+    return result;
+  }
+
   function handleUpdateComponent(updatedComponent: PageComponent) {
-    pageComponents = pageComponents.map((c) =>
-      c.id === updatedComponent.id ? updatedComponent : c
+    // Extract all nested children from the updated component
+    const nestedChildren = extractNestedChildren(updatedComponent, updatedComponent.id);
+
+    console.log(
+      '[handleUpdateComponent] Extracted nested children:',
+      nestedChildren.map((c) => ({ id: c.id, parent_id: c.parent_id, position: c.position }))
     );
+
+    // Create a map of all updates (the component itself + all its nested children)
+    const updateMap = new Map<string, PageComponent>();
+
+    // Add the root component (without config.children since those are stored separately)
+    const rootComponentForStorage = {
+      ...updatedComponent,
+      config: {
+        ...updatedComponent.config
+        // Keep children in config for components that render with them (navbar, container)
+        // The children field is the source of truth for nested structure
+      }
+    };
+    updateMap.set(updatedComponent.id, rootComponentForStorage);
+
+    // Add all nested children
+    for (const child of nestedChildren) {
+      updateMap.set(child.id, child);
+    }
+
+    // Update pageComponents with all the changes
+    let updatedPageComponents = pageComponents.map((c) =>
+      updateMap.has(c.id) ? updateMap.get(c.id)! : c
+    );
+
+    // Add any NEW children that don't exist in pageComponents yet
+    const existingIds = new Set(updatedPageComponents.map((c) => c.id));
+    const newChildren = nestedChildren.filter((c) => !existingIds.has(c.id));
+    if (newChildren.length > 0) {
+      updatedPageComponents = [...updatedPageComponents, ...newChildren];
+    }
+
+    console.log(
+      '[handleUpdateComponent] Final pageComponents:',
+      updatedPageComponents.map((c) => ({ id: c.id, parent_id: c.parent_id, position: c.position }))
+    );
+
+    pageComponents = updatedPageComponents;
+
     // Update selectedComponent to keep it in sync
     if (selectedComponent?.id === updatedComponent.id) {
       selectedComponent = updatedComponent;
+    } else if (selectedComponent && updateMap.has(selectedComponent.id)) {
+      selectedComponent = updateMap.get(selectedComponent.id)!;
     }
     addToHistory();
   }

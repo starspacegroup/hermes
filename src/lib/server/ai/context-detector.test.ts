@@ -42,6 +42,37 @@ describe('context-detector', () => {
       const result = detectContextFromUrl('/admin/unknown');
       expect(result).toBe('general_help');
     });
+
+    // Builder route tests
+    it('detects layout building context', () => {
+      expect(detectContextFromUrl('/admin/builder/layout')).toBe('layout_building');
+      expect(detectContextFromUrl('/admin/builder/layout/')).toBe('layout_building');
+    });
+
+    it('detects layout editing context', () => {
+      const result = detectContextFromUrl('/admin/builder/layout/123');
+      expect(result).toBe('layout_editing');
+    });
+
+    it('detects component building context', () => {
+      expect(detectContextFromUrl('/admin/builder/component')).toBe('component_building');
+      expect(detectContextFromUrl('/admin/builder/component/')).toBe('component_building');
+    });
+
+    it('detects component editing context', () => {
+      const result = detectContextFromUrl('/admin/builder/component/456');
+      expect(result).toBe('component_editing');
+    });
+
+    it('detects page building from builder route', () => {
+      expect(detectContextFromUrl('/admin/builder')).toBe('page_building');
+      expect(detectContextFromUrl('/admin/builder/')).toBe('page_building');
+    });
+
+    it('detects page editing from builder route with ID', () => {
+      const result = detectContextFromUrl('/admin/builder/some-page-id');
+      expect(result).toBe('page_editing');
+    });
   });
 
   describe('extractEntityIdFromUrl', () => {
@@ -58,6 +89,22 @@ describe('context-detector', () => {
     it('returns undefined for URLs without entity ID', () => {
       expect(extractEntityIdFromUrl('/admin/products/new')).toBeUndefined();
       expect(extractEntityIdFromUrl('/admin/dashboard')).toBeUndefined();
+    });
+
+    // Builder route entity ID extraction tests
+    it('extracts layout ID from builder layout URL', () => {
+      const result = extractEntityIdFromUrl('/admin/builder/layout/layout-123');
+      expect(result).toBe('layout-123');
+    });
+
+    it('extracts component ID from builder component URL', () => {
+      const result = extractEntityIdFromUrl('/admin/builder/component/comp-456');
+      expect(result).toBe('comp-456');
+    });
+
+    it('extracts page ID from builder page URL', () => {
+      const result = extractEntityIdFromUrl('/admin/builder/page-789');
+      expect(result).toBe('page-789');
     });
   });
 
@@ -82,6 +129,42 @@ describe('context-detector', () => {
       expect(result).toBe('page_building');
     });
 
+    it('switches to layout building when layout keywords detected', () => {
+      const messages = [
+        { role: 'user' as const, content: 'I need to create a new layout template' },
+        { role: 'assistant' as const, content: 'I can help with that!' }
+      ];
+
+      const result = analyzeConversation(messages, 'general_help');
+      expect(result).toBe('layout_building');
+    });
+
+    it('switches to component building when component keywords detected', () => {
+      const messages = [
+        { role: 'user' as const, content: 'Help me create a custom widget component' },
+        { role: 'assistant' as const, content: 'Sure!' }
+      ];
+
+      const result = analyzeConversation(messages, 'general_help');
+      expect(result).toBe('component_building');
+    });
+
+    it('keeps builder context when widget keywords detected', () => {
+      const messages = [{ role: 'user' as const, content: 'Add a new widget section here' }];
+
+      const result = analyzeConversation(messages, 'page_building');
+      expect(result).toBe('page_building');
+    });
+
+    it('switches to general help when help keywords detected', () => {
+      const messages = [
+        { role: 'user' as const, content: 'How do I use this feature? Explain it please.' }
+      ];
+
+      const result = analyzeConversation(messages, 'product_creation');
+      expect(result).toBe('general_help');
+    });
+
     it('keeps current context if no clear intent', () => {
       const messages = [{ role: 'user' as const, content: 'Hello' }];
 
@@ -92,6 +175,20 @@ describe('context-detector', () => {
     it('returns current context for empty conversation', () => {
       const result = analyzeConversation([], 'dashboard_insights');
       expect(result).toBe('dashboard_insights');
+    });
+
+    it('stays in layout context when widget keywords are used', () => {
+      const messages = [{ role: 'user' as const, content: 'Insert a new widget into the layout' }];
+
+      const result = analyzeConversation(messages, 'layout_editing');
+      expect(result).toBe('layout_editing');
+    });
+
+    it('stays in component context when widget keywords are used', () => {
+      const messages = [{ role: 'user' as const, content: 'Remove this component section' }];
+
+      const result = analyzeConversation(messages, 'component_editing');
+      expect(result).toBe('component_editing');
     });
   });
 

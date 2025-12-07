@@ -10,6 +10,9 @@
   $: rowPadding = config.rowPadding || { desktop: { top: 16, right: 16, bottom: 16, left: 16 } };
   $: rowBackground = config.rowBackground || 'transparent';
   $: children = config.children || [];
+
+  // Check if slot content is provided (used when Row wraps other content)
+  $: hasSlotContent = $$slots.default;
 </script>
 
 <div
@@ -26,12 +29,12 @@
     background: {rowBackground};
   "
 >
-  {#if children.length === 0}
+  {#if hasSlotContent || children.length > 0}
+    <slot />
+  {:else}
     <div class="row-placeholder">
       <p>Add elements to this row</p>
     </div>
-  {:else}
-    <slot />
   {/if}
 </div>
 

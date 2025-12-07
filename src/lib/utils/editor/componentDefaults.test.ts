@@ -159,9 +159,95 @@ describe('Component Defaults', () => {
       expect(getComponentLabel('cta')).toBe('Call to Action');
     });
 
+    it('should return label for navbar component', () => {
+      expect(getComponentLabel('navbar')).toBe('Navigation Bar');
+    });
+
+    it('should return label for footer component', () => {
+      expect(getComponentLabel('footer')).toBe('Footer');
+    });
+
+    it('should return label for container component', () => {
+      expect(getComponentLabel('container')).toBe('Container');
+    });
+
+    it('should return label for composite component', () => {
+      expect(getComponentLabel('composite')).toBe('Composite');
+    });
+
+    it('should return label for component_ref', () => {
+      expect(getComponentLabel('component_ref')).toBe('Component Reference');
+    });
+
+    it('should return label for dropdown component', () => {
+      expect(getComponentLabel('dropdown')).toBe('Dropdown');
+    });
+
+    it('should return label for theme_toggle component', () => {
+      expect(getComponentLabel('theme_toggle')).toBe('Theme Toggle');
+    });
+
+    it('should return label for yield component', () => {
+      expect(getComponentLabel('yield')).toBe('Page Content (Yield)');
+    });
+
     it('should return component type for unknown component', () => {
       const unknownType = 'unknown' as ComponentType;
       expect(getComponentLabel(unknownType)).toBe('unknown');
+    });
+  });
+
+  describe('getDefaultConfig - additional components', () => {
+    it('should return default config for container component', () => {
+      const config = getDefaultConfig('container');
+      expect(config.containerBackground).toBe('transparent');
+      expect(config.containerMaxWidth).toBe('1200px');
+      expect(config.children).toEqual([]);
+    });
+
+    it('should return default config for navbar component', () => {
+      const config = getDefaultConfig('navbar');
+      expect(config.containerBackground).toBe('theme:secondary');
+      expect(config.sticky).toBe(true);
+      expect(config.children).toEqual([]);
+    });
+
+    it('should return default config for footer component', () => {
+      const config = getDefaultConfig('footer');
+      expect(config.copyright).toContain('2025');
+      expect(config.footerLinks).toHaveLength(2);
+      expect(config.footerBackground).toBe('theme:surface');
+    });
+
+    it('should return default config for composite component', () => {
+      const config = getDefaultConfig('composite');
+      expect(config.children).toEqual([]);
+    });
+
+    it('should return default config for dropdown component', () => {
+      const config = getDefaultConfig('dropdown');
+      expect(config.triggerLabel).toBe('Menu');
+      expect(config.triggerVariant).toBe('text');
+      expect(config.showChevron).toBe(true);
+      expect(config.menuWidth).toBe('200px');
+      expect(config.children).toEqual([]);
+    });
+
+    it('should return default config for theme_toggle component', () => {
+      const config = getDefaultConfig('theme_toggle');
+      expect(config.size).toBe('medium');
+      expect(config.toggleVariant).toBe('icon');
+      expect(config.alignment).toBe('left');
+    });
+
+    it('should return empty config for yield component', () => {
+      const config = getDefaultConfig('yield');
+      expect(config).toEqual({});
+    });
+
+    it('should return empty config for component_ref', () => {
+      const config = getDefaultConfig('component_ref');
+      expect(config).toEqual({});
     });
   });
 

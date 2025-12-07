@@ -21,6 +21,7 @@ export type ComponentType =
   | 'cta'
   | 'navbar'
   | 'footer'
+  | 'theme_toggle' // Light/dark theme toggle button
   | 'yield' // Special component type for layouts - renders page content
   | 'container' // Container with padding and background
   | 'composite' // Multi-part component composition
@@ -493,6 +494,9 @@ export interface ComponentConfig {
   dividerColor?: string | ThemeSpecificColor;
   dividerStyle?: 'solid' | 'dashed' | 'dotted';
   spacing?: ResponsiveValue<number>;
+
+  // Theme toggle component
+  toggleVariant?: 'icon' | 'icon-label' | 'button';
 
   // Features component
   features?: Array<{

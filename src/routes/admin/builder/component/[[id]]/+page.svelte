@@ -31,13 +31,47 @@
   async function handleSave(saveData: SaveData): Promise<void> {
     try {
       // Convert PageComponent[] to component children format
-      const children = saveData.components.map((c, index) => ({
-        id: c.id,
-        type: c.type,
-        position: index,
-        config: c.config,
-        parent_id: undefined // TODO: Add parent_id support for nested components
-      }));
+      // Preserve parent_id to maintain the component hierarchy
+      // Group by parent_id to calculate correct positions within each parent
+      const componentsByParent = new Map<string | undefined, typeof saveData.components>();
+      for (const c of saveData.components) {
+        const parentId = c.parent_id;
+        if (!componentsByParent.has(parentId)) {
+          componentsByParent.set(parentId, []);
+        }
+        componentsByParent.get(parentId)!.push(c);
+      }
+
+      // Sort each group by position to ensure correct ordering
+      for (const [_parentId, siblings] of componentsByParent) {
+        siblings.sort((a, b) => a.position - b.position);
+      }
+
+      console.log(
+        '[handleSave] Components grouped by parent (after sort):',
+        Array.from(componentsByParent.entries()).map(([parentId, siblings]) => ({
+          parentId,
+          siblings: siblings.map((s) => ({ id: s.id, position: s.position }))
+        }))
+      );
+
+      // Assign positions based on sorted order within each parent group
+      const children = saveData.components.map((c) => {
+        const siblings = componentsByParent.get(c.parent_id) || [];
+        const positionInParent = siblings.indexOf(c);
+        return {
+          id: c.id,
+          type: c.type,
+          position: positionInParent >= 0 ? positionInParent : c.position,
+          config: c.config,
+          parent_id: c.parent_id
+        };
+      });
+
+      console.log(
+        '[handleSave] Final children to save:',
+        children.map((c) => ({ id: c.id, parent_id: c.parent_id, position: c.position }))
+      );
 
       // Determine component type
       // For navbar/footer components, preserve the original type to ensure proper rendering

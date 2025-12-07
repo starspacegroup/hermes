@@ -817,7 +817,9 @@ describe('Component Database Functions', () => {
         }
       ];
 
+      // Need 3 .first() mocks: 1) getComponent in saveComponentWithChildren, 2) getComponent in updateComponent, 3) UPDATE RETURNING
       mockDb.first
+        .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce({ ...mockComponent, name: 'Updated' });
       vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
@@ -862,7 +864,9 @@ describe('Component Database Functions', () => {
         }
       ];
 
+      // Need 3 .first() mocks: 1) getComponent in saveComponentWithChildren, 2) getComponent in updateComponent, 3) UPDATE RETURNING
       mockDb.first
+        .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce({ ...mockComponent, config: JSON.stringify(navbarConfig) });
       vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
@@ -906,7 +910,9 @@ describe('Component Database Functions', () => {
         }
       ];
 
+      // Need 3 .first() mocks: 1) getComponent in saveComponentWithChildren, 2) getComponent in updateComponent, 3) UPDATE RETURNING
       mockDb.first
+        .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce(mockComponent)
         .mockResolvedValueOnce({ ...mockComponent, config: JSON.stringify(footerConfig) });
       vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
@@ -922,6 +928,91 @@ describe('Component Database Functions', () => {
       expect(mockDb.bind).toHaveBeenCalled();
     });
 
+    it('should reconstruct nested children for navbar components with container children', async () => {
+      const mockComponent = {
+        id: 1,
+        site_id: '1',
+        name: 'Navigation Bar',
+        type: 'navbar',
+        config: '{}',
+        is_global: 1,
+        is_primitive: 0
+      };
+
+      // Flat structure with parent_id relationships (as sent by the builder)
+      const mockChildren = [
+        {
+          id: 'root-container',
+          component_id: 1,
+          type: 'container' as const,
+          position: 0,
+          config: { containerBackground: 'theme:secondary' },
+          parent_id: undefined,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 'inner-container',
+          component_id: 1,
+          type: 'container' as const,
+          position: 0,
+          config: { containerJustifyContent: 'flex-end' as const },
+          parent_id: 'root-container',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 'theme-toggle',
+          component_id: 1,
+          type: 'theme_toggle' as const,
+          position: 0,
+          config: { size: 'medium' as const, visibilityRule: 'unauthenticated' as const },
+          parent_id: 'inner-container',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ];
+
+      // Need 3 .first() mocks: 1) getComponent in saveComponentWithChildren, 2) getComponent in updateComponent, 3) UPDATE RETURNING
+      mockDb.first
+        .mockResolvedValueOnce(mockComponent)
+        .mockResolvedValueOnce(mockComponent)
+        .mockResolvedValueOnce(mockComponent);
+      vi.mocked(saveComponentChildren).mockResolvedValue(undefined);
+      vi.mocked(getComponentChildren).mockResolvedValue(mockChildren);
+
+      await saveComponentWithChildren(mockDb as unknown as D1Database, '1', 1, {
+        name: 'Navigation Bar',
+        type: 'navbar',
+        children: mockChildren
+      });
+
+      // Verify the config was reconstructed with nested children
+      // The first bind call includes the config parameter for UPDATE
+      const bindCalls = mockDb.bind.mock.calls;
+      // Find the call that contains the JSON config (it will be a string with 'children')
+      const configCall = bindCalls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('children')
+      );
+
+      if (configCall) {
+        const parsedConfig = JSON.parse(configCall[0] as string);
+        expect(parsedConfig.children).toBeDefined();
+        expect(parsedConfig.children.length).toBe(1);
+
+        // The inner container should be nested inside the root container's children
+        const innerContainer = parsedConfig.children[0];
+        expect(innerContainer.id).toBe('inner-container');
+        expect(innerContainer.config.children).toBeDefined();
+        expect(innerContainer.config.children.length).toBe(1);
+
+        // The theme toggle should be nested inside the inner container
+        const themeToggle = innerContainer.config.children[0];
+        expect(themeToggle.id).toBe('theme-toggle');
+        expect(themeToggle.config.visibilityRule).toBe('unauthenticated');
+      }
+    });
+
     it('should throw error when update fails', async () => {
       mockDb.first.mockResolvedValueOnce(null);
 
@@ -934,7 +1025,7 @@ describe('Component Database Functions', () => {
   });
 
   describe('resetBuiltInComponent', () => {
-    it('should reset component to default navbar config with container-based children in config', async () => {
+    it('should reset component to default navbar config with main-container wrapper', async () => {
       mockDb.run.mockResolvedValue({ success: true });
 
       await resetBuiltInComponent(mockDb as unknown as D1Database, 1, 'navbar');
@@ -946,19 +1037,27 @@ describe('Component Database Functions', () => {
       const updateBindCall = mockDb.bind.mock.calls[0];
       const parsedConfig = JSON.parse(updateBindCall[0] as string);
 
-      // New container-based architecture has containerPadding and children in config
+      // New architecture: component wrapper has transparent background, main-container has styling
       expect(parsedConfig.containerPadding).toBeDefined();
-      expect(parsedConfig.containerBackground).toBe('theme:secondary');
+      expect(parsedConfig.containerBackground).toBe('transparent');
       expect(parsedConfig.children).toBeDefined();
-      expect(parsedConfig.children.length).toBe(2); // logo-container and nav-links-container
+      expect(parsedConfig.children.length).toBe(1); // main-container
 
-      // Verify the nested children structure
-      const logoContainer = parsedConfig.children[0];
+      // Verify main-container structure
+      const mainContainer = parsedConfig.children[0];
+      expect(mainContainer.id).toBe('main-container');
+      expect(mainContainer.type).toBe('container');
+      expect(mainContainer.config.containerBackground).toBe('theme:secondary');
+      expect(mainContainer.config.children).toBeDefined();
+      expect(mainContainer.config.children.length).toBe(2); // logo-container and nav-links-container
+
+      // Verify nested children inside main-container
+      const logoContainer = mainContainer.config.children[0];
       expect(logoContainer.id).toBe('logo-container');
       expect(logoContainer.type).toBe('container');
       expect(logoContainer.config.children).toBeDefined();
 
-      const navLinksContainer = parsedConfig.children[1];
+      const navLinksContainer = mainContainer.config.children[1];
       expect(navLinksContainer.id).toBe('nav-links-container');
       expect(navLinksContainer.type).toBe('container');
 

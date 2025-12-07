@@ -211,6 +211,13 @@ export function getDefaultConfig(type: ComponentType): ComponentConfig {
         children: []
       };
 
+    case 'theme_toggle':
+      return {
+        size: 'medium',
+        toggleVariant: 'icon',
+        alignment: 'left'
+      };
+
     case 'yield':
       return {};
 
@@ -237,6 +244,7 @@ export function getComponentLabel(type: ComponentType): string {
     cta: 'Call to Action',
     navbar: 'Navigation Bar',
     footer: 'Footer',
+    theme_toggle: 'Theme Toggle',
     yield: 'Page Content (Yield)',
     container: 'Container',
     composite: 'Composite',

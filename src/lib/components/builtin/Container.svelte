@@ -13,6 +13,9 @@
   $: containerBorderRadius = config.containerBorderRadius || 0;
   $: containerMaxWidth = config.containerMaxWidth || '1200px';
   $: children = config.children || [];
+
+  // Check if slot content is provided (used when Container wraps other content)
+  $: hasSlotContent = $$slots.default;
 </script>
 
 <div
@@ -27,12 +30,12 @@
     margin: {containerMargin.desktop.top}px auto {containerMargin.desktop.bottom}px;
   "
 >
-  {#if children.length === 0}
+  {#if hasSlotContent || children.length > 0}
+    <slot />
+  {:else}
     <div class="container-placeholder">
       <p>Drop widgets here</p>
     </div>
-  {:else}
-    <slot />
   {/if}
 </div>
 

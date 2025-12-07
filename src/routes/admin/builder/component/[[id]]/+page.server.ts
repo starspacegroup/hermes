@@ -73,25 +73,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
   }> = [];
 
   if (configChildren && Array.isArray(configChildren) && configChildren.length > 0) {
-    // Create root widget from the component itself FIRST
-    // Use 'container' type for builder display - the actual component type (navbar, footer)
-    // is preserved on save via +page.svelte's handleSave which checks data.component.type
-    const rootId = `component-${component.id}`;
-    const rootConfig = { ...config };
-    delete rootConfig.children; // Children will be separate widgets
-
-    widgets.push({
-      id: rootId,
-      page_id: String(component.id),
-      type: 'container',
-      position: 0,
-      config: rootConfig,
-      created_at: new Date(component.created_at).getTime(),
-      updated_at: new Date(component.updated_at).getTime(),
-      parent_id: undefined
-    });
-
-    // Flatten nested children structure into widgets array
+    // For component editing, we show the CONTENTS of the component, not the component itself
+    // The component's own config (navbar styling, etc.) is stored in the component record
+    // Direct children from config.children have parent_id: undefined (they're at root level in the editor)
     const flattenChildren = (
       children: Array<{
         id: string;
@@ -99,9 +83,12 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
         config: Record<string, unknown>;
         position: number;
       }>,
-      parentId: string
+      parentId: string | undefined
     ): void => {
-      for (const child of children) {
+      // Sort children by position before processing
+      const sortedChildren = [...children].sort((a, b) => a.position - b.position);
+
+      for (const child of sortedChildren) {
         const childConfig = { ...child.config };
         const nestedChildren = childConfig.children as
           | Array<{
@@ -133,8 +120,9 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
       }
     };
 
-    // Flatten all children with the root widget as parent
-    flattenChildren(configChildren, rootId);
+    // Flatten all children - direct children of config.children have parent_id: undefined
+    // They appear as root-level widgets in the editor
+    flattenChildren(configChildren, undefined);
   } else if (componentWithWidgets.widgets.length > 0) {
     // Fall back to component_widgets table (legacy system)
     widgets = componentWithWidgets.widgets.map((w) => ({

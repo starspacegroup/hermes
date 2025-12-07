@@ -160,11 +160,53 @@
     return stringValue;
   }
 
+  // Recursively find a container by ID in the component tree
+  function findContainerInTree(
+    components: PageComponent[],
+    containerId: string
+  ): { container: PageComponent; path: string[] } | null {
+    for (const comp of components) {
+      if (comp.id === containerId) {
+        return { container: comp, path: [comp.id] };
+      }
+      if (comp.config.children && Array.isArray(comp.config.children)) {
+        const found = findContainerInTree(comp.config.children, containerId);
+        if (found) {
+          return { container: found.container, path: [comp.id, ...found.path] };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Recursively update a container's children at a given path
+  function updateContainerChildren(
+    components: PageComponent[],
+    containerId: string,
+    newChildren: PageComponent[]
+  ): PageComponent[] {
+    return components.map((comp) => {
+      if (comp.id === containerId) {
+        return { ...comp, config: { ...comp.config, children: newChildren } };
+      }
+      if (comp.config.children && Array.isArray(comp.config.children)) {
+        return {
+          ...comp,
+          config: {
+            ...comp.config,
+            children: updateContainerChildren(comp.config.children, containerId, newChildren)
+          }
+        };
+      }
+      return comp;
+    });
+  }
+
   // Handle dropping a new component into a container
   function handleContainerDrop(
     event: CustomEvent<{ containerId: string; componentType: string; insertIndex: number }>
   ) {
-    const { componentType: rawComponentType, insertIndex } = event.detail;
+    const { containerId, componentType: rawComponentType, insertIndex } = event.detail;
 
     // Determine the actual component type and config
     let actualType: ComponentType;
@@ -190,13 +232,64 @@
       updated_at: Date.now()
     };
 
-    const updatedChildren = [...(component.config.children || [])];
-    updatedChildren.splice(insertIndex, 0, newChild);
+    // Check if the drop target is this component directly
+    if (containerId === component.id) {
+      // Update this component's children directly
+      const updatedChildren = [...(component.config.children || [])];
+      updatedChildren.splice(insertIndex, 0, newChild);
 
-    if (onUpdate) {
-      onUpdate({ ...component.config, children: updatedChildren });
+      // Update positions for all children to match their array index
+      const childrenWithUpdatedPositions = updatedChildren.map((child, index) => ({
+        ...child,
+        position: index
+      }));
+
+      console.log('[ContainerDrop] Direct container drop:', {
+        containerId,
+        insertIndex,
+        childrenBefore: (component.config.children || []).map((c: PageComponent) => ({
+          id: c.id,
+          position: c.position
+        })),
+        childrenAfter: childrenWithUpdatedPositions.map((c) => ({ id: c.id, position: c.position }))
+      });
+
+      if (onUpdate) {
+        onUpdate({ ...component.config, children: childrenWithUpdatedPositions });
+      } else {
+        console.warn('[ContainerDrop] No onUpdate callback available!');
+      }
     } else {
-      console.warn('[ContainerDrop] No onUpdate callback available!');
+      // The drop target is a nested container - find it and update
+      const currentChildren = component.config.children || [];
+      const found = findContainerInTree(currentChildren, containerId);
+
+      if (found) {
+        const targetContainer = found.container;
+        const targetChildren = [...(targetContainer.config.children || [])];
+        targetChildren.splice(insertIndex, 0, newChild);
+
+        // Update positions for all children to match their array index
+        const childrenWithUpdatedPositions = targetChildren.map((child, index) => ({
+          ...child,
+          position: index
+        }));
+
+        // Update the tree with the new children
+        const updatedChildren = updateContainerChildren(
+          currentChildren,
+          containerId,
+          childrenWithUpdatedPositions
+        );
+
+        if (onUpdate) {
+          onUpdate({ ...component.config, children: updatedChildren });
+        } else {
+          console.warn('[ContainerDrop] No onUpdate callback available!');
+        }
+      } else {
+        console.warn(`[ContainerDrop] Could not find container with id: ${containerId}`);
+      }
     }
   }
 
@@ -213,28 +306,79 @@
   }
 
   // Handle reordering components within a container
-  function handleContainerReorder(event: CustomEvent<{ fromIndex: number; toIndex: number }>) {
-    const { fromIndex, toIndex } = event.detail;
-    const updatedChildren = [...(component.config.children || [])];
-    const [movedComponent] = updatedChildren.splice(fromIndex, 1);
-    updatedChildren.splice(toIndex, 0, movedComponent);
+  function handleContainerReorder(
+    event: CustomEvent<{ containerId: string; fromIndex: number; toIndex: number }>
+  ) {
+    const { containerId, fromIndex, toIndex } = event.detail;
 
-    if (onUpdate) {
-      onUpdate({ ...component.config, children: updatedChildren });
+    // Check if the reorder target is this component directly
+    if (containerId === component.id) {
+      const updatedChildren = [...(component.config.children || [])];
+      const [movedComponent] = updatedChildren.splice(fromIndex, 1);
+      updatedChildren.splice(toIndex, 0, movedComponent);
+
+      // Update positions for all children to match their array index
+      const childrenWithUpdatedPositions = updatedChildren.map((child, index) => ({
+        ...child,
+        position: index
+      }));
+
+      if (onUpdate) {
+        onUpdate({ ...component.config, children: childrenWithUpdatedPositions });
+      }
+    } else {
+      // The reorder target is a nested container - find it and update
+      const currentChildren = component.config.children || [];
+      const found = findContainerInTree(currentChildren, containerId);
+
+      if (found) {
+        const targetContainer = found.container;
+        const targetChildren = [...(targetContainer.config.children || [])];
+        const [movedComponent] = targetChildren.splice(fromIndex, 1);
+        targetChildren.splice(toIndex, 0, movedComponent);
+
+        // Update positions for all children to match their array index
+        const childrenWithUpdatedPositions = targetChildren.map((child, index) => ({
+          ...child,
+          position: index
+        }));
+
+        // Update the tree with the new children
+        const updatedChildren = updateContainerChildren(
+          currentChildren,
+          containerId,
+          childrenWithUpdatedPositions
+        );
+
+        if (onUpdate) {
+          onUpdate({ ...component.config, children: updatedChildren });
+        }
+      } else {
+        console.warn(`[ContainerReorder] Could not find container with id: ${containerId}`);
+      }
     }
   }
 
   // Create an onUpdate handler for a nested child component
   // This ensures that updates to nested children are properly propagated up the tree
   function createChildUpdateHandler(childId: string): (config: ComponentConfig) => void {
-    return (newChildConfig: ComponentConfig) => {
-      if (!onUpdate) return;
+    const _parentId = component.id;
+    const _parentType = component.type;
+    const parentOnUpdate = onUpdate;
 
-      const updatedChildren = (component.config.children || []).map((child: PageComponent) =>
+    return (newChildConfig: ComponentConfig) => {
+      if (!parentOnUpdate) {
+        console.warn('[createChildUpdateHandler] No onUpdate callback available!');
+        return;
+      }
+
+      const currentChildren = component.config.children || [];
+
+      const updatedChildren = currentChildren.map((child: PageComponent) =>
         child.id === childId ? { ...child, config: newChildConfig } : child
       );
 
-      onUpdate({ ...component.config, children: updatedChildren });
+      parentOnUpdate({ ...component.config, children: updatedChildren });
     };
   }
 
@@ -628,6 +772,7 @@
     <div
       class="dropdown-widget-container"
       class:drag-over={isDropdownDragOver}
+      class:edit-mode={isEditable}
       role="region"
       aria-label="Dropdown component drop zone"
       on:dragenter={(e) => {
@@ -695,11 +840,12 @@
           </span>
         {/if}
       </div>
-      <!-- Menu container (only visible when dragging over) -->
-      {#if isDropdownDragOver}
+      <!-- Menu container: always visible in edit mode, otherwise only when dragging -->
+      {#if isEditable || isDropdownDragOver}
         <div
           class="dropdown-menu-preview align-{menuAlign}"
           class:drag-target={isDropdownDragOver}
+          class:always-visible={isEditable}
           style="
             min-width: {typeof menuWidth === 'number' ? `${menuWidth}px` : menuWidth};
             background: {menuBackground};
@@ -715,6 +861,7 @@
               allowedTypes={['button', 'text', 'heading', 'divider', 'image']}
               displayMode="flex"
               showLayoutHints={true}
+              label="Dropdown Menu"
               containerStyles="flex-direction: column; gap: 4px;"
               on:drop={handleContainerDrop}
               on:reorder={handleContainerReorder}
@@ -761,6 +908,51 @@
     </div>
   {:else if component.type === 'spacer'}
     <div class="spacer-widget" style="height: {spacerHeight}px" />
+  {:else if component.type === 'theme_toggle'}
+    {@const toggleSize = component.config.size || 'medium'}
+    {@const toggleVariant = component.config.toggleVariant || 'icon'}
+    {@const toggleAlignment = component.config.alignment || 'left'}
+    {@const alignmentStyle =
+      toggleAlignment === 'center'
+        ? 'center'
+        : toggleAlignment === 'right'
+          ? 'flex-end'
+          : 'flex-start'}
+    {@const iconSize = toggleSize === 'small' ? 16 : toggleSize === 'large' ? 24 : 20}
+    <div class="theme-toggle-widget" style="justify-content: {alignmentStyle}">
+      <button
+        class="theme-toggle theme-toggle-{toggleSize} theme-toggle-{toggleVariant}"
+        aria-label="Toggle theme"
+        title="Toggle light/dark mode"
+        disabled
+      >
+        <!-- Sun/Moon icon preview -->
+        <svg
+          width={iconSize}
+          height={iconSize}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        {#if toggleVariant === 'icon-label' || toggleVariant === 'button'}
+          <span class="theme-toggle-label">Light Mode</span>
+        {/if}
+      </button>
+    </div>
   {:else if component.type === 'divider'}
     {@const divColor = resolveThemeColor(
       component.config.dividerColor,
@@ -957,20 +1149,11 @@
       component.config.containerBackground || component.config.navbarBackground || 'transparent'}
     {@const rawConfig = component.config}
     {@const isSticky = 'positionType' in rawConfig && rawConfig['positionType'] === 'sticky'}
-    {#if hasNavChildren}
-      <!-- New container-based navbar with children -->
+    {#if hasNavChildren || isEditable}
+      <!-- New container-based navbar with children (or editable empty navbar) -->
       <nav
         class="navbar-container-based"
         style="
-          display: {navDisplay};
-          flex-direction: {navFlexDirection};
-          justify-content: {component.config.containerJustifyContent || 'space-between'};
-          align-items: {component.config.containerAlignItems || 'center'};
-          flex-wrap: {component.config.containerWrap || 'nowrap'};
-          gap: {navGap}px;
-          padding: {navPadding
-          ? `${navPadding.top || 16}px ${navPadding.right || 24}px ${navPadding.bottom || 16}px ${navPadding.left || 24}px`
-          : '16px 24px'};
           background: {resolveThemeColor(navBackground, colorTheme, 'transparent', true)};
           max-width: {component.config.containerMaxWidth || '100%'};
           width: 100%;
@@ -978,18 +1161,73 @@
           {isSticky ? 'position: sticky; top: 0; z-index: 100;' : ''}
         "
       >
-        {#each navChildrenRaw as child (child.id)}
-          <svelte:self
-            component={child}
-            {currentBreakpoint}
-            {colorTheme}
-            onUpdate={createChildUpdateHandler(child.id)}
-            {isEditable}
-            {siteContext}
-            {user}
-            {onSelectComponent}
-          />
-        {/each}
+        {#if isEditable}
+          <!-- Use ContainerDropZone for editable navbar -->
+          <ContainerDropZone
+            containerId={component.id}
+            children={navChildrenRaw || []}
+            isActive={false}
+            allowedTypes={[]}
+            displayMode={navDisplay === 'grid' ? 'grid' : 'flex'}
+            showLayoutHints={true}
+            label="Navigation Bar"
+            containerStyles="
+              flex-direction: {navFlexDirection};
+              justify-content: {component.config.containerJustifyContent || 'space-between'};
+              align-items: {component.config.containerAlignItems || 'center'};
+              flex-wrap: {component.config.containerWrap || 'nowrap'};
+              gap: {navGap}px;
+              padding: {navPadding
+              ? `${navPadding.top || 16}px ${navPadding.right || 24}px ${navPadding.bottom || 16}px ${navPadding.left || 24}px`
+              : '16px 24px'};
+            "
+            on:drop={handleContainerDrop}
+            on:reorder={handleContainerReorder}
+            on:childClick={handleChildClick}
+          >
+            <svelte:fragment slot="child" let:child>
+              <svelte:self
+                component={child}
+                {currentBreakpoint}
+                {colorTheme}
+                onUpdate={createChildUpdateHandler(child.id)}
+                {isEditable}
+                {siteContext}
+                {user}
+                {onSelectComponent}
+              />
+            </svelte:fragment>
+          </ContainerDropZone>
+        {:else}
+          <!-- Non-editable: render children directly -->
+          <div
+            class="navbar-content-wrapper"
+            style="
+              display: {navDisplay};
+              flex-direction: {navFlexDirection};
+              justify-content: {component.config.containerJustifyContent || 'space-between'};
+              align-items: {component.config.containerAlignItems || 'center'};
+              flex-wrap: {component.config.containerWrap || 'nowrap'};
+              gap: {navGap}px;
+              padding: {navPadding
+              ? `${navPadding.top || 16}px ${navPadding.right || 24}px ${navPadding.bottom || 16}px ${navPadding.left || 24}px`
+              : '16px 24px'};
+            "
+          >
+            {#each navChildrenRaw || [] as child (child.id)}
+              <svelte:self
+                component={child}
+                {currentBreakpoint}
+                {colorTheme}
+                onUpdate={createChildUpdateHandler(child.id)}
+                {isEditable}
+                {siteContext}
+                {user}
+                {onSelectComponent}
+              />
+            {/each}
+          </div>
+        {/if}
       </nav>
     {:else}
       <!-- Legacy navbar format -->
@@ -1484,6 +1722,77 @@
       rgba(0, 0, 0, 0.05) 10px,
       rgba(0, 0, 0, 0.05) 20px
     );
+  }
+
+  /* Theme Toggle Widget */
+  .theme-toggle-widget {
+    display: flex;
+    width: 100%;
+    padding: 0.5rem 0;
+  }
+
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-border-primary, #e5e7eb);
+    border-radius: 0.375rem;
+    background-color: var(--color-bg-primary, #ffffff);
+    color: var(--color-text-primary, #111827);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .theme-toggle-small {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+  }
+
+  .theme-toggle-medium {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+  }
+
+  .theme-toggle-large {
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+  }
+
+  .theme-toggle-icon-label,
+  .theme-toggle-button {
+    width: auto;
+    padding: 0.5rem 1rem;
+  }
+
+  .theme-toggle-small.theme-toggle-icon-label,
+  .theme-toggle-small.theme-toggle-button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .theme-toggle-large.theme-toggle-icon-label,
+  .theme-toggle-large.theme-toggle-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+  }
+
+  .theme-toggle-label {
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .theme-toggle-icon {
+    padding: 0;
+  }
+
+  .theme-toggle-button {
+    background-color: var(--color-primary, #3b82f6);
+    color: white;
+    border-color: var(--color-primary, #3b82f6);
   }
 
   /* Divider Widget */

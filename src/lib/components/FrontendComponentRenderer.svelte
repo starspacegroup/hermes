@@ -47,6 +47,7 @@
   import NavBar from '$lib/components/builtin/NavBar.svelte';
   import Footer from '$lib/components/builtin/Footer.svelte';
   import DropdownComponent from '$lib/components/builtin/Dropdown.svelte';
+  import ThemeToggleComponent from '$lib/components/builtin/ThemeToggle.svelte';
 
   // Props
   export let type: string;
@@ -370,6 +371,14 @@
       </div>
     {:else}
       <DropdownComponent {config} {siteContext} {user} />
+    {/if}
+  {:else if type === 'theme_toggle'}
+    {#if needsPositionWrapper}
+      <div class="position-wrapper" style={positionStyle}>
+        <ThemeToggleComponent {config} />
+      </div>
+    {:else}
+      <ThemeToggleComponent {config} />
     {/if}
   {:else}
     <!-- Unknown component type - render as placeholder -->

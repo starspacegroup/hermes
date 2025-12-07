@@ -45,6 +45,12 @@
       icon: '📣',
       color: '#f59e0b'
     },
+    theme: {
+      label: 'Theme',
+      types: ['theme_toggle'],
+      icon: '🎨',
+      color: '#a855f7'
+    },
     structure: {
       label: 'Structure',
       types: ['yield'],

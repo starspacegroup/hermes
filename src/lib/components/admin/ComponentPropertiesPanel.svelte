@@ -412,7 +412,12 @@
     }
 
     children.splice(insertIndex, 0, draggedItem);
-    config.children = children;
+
+    // Update positions for all children to match their array index
+    config.children = children.map((child, index) => ({
+      ...child,
+      position: index
+    }));
     handleImmediateUpdate();
 
     draggedChildIndex = null;
@@ -487,7 +492,8 @@
     >
       Content
     </button>
-    {#if parentDisplayMode}
+    {#if parentDisplayMode && component.type !== 'container'}
+      <!-- Non-container child within a container: show Layout tab for child positioning -->
       <button
         type="button"
         class="tab layout-tab"
@@ -498,6 +504,7 @@
         Layout
       </button>
     {:else if component.type === 'container'}
+      <!-- Container (nested or top-level): show Layout tab for container settings -->
       <button
         type="button"
         class="tab"
@@ -1016,6 +1023,44 @@
                 <span>Drop widgets from the sidebar into the dropdown menu</span>
               </div>
             {/if}
+          </div>
+        {:else if component.type === 'theme_toggle'}
+          <div class="section">
+            <h4>Toggle Settings</h4>
+            <div class="form-group">
+              <label>
+                <span>Size</span>
+                <select bind:value={config.size} on:change={handleImmediateUpdate}>
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Variant</span>
+                <select bind:value={config.toggleVariant} on:change={handleImmediateUpdate}>
+                  <option value="icon">Icon Only</option>
+                  <option value="icon-label">Icon with Label</option>
+                  <option value="button">Button Style</option>
+                </select>
+              </label>
+              <p class="field-hint">
+                "Icon Only" shows just the sun/moon icon. "Icon with Label" adds text like "Light
+                Mode" or "Dark Mode". "Button Style" uses a filled button design.
+              </p>
+            </div>
+            <div class="form-group">
+              <label>
+                <span>Alignment</span>
+                <select bind:value={config.alignment} on:change={handleImmediateUpdate}>
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+            </div>
           </div>
         {:else if component.type === 'divider'}
           <p class="tab-info">All divider settings are in the Style tab.</p>
@@ -2615,14 +2660,27 @@
       </div>
     {:else if activeTab === 'responsive'}
       <div class="responsive-tab">
-        {#if parentDisplayMode}
-          <!-- Child Layout Editor - shown when this component is inside a container -->
+        {#if parentDisplayMode && component.type !== 'container'}
+          <!-- Child Layout Editor - shown when this non-container component is inside a container -->
           <ChildLayoutEditor
             {config}
             {currentBreakpoint}
             {parentDisplayMode}
             onUpdate={(updatedConfig) => {
               config = updatedConfig;
+              handleImmediateUpdate();
+            }}
+          />
+        {:else if component.type === 'container'}
+          <!-- Container Layout Settings - shown for all containers including nested ones -->
+          <TailwindContainerEditor
+            {config}
+            {currentBreakpoint}
+            {colorTheme}
+            showTabNavigation={false}
+            activeTabOverride="layout"
+            on:update={(e) => {
+              config = e.detail;
               handleImmediateUpdate();
             }}
           />
@@ -2907,18 +2965,6 @@
                 Adjust navbar padding for {currentBreakpoint} devices.
               </p>
             </div>
-          {:else if component.type === 'container'}
-            <TailwindContainerEditor
-              {config}
-              {currentBreakpoint}
-              {colorTheme}
-              showTabNavigation={false}
-              activeTabOverride="layout"
-              on:update={(e) => {
-                config = e.detail;
-                handleImmediateUpdate();
-              }}
-            />
           {:else}
             <p class="tab-info">This widget doesn't have responsive settings.</p>
           {/if}

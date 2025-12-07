@@ -16,6 +16,9 @@
   $: useGrid = config.useGrid || false;
   $: children = config.children || [];
 
+  // Check if slot content is provided (used when Flex wraps other content)
+  $: hasSlotContent = $$slots.default;
+
   // Flex properties
   $: flexDirection = resolveResponsive(config.flexDirection, 'row');
   $: flexWrap = resolveResponsive(config.flexWrap, 'wrap');
@@ -123,12 +126,12 @@
 </script>
 
 <div class="flex-component" id={config.anchorName || undefined} style={containerStyle}>
-  {#if children.length === 0}
+  {#if hasSlotContent || children.length > 0}
+    <slot />
+  {:else}
     <div class="flex-placeholder">
       <p>{useGrid ? 'Add elements to this grid' : 'Add elements to this flex container'}</p>
     </div>
-  {:else}
-    <slot />
   {/if}
 </div>
 

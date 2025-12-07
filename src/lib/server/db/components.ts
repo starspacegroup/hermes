@@ -428,6 +428,50 @@ export const getComponentWithWidgets = getComponentWithChildren;
  * component's config field. This ensures backward compatibility with the frontend
  * layout rendering which reads from component.config directly.
  */
+/**
+ * Reconstruct nested children structure from flat array with parent_id references.
+ * This is needed because the builder saves widgets in a flat structure with parent_id,
+ * but the frontend expects nested config.children arrays.
+ */
+function reconstructNestedChildren(
+  flatChildren: Array<{
+    id: string;
+    type: string;
+    position: number;
+    config: Record<string, unknown>;
+    parent_id?: string;
+  }>,
+  parentId?: string
+): Array<{
+  id: string;
+  type: string;
+  position: number;
+  config: Record<string, unknown>;
+}> {
+  // Find all children that belong to this parent
+  const directChildren = flatChildren
+    .filter((c) => c.parent_id === parentId)
+    .sort((a, b) => a.position - b.position);
+
+  return directChildren.map((child) => {
+    // Recursively get nested children for this widget
+    const nestedChildren = reconstructNestedChildren(flatChildren, child.id);
+
+    // Clone the config and add children if any exist
+    const configWithChildren = { ...child.config };
+    if (nestedChildren.length > 0) {
+      configWithChildren.children = nestedChildren;
+    }
+
+    return {
+      id: child.id,
+      type: child.type,
+      position: child.position,
+      config: configWithChildren
+    };
+  });
+}
+
 export async function saveComponentWithChildren(
   db: D1Database,
   siteId: string,
@@ -446,45 +490,76 @@ export async function saveComponentWithChildren(
   }
 ): Promise<ComponentWithChildren> {
   try {
-    // For navbar and footer components, sync the primary child's config to the component
-    // This ensures the frontend layout rendering works correctly
-    let configToSync: Record<string, unknown> | undefined;
+    // Handle empty children array
+    if (!data.children || data.children.length === 0) {
+      // No children - just update component metadata, preserve existing config
+      const existingComponent = await getComponent(db, siteId, componentId);
+      const existingConfig = (existingComponent?.config as Record<string, unknown>) || {};
 
-    if (data.children.length > 0) {
-      // Sort children by position to get the first one
-      const sortedChildren = [...data.children].sort((a, b) => a.position - b.position);
-      const primaryChild = sortedChildren[0];
+      const component = await updateComponent(db, siteId, componentId, {
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        config: { ...existingConfig, children: [] }
+      });
 
-      // If the primary child is a navbar or footer, use its config for the component
-      if (primaryChild.type === 'navbar' || primaryChild.type === 'footer') {
-        configToSync = primaryChild.config;
-      }
-      // If the component type is navbar/footer, we need to sync config for frontend rendering
-      // First try to find a navbar/footer widget, otherwise use the primary child's config
-      else if (data.type === 'navbar' || data.type === 'footer') {
-        const navbarOrFooter = sortedChildren.find(
-          (c) => c.type === 'navbar' || c.type === 'footer'
-        );
-        if (navbarOrFooter) {
-          configToSync = navbarOrFooter.config;
-        } else {
-          // Fallback: use the primary child's config for navbar/footer components
-          // This ensures something is rendered even if wrong widget types are used
-          configToSync = primaryChild.config;
-        }
-      }
+      return {
+        ...component,
+        children: [],
+        widgets: []
+      };
     }
 
-    // Update component metadata (and config if we found a navbar/footer widget)
+    // Check if there's a component wrapper widget (special ID: __component_wrapper__)
+    // This represents the component's own container config (used in layout builder mode)
+    const wrapperWidget = data.children.find((c) => c.id === '__component_wrapper__');
+    const wrapperWidgetId = wrapperWidget?.id;
+
+    let configToSync: Record<string, unknown>;
+
+    if (wrapperWidget && wrapperWidgetId) {
+      // The wrapper widget's config becomes the component's config
+      // Its children (widgets with parent_id === wrapperWidgetId) become config.children
+      const wrapperChildren = reconstructNestedChildren(data.children, wrapperWidgetId);
+
+      configToSync = {
+        ...wrapperWidget.config,
+        children: wrapperChildren
+      };
+
+      // Filter out the wrapper and remap parent_ids for saving to component_widgets table
+      // Children with parent_id === wrapperWidgetId should have parent_id: undefined
+      // since the wrapper is not stored as a widget
+      const childrenToSave = data.children
+        .filter((c) => c.id !== wrapperWidgetId)
+        .map((c) => ({
+          ...c,
+          parent_id: c.parent_id === wrapperWidgetId ? undefined : c.parent_id
+        }));
+      await saveComponentChildren(db, componentId, childrenToSave);
+    } else {
+      // No wrapper widget - use existing logic for backward compatibility
+      const existingComponent = await getComponent(db, siteId, componentId);
+      const existingConfig = (existingComponent?.config as Record<string, unknown>) || {};
+
+      // Reconstruct from root-level widgets (parent_id: undefined)
+      const nestedChildren = reconstructNestedChildren(data.children, undefined);
+
+      configToSync = {
+        ...existingConfig,
+        children: nestedChildren
+      };
+
+      await saveComponentChildren(db, componentId, data.children);
+    }
+
+    // Update component metadata and config
     const component = await updateComponent(db, siteId, componentId, {
       name: data.name,
       description: data.description,
       type: data.type,
       config: configToSync
     });
-
-    // Save children
-    await saveComponentChildren(db, componentId, data.children);
 
     // Get updated children
     const children = await getComponentChildren(db, componentId);
@@ -596,226 +671,251 @@ export async function resetBuiltInComponent(
 function getDefaultComponentConfig(type: string): Record<string, unknown> {
   const defaults: Record<string, Record<string, unknown>> = {
     navbar: {
-      // Container-based architecture matching migration 0049
+      // Container-based architecture matching migration 0051
+      // Component wrapper has minimal styling - main styling is on main-container child
       containerPadding: {
-        desktop: { top: 16, right: 24, bottom: 16, left: 24 },
-        tablet: { top: 12, right: 20, bottom: 12, left: 20 },
-        mobile: { top: 12, right: 16, bottom: 12, left: 16 }
-      },
-      containerMargin: {
-        desktop: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
-        tablet: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+        desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+        tablet: { top: 0, right: 0, bottom: 0, left: 0 },
         mobile: { top: 0, right: 0, bottom: 0, left: 0 }
       },
-      containerBackground: 'theme:secondary',
+      containerMargin: {
+        desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+        tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+        mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+      },
+      containerBackground: 'transparent',
       containerBorderRadius: 0,
-      containerMaxWidth: '1400px',
-      containerJustifyContent: 'space-between',
-      containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
-      containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
-      containerAlignItems: 'stretch',
-      containerWrap: 'nowrap',
-      containerGap: { desktop: 16, tablet: 16, mobile: 16 },
-      containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
-      containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
-      containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
-      containerPlaceItems: null,
+      containerMaxWidth: '100%',
+      containerDisplay: { desktop: 'block', tablet: 'block', mobile: 'block' },
+      containerWidth: { desktop: '100%', tablet: '100%', mobile: '100%' },
       visibilityRule: 'always',
       position: 'sticky',
       positionType: 'sticky',
       children: [
         {
-          id: 'logo-container',
+          id: 'main-container',
           type: 'container',
           config: {
             containerPadding: {
-              desktop: { top: 40, right: 40, bottom: 40, left: 40 },
-              tablet: { top: 30, right: 30, bottom: 30, left: 30 },
-              mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+              desktop: { top: 16, right: 24, bottom: 16, left: 24 },
+              tablet: { top: 12, right: 20, bottom: 12, left: 20 },
+              mobile: { top: 12, right: 16, bottom: 12, left: 16 }
             },
             containerMargin: {
-              desktop: { top: 0, right: 0, bottom: 0, left: 0 },
-              tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+              desktop: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
+              tablet: { top: 0, right: 'auto', bottom: 0, left: 'auto' },
               mobile: { top: 0, right: 0, bottom: 0, left: 0 }
             },
-            containerBackground: 'transparent',
+            containerBackground: 'theme:secondary',
             containerBorderRadius: 0,
-            containerMaxWidth: '1200px',
-            containerGap: { desktop: 16, tablet: 12, mobile: 8 },
-            containerJustifyContent: 'flex-start',
-            containerAlignItems: 'center',
-            containerWrap: 'wrap',
-            children: [
-              {
-                id: 'site-name-heading',
-                type: 'heading',
-                config: {
-                  heading: '${site.name}',
-                  level: 2,
-                  textColor: 'theme:text',
-                  link: '/'
-                },
-                position: 0
-              }
-            ]
-          },
-          position: 0
-        },
-        {
-          id: 'nav-links-container',
-          type: 'container',
-          config: {
-            containerPadding: {
-              desktop: { top: 0, right: 40, bottom: 0, left: 40 },
-              tablet: { top: 30, right: 30, bottom: 30, left: 30 },
-              mobile: { top: 20, right: 20, bottom: 20, left: 20 }
-            },
-            containerMargin: {
-              desktop: { top: 0, right: 0, bottom: 0, left: 0 },
-              tablet: { top: 0, right: 0, bottom: 0, left: 0 },
-              mobile: { top: 0, right: 0, bottom: 0, left: 0 }
-            },
-            containerBackground: 'transparent',
-            containerBorderRadius: 0,
-            containerMaxWidth: '1200px',
-            containerGap: { desktop: 16, tablet: 12, mobile: 8 },
-            containerJustifyContent: 'flex-end',
-            containerAlignItems: 'center',
-            containerWrap: 'wrap',
+            containerMaxWidth: '1400px',
+            containerJustifyContent: 'space-between',
             containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
             containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+            containerAlignItems: 'stretch',
+            containerWrap: 'nowrap',
+            containerGap: { desktop: 16, tablet: 16, mobile: 16 },
             containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
             containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
             containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
+            containerPlaceItems: null,
             children: [
               {
-                id: 'products-link',
-                type: 'button',
+                id: 'logo-container',
+                type: 'container',
                 config: {
-                  label: 'Products',
-                  url: '/#products',
-                  variant: 'text',
-                  size: 'medium',
-                  fullWidth: { desktop: false, tablet: false, mobile: true }
+                  containerPadding: {
+                    desktop: { top: 40, right: 40, bottom: 40, left: 40 },
+                    tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+                    mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+                  },
+                  containerMargin: {
+                    desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+                    tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+                    mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+                  },
+                  containerBackground: 'transparent',
+                  containerBorderRadius: 0,
+                  containerMaxWidth: '1200px',
+                  containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+                  containerJustifyContent: 'flex-start',
+                  containerAlignItems: 'center',
+                  containerWrap: 'wrap',
+                  children: [
+                    {
+                      id: 'site-name-heading',
+                      type: 'heading',
+                      config: {
+                        heading: '${site.name}',
+                        level: 2,
+                        textColor: 'theme:text',
+                        link: '/'
+                      },
+                      position: 0
+                    }
+                  ]
                 },
                 position: 0
               },
               {
-                id: 'pricing-link',
-                type: 'button',
+                id: 'nav-links-container',
+                type: 'container',
                 config: {
-                  label: 'Pricing',
-                  url: '/#pricing',
-                  variant: 'text',
-                  size: 'medium',
-                  fullWidth: { desktop: false, tablet: false, mobile: true }
-                },
-                position: 1
-              },
-              {
-                id: 'login-button',
-                type: 'button',
-                config: {
-                  label: 'Login',
-                  url: '/auth/login',
-                  variant: 'outline',
-                  size: 'medium',
-                  fullWidth: { desktop: false, tablet: false, mobile: true },
-                  icon: 'LogIn',
-                  visibilityRule: 'unauthenticated'
-                },
-                position: 2
-              },
-              {
-                id: 'user-dropdown',
-                type: 'dropdown',
-                config: {
-                  label: 'Select Option',
-                  placeholder: 'Choose...',
-                  options: [
-                    { value: 'option1', label: 'Option 1' },
-                    { value: 'option2', label: 'Option 2' },
-                    { value: 'option3', label: 'Option 3' }
-                  ],
-                  required: false,
-                  searchable: false,
-                  size: 'medium',
-                  defaultValue: '',
-                  triggerIcon: '',
-                  triggerVariant: 'text',
-                  menuAlign: 'left',
-                  triggerLabel: '${user.display_name}',
-                  visibilityRule: 'authenticated',
+                  containerPadding: {
+                    desktop: { top: 0, right: 40, bottom: 0, left: 40 },
+                    tablet: { top: 30, right: 30, bottom: 30, left: 30 },
+                    mobile: { top: 20, right: 20, bottom: 20, left: 20 }
+                  },
+                  containerMargin: {
+                    desktop: { top: 0, right: 0, bottom: 0, left: 0 },
+                    tablet: { top: 0, right: 0, bottom: 0, left: 0 },
+                    mobile: { top: 0, right: 0, bottom: 0, left: 0 }
+                  },
+                  containerBackground: 'transparent',
+                  containerBorderRadius: 0,
+                  containerMaxWidth: '1200px',
+                  containerGap: { desktop: 16, tablet: 12, mobile: 8 },
+                  containerJustifyContent: 'flex-end',
+                  containerAlignItems: 'center',
+                  containerWrap: 'wrap',
+                  containerDisplay: { desktop: 'flex', tablet: 'flex', mobile: 'flex' },
+                  containerFlexDirection: { desktop: 'row', tablet: 'row', mobile: 'column' },
+                  containerWidth: { desktop: 'auto', tablet: 'auto', mobile: 'auto' },
+                  containerGridCols: { desktop: 3, tablet: 2, mobile: 1 },
+                  containerGridAutoFlow: { desktop: 'row', tablet: 'row', mobile: 'row' },
                   children: [
                     {
-                      id: 'admin-dashboard-link',
+                      id: 'products-link',
                       type: 'button',
                       config: {
-                        label: 'Admin Dashboard',
-                        url: '/admin/dashboard',
+                        label: 'Products',
+                        url: '/#products',
                         variant: 'text',
                         size: 'medium',
-                        fullWidth: { desktop: false, tablet: false, mobile: true },
-                        visibilityRule: 'role',
-                        requiredRoles: ['admin']
+                        fullWidth: { desktop: false, tablet: false, mobile: true }
                       },
                       position: 0
                     },
                     {
-                      id: 'dropdown-divider',
-                      type: 'divider',
+                      id: 'pricing-link',
+                      type: 'button',
                       config: {
-                        thickness: 1,
-                        dividerColor: 'theme:border',
-                        dividerStyle: 'solid',
-                        spacing: { desktop: 20, tablet: 15, mobile: 10 }
+                        label: 'Pricing',
+                        url: '/#pricing',
+                        variant: 'text',
+                        size: 'medium',
+                        fullWidth: { desktop: false, tablet: false, mobile: true }
                       },
                       position: 1
                     },
                     {
-                      id: 'logout-button',
+                      id: 'login-button',
                       type: 'button',
                       config: {
-                        label: 'Logout',
-                        url: '/auth/logout',
-                        variant: 'text',
+                        label: 'Login',
+                        url: '/auth/login',
+                        variant: 'outline',
                         size: 'medium',
-                        fullWidth: { desktop: false, tablet: false, mobile: true }
+                        fullWidth: { desktop: false, tablet: false, mobile: true },
+                        icon: 'LogIn',
+                        visibilityRule: 'unauthenticated'
                       },
                       position: 2
                     },
                     {
-                      id: 'profile-button',
-                      type: 'button',
+                      id: 'user-dropdown',
+                      type: 'dropdown',
                       config: {
-                        label: 'Profile',
-                        url: '#',
-                        variant: 'text',
+                        label: 'Select Option',
+                        placeholder: 'Choose...',
+                        options: [
+                          { value: 'option1', label: 'Option 1' },
+                          { value: 'option2', label: 'Option 2' },
+                          { value: 'option3', label: 'Option 3' }
+                        ],
+                        required: false,
+                        searchable: false,
                         size: 'medium',
-                        fullWidth: { desktop: false, tablet: false, mobile: true }
+                        defaultValue: '',
+                        triggerIcon: '',
+                        triggerVariant: 'text',
+                        menuAlign: 'left',
+                        triggerLabel: '${user.display_name}',
+                        visibilityRule: 'authenticated',
+                        children: [
+                          {
+                            id: 'admin-dashboard-link',
+                            type: 'button',
+                            config: {
+                              label: 'Admin Dashboard',
+                              url: '/admin/dashboard',
+                              variant: 'text',
+                              size: 'medium',
+                              fullWidth: { desktop: false, tablet: false, mobile: true },
+                              visibilityRule: 'role',
+                              requiredRoles: ['admin']
+                            },
+                            position: 0
+                          },
+                          {
+                            id: 'dropdown-divider',
+                            type: 'divider',
+                            config: {
+                              thickness: 1,
+                              dividerColor: 'theme:border',
+                              dividerStyle: 'solid',
+                              spacing: { desktop: 20, tablet: 15, mobile: 10 }
+                            },
+                            position: 1
+                          },
+                          {
+                            id: 'logout-button',
+                            type: 'button',
+                            config: {
+                              label: 'Logout',
+                              url: '/auth/logout',
+                              variant: 'text',
+                              size: 'medium',
+                              fullWidth: { desktop: false, tablet: false, mobile: true }
+                            },
+                            position: 2
+                          },
+                          {
+                            id: 'profile-button',
+                            type: 'button',
+                            config: {
+                              label: 'Profile',
+                              url: '#',
+                              variant: 'text',
+                              size: 'medium',
+                              fullWidth: { desktop: false, tablet: false, mobile: true }
+                            },
+                            position: 3
+                          }
+                        ]
                       },
                       position: 3
+                    },
+                    {
+                      id: 'cart-button',
+                      type: 'button',
+                      config: {
+                        label: 'Cart',
+                        url: '/cart',
+                        variant: 'text',
+                        size: 'medium',
+                        fullWidth: { desktop: false, tablet: false, mobile: true },
+                        icon: 'ShoppingCart'
+                      },
+                      position: 4
                     }
                   ]
                 },
-                position: 3
-              },
-              {
-                id: 'cart-button',
-                type: 'button',
-                config: {
-                  label: 'Cart',
-                  url: '/cart',
-                  variant: 'text',
-                  size: 'medium',
-                  fullWidth: { desktop: false, tablet: false, mobile: true },
-                  icon: 'ShoppingCart'
-                },
-                position: 4
+                position: 1
               }
             ]
           },
-          position: 1
+          position: 0
         }
       ]
     },
