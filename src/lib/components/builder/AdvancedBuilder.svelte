@@ -246,10 +246,9 @@
     // Extract all nested children from the updated component
     const nestedChildren = extractNestedChildren(updatedComponent, updatedComponent.id);
 
-    console.log(
-      '[handleUpdateComponent] Extracted nested children:',
-      nestedChildren.map((c) => ({ id: c.id, parent_id: c.parent_id, position: c.position }))
-    );
+    // Create a set of all child IDs that should exist after this update
+    const validChildIds = new Set(nestedChildren.map((c) => c.id));
+    validChildIds.add(updatedComponent.id); // The component itself is valid
 
     // Create a map of all updates (the component itself + all its nested children)
     const updateMap = new Map<string, PageComponent>();
@@ -270,10 +269,29 @@
       updateMap.set(child.id, child);
     }
 
-    // Update pageComponents with all the changes
-    let updatedPageComponents = pageComponents.map((c) =>
-      updateMap.has(c.id) ? updateMap.get(c.id)! : c
-    );
+    // Find all components that were children of this component (directly or nested)
+    // These are components whose parent_id chain leads back to updatedComponent.id
+    function isDescendantOf(comp: PageComponent, ancestorId: string): boolean {
+      if (!comp.parent_id) return false;
+      if (comp.parent_id === ancestorId) return true;
+      const parent = pageComponents.find((c) => c.id === comp.parent_id);
+      return parent ? isDescendantOf(parent, ancestorId) : false;
+    }
+
+    // Update pageComponents:
+    // 1. Update existing components that are in updateMap
+    // 2. Remove components that were descendants but are no longer in validChildIds
+    let updatedPageComponents = pageComponents
+      .filter((c) => {
+        // Keep the component if:
+        // 1. It's not a descendant of the updated component, OR
+        // 2. It's still in the valid children list
+        if (!isDescendantOf(c, updatedComponent.id)) {
+          return true;
+        }
+        return validChildIds.has(c.id);
+      })
+      .map((c) => (updateMap.has(c.id) ? updateMap.get(c.id)! : c));
 
     // Add any NEW children that don't exist in pageComponents yet
     const existingIds = new Set(updatedPageComponents.map((c) => c.id));
@@ -281,11 +299,6 @@
     if (newChildren.length > 0) {
       updatedPageComponents = [...updatedPageComponents, ...newChildren];
     }
-
-    console.log(
-      '[handleUpdateComponent] Final pageComponents:',
-      updatedPageComponents.map((c) => ({ id: c.id, parent_id: c.parent_id, position: c.position }))
-    );
 
     pageComponents = updatedPageComponents;
 
@@ -718,6 +731,7 @@
         {components}
         on:selectComponent={(e) => handleSelectComponent(e.detail)}
         on:updateComponent={(e) => handleUpdateComponent(e.detail)}
+        on:deleteComponent={(e) => handleDeleteComponent(e.detail)}
         on:updatePageProperties={(e) => handleUpdatePageProperties(e.detail)}
         on:close={() => {
           showPropertiesPanel = false;

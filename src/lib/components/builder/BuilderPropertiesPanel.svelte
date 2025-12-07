@@ -429,22 +429,45 @@
             <ComponentPropertiesPanel
               component={componentItem}
               {currentBreakpoint}
+              onDeleteChild={(childId) => {
+                // For components with inline children, we need to update the parent's config
+                // rather than dispatching a deleteComponent event
+                const usesInlineChildren =
+                  componentItem.type === 'navbar' ||
+                  componentItem.type === 'footer' ||
+                  componentItem.type === 'container' ||
+                  componentItem.type === 'dropdown' ||
+                  componentItem.type === 'columns';
+
+                if (usesInlineChildren) {
+                  // The child was already removed from config.children in ComponentPropertiesPanel
+                  // The handleImmediateUpdate will dispatch the updated config
+                  // No need to dispatch deleteComponent since it's not in pageComponents
+                } else {
+                  // For other component types that might store children separately
+                  dispatch('deleteComponent', childId);
+                }
+              }}
               onUpdate={(config) => {
                 // Use the component ID to find the current version from pageComponents
                 // This avoids closure issues where componentItem might be stale
                 const currentComponent = pageComponents.find((c) => c.id === componentItem.id);
                 if (currentComponent) {
-                  // Check if this is a component type that stores children inline (navbar, footer)
-                  // vs one that uses parent_id references (container)
+                  // Check if this is a component type that stores children inline
+                  // vs one that uses parent_id references
                   const usesInlineChildren =
-                    componentItem.type === 'navbar' || componentItem.type === 'footer';
+                    componentItem.type === 'navbar' ||
+                    componentItem.type === 'footer' ||
+                    componentItem.type === 'container' ||
+                    componentItem.type === 'dropdown' ||
+                    componentItem.type === 'columns';
 
                   if (usesInlineChildren) {
-                    // For navbar/footer, keep children in config as-is
+                    // For components with inline children, keep children in config as-is
                     const updatedComponent = { ...currentComponent, config };
                     dispatch('updateComponent', updatedComponent);
                   } else {
-                    // For containers, children are stored separately with parent_id
+                    // For other components that might use parent_id references
                     // Strip children from config and dispatch updates for each child
 
                     const { children: configChildren, ...configWithoutChildren } = config;

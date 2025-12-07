@@ -19,6 +19,7 @@
   export let currentBreakpoint: Breakpoint;
   export let colorTheme: ColorTheme = 'default';
   export let onUpdate: (config: ComponentConfig) => void;
+  export let onDeleteChild: ((childId: string) => void) | undefined = undefined;
   // Context from parent - when this component is a child of a container
   export let parentDisplayMode: 'flex' | 'grid' | 'block' | undefined = undefined;
 
@@ -185,6 +186,9 @@
   }
 
   // Sync external widget config changes to local config (e.g., from contenteditable)
+  // NOTE: We explicitly exclude 'children' from syncing because children are managed locally
+  // via handleDeleteChild, handleChildUpdate, etc. Syncing children from external would cause
+  // race conditions where the old value overwrites local deletions/updates.
   $: {
     const currentConfigString = JSON.stringify(component.config);
     if (currentConfigString !== _lastConfigString) {
@@ -192,10 +196,13 @@
       // we should sync it to the local config
       if (!_isLocalUpdate) {
         // Update individual properties to maintain bind:value reactivity
+        // IMPORTANT: Skip 'children' - those are managed locally and should not be synced back
         Object.keys(component.config).forEach((key) => {
-          (config as Record<string, unknown>)[key] = (component.config as Record<string, unknown>)[
-            key
-          ];
+          if (key !== 'children') {
+            (config as Record<string, unknown>)[key] = (
+              component.config as Record<string, unknown>
+            )[key];
+          }
         });
         _lastConfigString = currentConfigString;
       } else {
@@ -440,6 +447,11 @@
     // Remove from expanded set if it was expanded
     expandedChildren.delete(childId);
     expandedChildren = expandedChildren;
+
+    // Notify parent about the deletion so it can remove from pageComponents
+    if (onDeleteChild) {
+      onDeleteChild(childId);
+    }
 
     handleImmediateUpdate();
   }
