@@ -1047,3 +1047,21 @@ describe('calculateDiscount', () => {
 - [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)
 - Project docs: `docs/` folder
 - Agent guidelines: `AGENTS.md`
+
+### Svelte/SvelteKit LLM Documentation
+
+The following files in the project root contain Svelte and SvelteKit documentation optimized for LLM consumption:
+
+- `llms.txt` - Index of Svelte documentation resources with links to various documentation sets
+- `llms-full.txt` - Complete Svelte and SvelteKit developer documentation (33,000+ lines)
+
+When working with Svelte components, SvelteKit routing, or framework-specific patterns, reference these files for authoritative documentation on:
+
+- Svelte component syntax and reactivity (`$:`, `{#if}`, `{#each}`, etc.)
+- SvelteKit routing conventions (`+page.svelte`, `+layout.svelte`, `+server.ts`)
+- Stores and state management (`writable`, `readable`, `derived`)
+- Lifecycle functions (`onMount`, `beforeUpdate`, `afterUpdate`)
+- Special elements (`<svelte:component>`, `<svelte:element>`, `<svelte:window>`)
+- Actions, transitions, and animations
+- Form handling and progressive enhancement
+- Server-side rendering and hydration

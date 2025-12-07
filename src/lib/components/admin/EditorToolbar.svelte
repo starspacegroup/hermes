@@ -20,7 +20,7 @@
   export let pageId: string | null = null;
   export let revisions: RevisionNode<unknown>[] = [];
   export let currentRevisionId: string | null = null;
-  export let showWidgetLibrary = true;
+  export let showComponentLibrary = true;
   export let showPropertiesPanel = true;
 
   interface Events {
@@ -32,7 +32,7 @@
     cancel: () => void;
     loadRevision?: (revisionId: string) => void;
     publishRevision?: (revisionId: string) => void;
-    toggleWidgetLibrary: () => void;
+    toggleComponentLibrary: () => void;
     togglePropertiesPanel: () => void;
     changeTheme: (theme: ColorTheme | undefined) => void;
   }
@@ -135,9 +135,9 @@
     <button
       type="button"
       class="icon-btn"
-      title="Toggle Widget Library"
-      on:click={events.toggleWidgetLibrary}
-      class:active={showWidgetLibrary}
+      title="Toggle Component Library"
+      on:click={events.toggleComponentLibrary}
+      class:active={showComponentLibrary}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
         <rect

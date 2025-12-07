@@ -2,6 +2,16 @@
 -- This file is used by the db:seed script to populate the database with sample data
 -- It should NOT be run as a migration - only for local/preview development
 
+-- Insert default site first (required for foreign key constraints)
+INSERT OR IGNORE INTO sites (id, name, domain, description, status)
+VALUES (
+  'default-site',
+  'Default Site',
+  'localhost',
+  'Default development site for local testing',
+  'active'
+);
+
 -- Insert sample products for default site
 INSERT INTO products (id, site_id, name, description, price, image, category, stock, type, tags)
 VALUES

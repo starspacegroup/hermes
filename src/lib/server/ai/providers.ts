@@ -161,7 +161,6 @@ class OpenAIProvider implements AIProviderInterface {
 
         // Check for usage information in any chunk
         if (chunk.usage) {
-          console.log('OpenAI usage chunk:', JSON.stringify(chunk.usage, null, 2));
           usageData = {
             inputTokens: chunk.usage.prompt_tokens || 0,
             outputTokens: chunk.usage.completion_tokens || 0,

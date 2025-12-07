@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "vite dev --host 0.0.0.0",
+    "dev": "vite dev --host 0.0.0.0 --port 4236",
     "build": "vite build",
     "build:pages": "node scripts/preview-build.js",
-    "preview": "npm run db:setup:preview && vite preview --host 0.0.0.0",
+    "preview": "npm run db:setup:preview && vite preview --host 0.0.0.0 --port 4236",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",

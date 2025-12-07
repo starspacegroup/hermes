@@ -14,8 +14,17 @@ export interface DBPage {
   status: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
+  published_revision_id?: string;
+  draft_revision_id?: string;
   created_at: number;
   updated_at: number;
+}
+
+export interface EnrichedPage extends DBPage {
+  published_at?: number;
+  draft_at?: number;
+  has_unpublished_changes: boolean;
 }
 
 export interface DBPageWidget {
@@ -47,6 +56,7 @@ export interface CreatePageData {
   status: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
 }
 
 export interface UpdatePageData {
@@ -55,9 +65,10 @@ export interface UpdatePageData {
   status?: 'draft' | 'published';
   content?: string;
   colorTheme?: string;
+  layout_id?: number;
 }
 
-export interface CreateWidgetData {
+export interface CreatePageComponentData {
   type:
     | 'single_product'
     | 'product_list'
@@ -73,7 +84,12 @@ export interface CreateWidgetData {
   position: number;
 }
 
-export interface UpdateWidgetData {
+/**
+ * @deprecated Use CreatePageComponentData instead
+ */
+export type CreateWidgetData = CreatePageComponentData;
+
+export interface UpdatePageComponentData {
   type?:
     | 'single_product'
     | 'product_list'
@@ -88,6 +104,11 @@ export interface UpdateWidgetData {
   config?: WidgetConfig;
   position?: number;
 }
+
+/**
+ * @deprecated Use UpdatePageComponentData instead
+ */
+export type UpdateWidgetData = UpdatePageComponentData;
 
 /**
  * Get a page by ID (scoped by site)
@@ -130,6 +151,37 @@ export async function getAllPages(db: D1Database, siteId: string): Promise<DBPag
 }
 
 /**
+ * Get all pages for a site with enriched revision information
+ */
+export async function getAllPagesWithRevisionInfo(
+  db: D1Database,
+  siteId: string
+): Promise<EnrichedPage[]> {
+  const query = `
+    SELECT 
+      p.*,
+      pr_pub.created_at as published_at,
+      pr_draft.created_at as draft_at
+    FROM pages p
+    LEFT JOIN page_revisions pr_pub ON p.published_revision_id = pr_pub.id
+    LEFT JOIN page_revisions pr_draft ON p.draft_revision_id = pr_draft.id
+    WHERE p.site_id = ?
+    ORDER BY p.updated_at DESC
+  `;
+
+  const result = await execute<DBPage & { published_at?: number; draft_at?: number }>(db, query, [
+    siteId
+  ]);
+
+  // Enrich pages with has_unpublished_changes flag
+  return (result.results || []).map((page) => ({
+    ...page,
+    has_unpublished_changes:
+      !!page.draft_at && !!page.published_at && page.draft_at > page.published_at
+  }));
+}
+
+/**
  * Get published pages for a site
  */
 export async function getPublishedPages(db: D1Database, siteId: string): Promise<DBPage[]> {
@@ -160,8 +212,8 @@ export async function createPage(
 
   await db
     .prepare(
-      `INSERT INTO pages (id, site_id, title, slug, status, content, color_theme, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO pages (id, site_id, title, slug, status, content, color_theme, layout_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -171,6 +223,7 @@ export async function createPage(
       data.status,
       data.content || null,
       data.colorTheme || null,
+      data.layout_id || null,
       timestamp,
       timestamp
     )
@@ -229,6 +282,10 @@ export async function updatePage(
     updates.push('color_theme = ?');
     params.push(data.colorTheme);
   }
+  if (data.layout_id !== undefined) {
+    updates.push('layout_id = ?');
+    params.push(data.layout_id);
+  }
 
   if (updates.length === 0) {
     return page;
@@ -259,9 +316,9 @@ export async function deletePage(db: D1Database, siteId: string, pageId: string)
 }
 
 /**
- * Get all widgets for a page
+ * Get all components for a page
  */
-export async function getPageWidgets(db: D1Database, pageId: string): Promise<DBPageWidget[]> {
+export async function getPageComponents(db: D1Database, pageId: string): Promise<DBPageWidget[]> {
   const result = await execute<DBPageWidget>(
     db,
     'SELECT * FROM page_widgets WHERE page_id = ? ORDER BY position ASC',
@@ -269,6 +326,11 @@ export async function getPageWidgets(db: D1Database, pageId: string): Promise<DB
   );
   return result.results || [];
 }
+
+/**
+ * @deprecated Use getPageComponents instead
+ */
+export const getPageWidgets = getPageComponents;
 
 /**
  * Get a widget by ID
@@ -281,12 +343,12 @@ export async function getWidgetById(
 }
 
 /**
- * Create a new widget for a page
+ * Create a new component for a page
  */
-export async function createWidget(
+export async function createPageComponent(
   db: D1Database,
   pageId: string,
-  data: CreateWidgetData
+  data: CreatePageComponentData
 ): Promise<DBPageWidget> {
   const id = generateId();
   const timestamp = getCurrentTimestamp();
@@ -300,23 +362,28 @@ export async function createWidget(
     .bind(id, pageId, data.type, configJson, data.position, timestamp, timestamp)
     .run();
 
-  const widget = await getWidgetById(db, id);
-  if (!widget) {
-    throw new Error('Failed to create widget');
+  const component = await getWidgetById(db, id);
+  if (!component) {
+    throw new Error('Failed to create page component');
   }
-  return widget;
+  return component;
 }
 
 /**
- * Update a widget
+ * @deprecated Use createPageComponent instead
  */
-export async function updateWidget(
+export const createWidget = createPageComponent;
+
+/**
+ * Update a page component
+ */
+export async function updatePageComponent(
   db: D1Database,
-  widgetId: string,
-  data: UpdateWidgetData
+  componentId: string,
+  data: UpdatePageComponentData
 ): Promise<DBPageWidget | null> {
-  const widget = await getWidgetById(db, widgetId);
-  if (!widget) {
+  const component = await getWidgetById(db, componentId);
+  if (!component) {
     return null;
   }
 
@@ -338,28 +405,38 @@ export async function updateWidget(
   }
 
   if (updates.length === 0) {
-    return widget;
+    return component;
   }
 
   updates.push('updated_at = ?');
   params.push(timestamp);
-  params.push(widgetId);
+  params.push(componentId);
 
   await db
     .prepare(`UPDATE page_widgets SET ${updates.join(', ')} WHERE id = ?`)
     .bind(...params)
     .run();
 
-  return await getWidgetById(db, widgetId);
+  return await getWidgetById(db, componentId);
 }
 
 /**
- * Delete a widget
+ * @deprecated Use updatePageComponent instead
  */
-export async function deleteWidget(db: D1Database, widgetId: string): Promise<boolean> {
-  const result = await db.prepare('DELETE FROM page_widgets WHERE id = ?').bind(widgetId).run();
+export const updateWidget = updatePageComponent;
+
+/**
+ * Delete a page component
+ */
+export async function deletePageComponent(db: D1Database, componentId: string): Promise<boolean> {
+  const result = await db.prepare('DELETE FROM page_widgets WHERE id = ?').bind(componentId).run();
   return (result.meta?.changes || 0) > 0;
 }
+
+/**
+ * @deprecated Use deletePageComponent instead
+ */
+export const deleteWidget = deletePageComponent;
 
 /**
  * Delete all widgets for a page
@@ -370,20 +447,25 @@ export async function deletePageWidgets(db: D1Database, pageId: string): Promise
 }
 
 /**
- * Reorder widgets for a page
+ * Reorder components for a page
  */
-export async function reorderWidgets(
+export async function reorderPageComponents(
   db: D1Database,
   pageId: string,
-  widgetIds: string[]
+  componentIds: string[]
 ): Promise<void> {
   const timestamp = getCurrentTimestamp();
 
-  // Update position for each widget
-  for (let i = 0; i < widgetIds.length; i++) {
+  // Update position for each component
+  for (let i = 0; i < componentIds.length; i++) {
     await db
       .prepare('UPDATE page_widgets SET position = ?, updated_at = ? WHERE id = ? AND page_id = ?')
-      .bind(i, timestamp, widgetIds[i], pageId)
+      .bind(i, timestamp, componentIds[i], pageId)
       .run();
   }
 }
+
+/**
+ * @deprecated Use reorderPageComponents instead
+ */
+export const reorderWidgets = reorderPageComponents;

@@ -1,8 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { getDB } from '$lib/server/db/connection';
 import * as pagesDb from '$lib/server/db/pages';
+import { getPublishedRevision } from '$lib/server/db/revisions';
+import { getLayout, getLayoutComponents, getDefaultLayout } from '$lib/server/db/layouts';
 import type { PageServerLoad } from './$types';
 import { logPageAction } from '$lib/server/activity-logger';
+import type { LayoutWidget } from '$lib/types/pages';
 
 export const load: PageServerLoad = async ({
   params,
@@ -37,14 +40,24 @@ export const load: PageServerLoad = async ({
       }
     }
 
-    // Fetch widgets for this page
-    const dbWidgets = await pagesDb.getPageWidgets(db, page.id);
+    // Fetch components from published revision (Builder content)
+    const publishedRevision = await getPublishedRevision(db, siteId, page.id);
+    const components = publishedRevision?.components || [];
 
-    // Parse widget configs
-    const widgets = dbWidgets.map((w) => ({
-      ...w,
-      config: JSON.parse(w.config)
-    }));
+    // Fetch the layout for this page (use page's layout_id or default layout)
+    let layout = null;
+    let layoutComponents: LayoutWidget[] = [];
+
+    if (page.layout_id) {
+      layout = await getLayout(db, siteId, page.layout_id);
+    } else {
+      // Fall back to the site's default layout
+      layout = await getDefaultLayout(db, siteId);
+    }
+
+    if (layout) {
+      layoutComponents = await getLayoutComponents(db, layout.id);
+    }
 
     // Log page view (only for published pages, not previews)
     if (!isPreview && page.status === 'published') {
@@ -67,10 +80,13 @@ export const load: PageServerLoad = async ({
 
     return {
       page,
-      widgets,
+      components,
+      layout,
+      layoutComponents,
       colorTheme: page.colorTheme || null,
       isPreview: isPreview && page.status === 'draft',
-      isAdmin: locals.isAdmin || false
+      isAdmin: locals.isAdmin || false,
+      currentUser: locals.currentUser || null
     };
   } catch (err) {
     if (err && typeof err === 'object' && 'status' in err) {
