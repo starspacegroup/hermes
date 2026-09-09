@@ -8,8 +8,14 @@
  * had was curled from GitHub Actions instead. See issue #114.
  *
  * This wraps the adapter's output rather than replacing it: `fetch` is passed
- * through untouched, and `scheduled` is added. `wrangler.toml` points `main`
- * here, and wrangler bundles the import.
+ * through untouched, and `scheduled` is added.
+ *
+ * It is NOT `main` in wrangler.toml. The adapter writes to whatever `main`
+ * names, so pointing it here overwrites this file on the next build. Instead
+ * `scripts/wrap-worker.js` runs after the build, moves the adapter's output to
+ * `_app-worker.js` and copies this file into its place — which is why the
+ * import below is rewritten to `./_app-worker.js` on the way. This file does
+ * not resolve from its own location, and is not meant to.
  *
  * The scheduled handler deliberately does no work of its own. It builds a
  * request and hands it to the app's own `fetch`, so every job runs inside
@@ -22,7 +28,7 @@
  * dependency-free is what makes that safe.
  */
 
-import worker from '../.svelte-kit/cloudflare/_worker.js';
+import worker from '../.svelte-kit/cloudflare/_app-worker.js';
 
 /**
  * Any hostname works. `hooks.server.ts` resolves an unknown host to

@@ -9,11 +9,16 @@ account_id = "7170285216abcab51100eea6730677aa"
 # Workers deployment with static assets (migrated from Cloudflare Pages —
 # tenancy plan §8). `wrangler deploy` after `npm run build`.
 #
-# `main` is NOT the adapter's output directly. worker/entry.js wraps it: it
-# passes `fetch` through untouched and adds the `scheduled()` handler that
-# @sveltejs/adapter-cloudflare does not emit, which is what lets Cron Triggers
-# below reach the platform's job registry. See docs/SCHEDULED_JOBS.md.
-main = "worker/entry.js"
+# `main` stays the adapter's own output path — adapter-cloudflare v7 WRITES to
+# whatever `main` names, so pointing this at a hand-written file silently
+# overwrites that file on the next build.
+#
+# The scheduled() handler the adapter does not emit is added after the build
+# instead: `npm run build` runs scripts/wrap-worker.js, which moves the
+# adapter's output aside and puts the wrapper (worker/entry.js) here in its
+# place. That is what lets the Cron Triggers below reach the job registry.
+# See docs/SCHEDULED_JOBS.md.
+main = ".svelte-kit/cloudflare/_worker.js"
 
 # Cron Triggers. Every expression here must be claimed by a job in
 # src/lib/server/scheduler/registry.ts, and every cron a job names must appear

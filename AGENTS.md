@@ -15,8 +15,9 @@ this codebase — the **Ammoura™** multi-tenant eCommerce platform (codenamed
     port 4236. **Do not** start a second one — use
     `http://localhost:4236` and check for a process on port 4236 before
     launching a new server.
-- **Build**: `npm run build` - Build for production (includes Cloudflare
-  adapter)
+- **Build**: `npm run build` - Build for production (Cloudflare adapter, then
+  `scripts/wrap-worker.js`, which adds the `scheduled()` handler the adapter
+  does not emit — see [docs/SCHEDULED_JOBS.md](docs/SCHEDULED_JOBS.md))
 - **Preview**: `npm run preview` - Build + preview against the remote preview
   DB; `npm run preview:local` uses the local DB (migrates + seeds first);
   `npm run preview:prod` previews against production bindings
@@ -107,7 +108,10 @@ One deployment serves many independent stores/sites. See
 ### Cloudflare Platform
 
 - Deployed as a Cloudflare **Worker** with static assets (`wrangler.toml`;
-  migrated from Cloudflare Pages). `main` is the built SvelteKit worker.
+  migrated from Cloudflare Pages). `main` is the built SvelteKit worker — the
+  adapter writes to that path, and `scripts/wrap-worker.js` then swaps in a
+  wrapper that adds `scheduled()` (`docs/SCHEDULED_JOBS.md`). Never point
+  `main` at a hand-written file: the adapter overwrites it.
 - **D1** (`DB` binding) is the database; **R2** (`MEDIA_BUCKET`) stores media;
   optional **KV** (`SITE_ROUTES`) caches hostname → site id routing.
 - Separate production and preview databases/buckets are configured in
@@ -153,6 +157,8 @@ One deployment serves many independent stores/sites. See
   (`docs/THEME_SYSTEM.md`)
 - **Integrations**: OAuth/SSO providers (`docs/OAUTH_SSO_SETUP.md`), Printful
   fulfillment (`docs/PRINTFUL_INTEGRATION.md`), shipping (`docs/SHIPPING.md`)
+- **Scheduled jobs**: recurring work on Cloudflare Cron Triggers, declared in
+  `src/lib/server/scheduler/registry.ts` (`docs/SCHEDULED_JOBS.md`)
 - Comprehensive docs live in `docs/`; read the relevant doc before modifying a
   core feature, and update docs when adding significant features. `llms.txt`
   and `llms-full.txt` in the repo root contain Svelte/SvelteKit documentation
